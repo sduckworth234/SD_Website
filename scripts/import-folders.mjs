@@ -35,21 +35,36 @@ if (!dryRun && (!supabaseUrl || !supabaseKey)) {
 await mkdir(compressedDir, { recursive: true });
 const supabase = dryRun ? null : createClient(supabaseUrl, supabaseKey);
 
-// Each immediate subfolder is a location (skip _NoGPS, dotfiles).
-const subdirs = (await readdir(DIR, { withFileTypes: true })).filter(
-  (e) => e.isDirectory() && !e.name.startsWith("_") && !e.name.startsWith("."),
-);
-
-let items = [];
-for (const dir of subdirs) {
-  const files = (await readdir(join(DIR, dir.name))).filter(
-    (n) => !n.startsWith("._") && /\.jpe?g$/i.test(n),
+// Nesting-aware: if a top folder has sub-folders, treat it as
+// Country/Precise (location = country, title = precise). Otherwise flat
+// (location = title = folder name). Skip _NoGPS / dotfolders.
+const dirsIn = async (p) =>
+  (await readdir(p, { withFileTypes: true })).filter(
+    (e) => e.isDirectory() && !e.name.startsWith("_") && !e.name.startsWith("."),
   );
-  for (const f of files) items.push({ path: join(DIR, dir.name, f), location: dir.name.trim() });
+const jpgsIn = async (p) =>
+  (await readdir(p)).filter((n) => !n.startsWith("._") && /\.jpe?g$/i.test(n));
+
+const top = await dirsIn(DIR);
+let items = [];
+for (const t of top) {
+  const inner = await dirsIn(join(DIR, t.name));
+  if (inner.length) {
+    for (const p of inner) {
+      for (const f of await jpgsIn(join(DIR, t.name, p.name))) {
+        items.push({ path: join(DIR, t.name, p.name, f), location: t.name.trim(), title: p.name.trim() });
+      }
+    }
+  } else {
+    for (const f of await jpgsIn(join(DIR, t.name))) {
+      items.push({ path: join(DIR, t.name, f), location: t.name.trim(), title: t.name.trim() });
+    }
+  }
 }
 if (Number.isFinite(limit)) items = items.slice(0, limit);
 
-console.log(`Found ${items.length} photos across ${subdirs.length} location folders.`);
+const locationCount = new Set(items.map((it) => it.location)).size;
+console.log(`Found ${items.length} photos across ${locationCount} location buckets.`);
 
 // 1. Ensure location rows exist.
 const locByName = new Map();
@@ -119,7 +134,7 @@ for (const it of items) {
 
   if (!existingPaths.has(storagePath)) {
     rows.push({
-      title: it.location,
+      title: it.title ?? it.location,
       slug: `${slugLoc}-${hash}`,
       location_id: locByName.get(it.location)?.id ?? null,
       kind: "Drone",
