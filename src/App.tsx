@@ -59,6 +59,16 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
   }, []);
 
   const featuredPhotos = photos.filter((photo) => photo.featured).slice(0, 3);
+
+  useEffect(() => {
+    if (
+      activeLocation !== allLocations &&
+      !photos.some((photo) => photo.location === activeLocation)
+    ) {
+      setActiveLocation(allLocations);
+    }
+  }, [activeLocation, photos]);
+
   const filteredPhotos = useMemo(() => {
     if (activeLocation === allLocations) return photos;
     return photos.filter((photo) => photo.location === activeLocation);
@@ -81,6 +91,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
       <LocationRail
         activeLocation={activeLocation}
         locations={locations}
+        photos={photos}
         onChange={setActiveLocation}
       />
       {isLoading ? (
@@ -163,15 +174,23 @@ function Hero({
 function LocationRail({
   activeLocation,
   locations,
+  photos,
   onChange,
 }: {
   activeLocation: ActiveLocation;
   locations: GalleryLocation[];
+  photos: Photo[];
   onChange: (location: ActiveLocation) => void;
 }) {
+  const photoLocationNames = new Set(photos.map((photo) => photo.location));
   const visibleLocations: ActiveLocation[] = [
     allLocations,
-    ...locations.map((location) => location.name),
+    ...locations
+      .map((location) => location.name)
+      .filter((locationName) => photoLocationNames.has(locationName)),
+    ...[...photoLocationNames].filter(
+      (locationName) => !locations.some((location) => location.name === locationName),
+    ),
   ];
 
   return (
@@ -419,6 +438,15 @@ function AdminDashboard({ session }: { session: Session }) {
     return adminPhotos.filter((photo) => photo.location === activeLocation);
   }, [activeLocation, adminPhotos]);
 
+  useEffect(() => {
+    if (
+      activeLocation !== allLocations &&
+      !adminPhotos.some((photo) => photo.location === activeLocation)
+    ) {
+      setActiveLocation(allLocations);
+    }
+  }, [activeLocation, adminPhotos]);
+
   async function signOut() {
     await supabase?.auth.signOut();
   }
@@ -465,6 +493,7 @@ function AdminDashboard({ session }: { session: Session }) {
       <LocationRail
         activeLocation={activeLocation}
         locations={locations}
+        photos={adminPhotos}
         onChange={setActiveLocation}
       />
       <section className="admin-toolbar" aria-label="Bulk photo actions">
