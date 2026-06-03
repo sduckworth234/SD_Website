@@ -410,6 +410,8 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  max-width: 1080px;
+  margin-inline: auto;
   padding: clamp(18px, 4vw, 56px) clamp(18px, 4vw, 56px) 0;
 }
 
@@ -452,13 +454,15 @@ h1 {
 }
 
 .gallery {
+  max-width: 1080px;
+  margin-inline: auto;
   padding: clamp(18px, 3vw, 40px) clamp(18px, 4vw, 56px) clamp(28px, 5vw, 72px);
 }
 
-/* "Box grid" — uniform cropped tiles in an even grid */
+/* "Box grid" — uniform cropped tiles, three columns max */
 .gallery.view-box {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(clamp(180px, 22vw, 270px), 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: clamp(18px, 2.8vw, 42px);
 }
 
@@ -466,9 +470,9 @@ h1 {
   aspect-ratio: 4 / 5;
 }
 
-/* "As they appear" — masonry columns that keep each image's own proportions */
+/* "As they appear" — masonry, three columns max, keeping each image's own proportions */
 .gallery.view-flow {
-  columns: clamp(200px, 23vw, 300px);
+  columns: 3;
   column-gap: clamp(18px, 2.8vw, 42px);
 }
 
@@ -1128,6 +1132,14 @@ footer {
   .hero,
   .intro-panel {
     grid-template-columns: 1fr;
+  }
+
+  .gallery.view-box {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .gallery.view-flow {
+    columns: 2;
   }
 
   h1 {
