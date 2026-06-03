@@ -233,6 +233,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
       ) : null}
       <LocationRail
         activeLocation={activeLocation}
+        excludeUnsorted
         locations={locations}
         photos={photos}
         onChange={setActiveLocation}
@@ -486,11 +487,13 @@ function RotatingLocations({ locations }: { locations: string[] }) {
 
 function LocationRail({
   activeLocation,
+  excludeUnsorted = false,
   locations,
   photos,
   onChange,
 }: {
   activeLocation: ActiveLocation;
+  excludeUnsorted?: boolean;
   locations: GalleryLocation[];
   photos: Photo[];
   onChange: (location: ActiveLocation) => void;
@@ -504,7 +507,7 @@ function LocationRail({
     ...[...photoLocationNames].filter(
       (locationName) => !locations.some((location) => location.name === locationName),
     ),
-  ];
+  ].filter((locationName) => !excludeUnsorted || locationName !== "Unsorted");
 
   return (
     <section className="location-rail" aria-label="Filter gallery by location">
