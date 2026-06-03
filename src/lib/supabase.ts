@@ -8,12 +8,17 @@ const supabasePublishableKey =
   import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const photoBucket =
   import.meta.env.VITE_SUPABASE_PHOTO_BUCKET ?? "photos";
+export const siteUrl = import.meta.env.VITE_SITE_URL?.replace(/\/$/, "");
 
 export const hasSupabaseEnv = Boolean(supabaseUrl && supabasePublishableKey);
 
 export const supabase = hasSupabaseEnv
   ? createClient(supabaseUrl, supabasePublishableKey)
   : null;
+
+export function getAdminRedirectUrl() {
+  return `${siteUrl || window.location.origin}/admin`;
+}
 
 export function getTransformedPublicUrl(
   bucket: string,

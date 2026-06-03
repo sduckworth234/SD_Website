@@ -12,6 +12,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import {
   createPhotoRecord,
+  getAdminRedirectUrl,
   getAdminPhotos,
   getGalleryData,
   hasSupabaseEnv,
@@ -337,7 +338,7 @@ function AdminLogin() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/admin`,
+          emailRedirectTo: getAdminRedirectUrl(),
           shouldCreateUser: false,
         },
       });

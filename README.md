@@ -16,7 +16,16 @@ Required Vercel environment variables:
 VITE_SUPABASE_URL=https://krixuiimabosiorzxzju.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_f0wHsXRdEcLb6-7b3walPw_xt2Ii5uM
 VITE_SUPABASE_PHOTO_BUCKET=photos
+VITE_SITE_URL=https://sdwebsite-rho.vercel.app
 ```
+
+Also add the same Vercel URL in Supabase Dashboard under
+**Authentication > URL Configuration**:
+
+- Site URL: `https://sdwebsite-rho.vercel.app`
+- Redirect URLs: `https://sdwebsite-rho.vercel.app/admin`
+
+If you use a custom domain later, add that domain there too.
 
 ## Admin Access
 
