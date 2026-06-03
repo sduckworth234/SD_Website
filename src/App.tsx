@@ -17,6 +17,7 @@ import {
   isCurrentUserAdmin,
   setHeroSlot,
   supabase,
+  updatePhotoDetails,
   updatePhotoCuration,
   updatePhotoVisibility,
   uploadPhotoAsset,
@@ -476,6 +477,7 @@ function AdminDashboard({ session }: { session: Session }) {
   const [activeLocation, setActiveLocation] =
     useState<ActiveLocation>(allLocations);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
+  const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
   async function refresh() {
@@ -534,6 +536,23 @@ function AdminDashboard({ session }: { session: Session }) {
     await refresh();
   }
 
+  async function savePhotoDetails(photoId: string, formData: FormData) {
+    try {
+      await updatePhotoDetails(photoId, {
+        title: String(formData.get("title") || ""),
+        description: String(formData.get("description") || ""),
+        locationId: String(formData.get("locationId") || ""),
+        year: Number(formData.get("year")) || undefined,
+        aspect: String(formData.get("aspect") || "landscape") as Photo["aspect"],
+      });
+      setEditingPhotoId(null);
+      setMessage("Photo details updated.");
+      await refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not update photo.");
+    }
+  }
+
   return (
     <section className="admin-dashboard">
       <div className="admin-title">
@@ -585,52 +604,136 @@ function AdminDashboard({ session }: { session: Session }) {
               <img src={photo.imageUrl} alt={photo.title} loading="lazy" />
               <span className="selection-dot">{selectedPhotoIds.has(photo.id) ? "Selected" : "Select"}</span>
             </button>
-            <div className="admin-card-meta">
-              <span>
-                {photo.location}
-                {photo.year ? ` / ${photo.year}` : ""}
-              </span>
-              <strong>{photo.title}</strong>
-              <small>
-                {photo.published ? "Published" : "Draft"}
-                {photo.featured ? " / Featured" : ""}
-              </small>
-              <div className="slot-actions">
-                <button onClick={() => assignHeroSlot(photo.id, 1)} type="button">Hero 1</button>
-                <button onClick={() => assignHeroSlot(photo.id, 2)} type="button">Hero 2</button>
-                <button onClick={() => assignHeroSlot(photo.id, 3)} type="button">Hero 3</button>
+            {editingPhotoId === photo.id ? (
+              <PhotoEditForm
+                locations={locations}
+                onCancel={() => setEditingPhotoId(null)}
+                onSave={(formData) => savePhotoDetails(photo.id, formData)}
+                photo={photo}
+              />
+            ) : (
+              <div className="admin-card-meta">
+                <span>
+                  {photo.location}
+                  {photo.year ? ` / ${photo.year}` : ""}
+                </span>
+                <strong>{photo.title}</strong>
+                {photo.description ? <p>{photo.description}</p> : null}
+                <small>
+                  {photo.published ? "Published" : "Draft"}
+                  {photo.featured ? " / Featured" : ""}
+                </small>
+                <div className="slot-actions">
+                  <button onClick={() => assignHeroSlot(photo.id, 1)} type="button">Hero 1</button>
+                  <button onClick={() => assignHeroSlot(photo.id, 2)} type="button">Hero 2</button>
+                  <button onClick={() => assignHeroSlot(photo.id, 3)} type="button">Hero 3</button>
+                </div>
+                <button className="text-button edit-button" onClick={() => setEditingPhotoId(photo.id)} type="button">
+                  Edit details
+                </button>
+                <label>
+                  <input
+                    checked={Boolean(photo.published)}
+                    onChange={(event) =>
+                      updatePhotoVisibility(photo.id, {
+                        featured: Boolean(photo.featured),
+                        published: event.target.checked,
+                      }).then(refresh)
+                    }
+                    type="checkbox"
+                  />
+                  Published
+                </label>
+                <label>
+                  <input
+                    checked={Boolean(photo.featured)}
+                    onChange={(event) =>
+                      updatePhotoVisibility(photo.id, {
+                        featured: event.target.checked,
+                        published: Boolean(photo.published),
+                      }).then(refresh)
+                    }
+                    type="checkbox"
+                  />
+                  Featured
+                </label>
               </div>
-              <label>
-                <input
-                  checked={Boolean(photo.published)}
-                  onChange={(event) =>
-                    updatePhotoVisibility(photo.id, {
-                      featured: Boolean(photo.featured),
-                      published: event.target.checked,
-                    }).then(refresh)
-                  }
-                  type="checkbox"
-                />
-                Published
-              </label>
-              <label>
-                <input
-                  checked={Boolean(photo.featured)}
-                  onChange={(event) =>
-                    updatePhotoVisibility(photo.id, {
-                      featured: event.target.checked,
-                      published: Boolean(photo.published),
-                    }).then(refresh)
-                  }
-                  type="checkbox"
-                />
-                Featured
-              </label>
-            </div>
+            )}
           </article>
         ))}
       </section>
     </section>
+  );
+}
+
+function PhotoEditForm({
+  locations,
+  onCancel,
+  onSave,
+  photo,
+}: {
+  locations: GalleryLocation[];
+  onCancel: () => void;
+  onSave: (formData: FormData) => Promise<void>;
+  photo: Photo;
+}) {
+  const [isSaving, setIsSaving] = useState(false);
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (isSaving) return;
+
+    setIsSaving(true);
+    try {
+      await onSave(new FormData(event.currentTarget));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <form className="admin-card-meta edit-photo-form" onSubmit={submit}>
+      <label>
+        Title
+        <input defaultValue={photo.title} name="title" placeholder={photo.location} type="text" />
+      </label>
+      <label>
+        Description
+        <textarea defaultValue={photo.description ?? ""} name="description" rows={3} />
+      </label>
+      <label>
+        Location
+        <select defaultValue={photo.locationId ?? ""} name="locationId">
+          <option value="">Unsorted</option>
+          {locations.map((location) => (
+            <option key={location.id} value={location.id}>
+              {location.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Year
+        <input defaultValue={photo.year} inputMode="numeric" name="year" placeholder="2026" type="number" />
+      </label>
+      <label>
+        Ratio
+        <select defaultValue={photo.aspect} name="aspect">
+          <option>landscape</option>
+          <option>portrait</option>
+          <option>square</option>
+          <option>wide</option>
+        </select>
+      </label>
+      <div className="edit-actions">
+        <button className="solid-button" disabled={isSaving} type="submit">
+          {isSaving ? "Saving" : "Save changes"}
+        </button>
+        <button className="text-button" disabled={isSaving} onClick={onCancel} type="button">
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 }
 

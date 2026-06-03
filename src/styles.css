@@ -953,6 +953,13 @@ footer {
   text-transform: uppercase;
 }
 
+.admin-card-meta p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 .admin-card-meta strong {
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(1.25rem, 1.7vw, 2rem);
@@ -964,6 +971,34 @@ footer {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.edit-button {
+  justify-self: start;
+}
+
+.edit-photo-form {
+  align-content: start;
+}
+
+.edit-photo-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.edit-photo-form input,
+.edit-photo-form select,
+.edit-photo-form textarea {
+  width: 100%;
+  padding: 9px 10px;
+  font-size: 0.82rem;
+  text-transform: none;
+}
+
+.edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .slot-actions {

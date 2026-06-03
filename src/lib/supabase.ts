@@ -254,6 +254,34 @@ export async function updatePhotoVisibility(
   if (error) throw error;
 }
 
+export async function updatePhotoDetails(
+  photoId: string,
+  input: {
+    title: string;
+    description?: string;
+    locationId?: string;
+    year?: number;
+    aspect: Photo["aspect"];
+  },
+) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const title = input.title.trim() || "Untitled";
+  const { error } = await supabase
+    .from("photos")
+    .update({
+      title,
+      description: input.description?.trim() || null,
+      location_id: input.locationId || null,
+      year_taken: input.year || null,
+      aspect: input.aspect,
+      slug: `${slugify(title) || "untitled"}-${Date.now()}`,
+    })
+    .eq("id", photoId);
+
+  if (error) throw error;
+}
+
 export async function updatePhotoCuration(
   photoIds: string[],
   input: { featured?: boolean; published?: boolean; sortOrder?: number },
