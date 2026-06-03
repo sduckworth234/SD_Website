@@ -1217,6 +1217,14 @@ footer {
   color: var(--sea);
 }
 
+.text-button.danger {
+  color: #b3402f;
+}
+
+.text-button.danger:hover {
+  color: #8f2f21;
+}
+
 .upload-panel {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }

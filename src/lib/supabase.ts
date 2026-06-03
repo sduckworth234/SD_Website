@@ -302,6 +302,37 @@ export async function updatePhotoCuration(
   if (error) throw error;
 }
 
+export async function deletePhoto(photoId: string, storagePath?: string | null) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  // Remove the stored image (ignore if the object is already gone), then the row.
+  if (storagePath) {
+    await supabase.storage.from(photoBucket).remove([storagePath]);
+  }
+
+  const { error } = await supabase.from("photos").delete().eq("id", photoId);
+  if (error) throw error;
+}
+
+export async function createLocation(name: string, region = "Northern Beaches") {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const clean = name.trim();
+  if (!clean) throw new Error("Enter a location name.");
+
+  const { data: existing } = await supabase.from("locations").select("sort_order");
+  const nextSort =
+    (existing ?? []).reduce((max, l) => Math.max(max, l.sort_order ?? 0), 0) + 1;
+
+  const { error } = await supabase.from("locations").insert({
+    name: clean,
+    slug: slugify(clean),
+    region,
+    sort_order: nextSort,
+    is_visible: true,
+  });
+  if (error) throw error;
+}
+
 export async function bulkEditPhotos(
   photoIds: string[],
   input: { title?: string; locationId?: string | null },

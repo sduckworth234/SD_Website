@@ -11,6 +11,8 @@ import {
   LogOut,
   MapPin,
   Pencil,
+  Plus,
+  Trash2,
   Upload,
   UserRound,
   X,
@@ -20,7 +22,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   assignRecentSlot,
   bulkEditPhotos,
+  createLocation,
   createPhotoRecord,
+  deletePhoto,
   getAdminPhotos,
   getGalleryData,
   getRecentPhotos,
@@ -821,6 +825,7 @@ function AdminDashboard({ session }: { session: Session }) {
   const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
   const [bulkTitle, setBulkTitle] = useState("");
   const [bulkLocationId, setBulkLocationId] = useState("");
+  const [newLocationName, setNewLocationName] = useState("");
   const [message, setMessage] = useState("");
 
   async function refresh() {
@@ -897,6 +902,41 @@ function AdminDashboard({ session }: { session: Session }) {
     setSelectedPhotoIds(new Set());
     setMessage(`Moved ${ids.length} photo${ids.length === 1 ? "" : "s"} to ${locationName}.`);
     await refresh();
+  }
+
+  async function removePhoto(photo: Photo) {
+    if (
+      !window.confirm(
+        `Delete "${photo.title}" permanently? This removes the photo and its image file.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await deletePhoto(photo.id, photo.storagePath);
+      setSelectedPhotoIds((current) => {
+        const next = new Set(current);
+        next.delete(photo.id);
+        return next;
+      });
+      setMessage(`Deleted "${photo.title}".`);
+      await refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not delete photo.");
+    }
+  }
+
+  async function addLocation() {
+    const name = newLocationName.trim();
+    if (!name) return;
+    try {
+      await createLocation(name);
+      setNewLocationName("");
+      setMessage(`Added location "${name}".`);
+      await refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not add location.");
+    }
   }
 
   async function savePhotoDetails(photoId: string, formData: FormData) {
@@ -976,6 +1016,17 @@ function AdminDashboard({ session }: { session: Session }) {
             Move to location
           </button>
         </div>
+        <div>
+          <input
+            onChange={(event) => setNewLocationName(event.target.value)}
+            placeholder="New location name…"
+            type="text"
+            value={newLocationName}
+          />
+          <button className="text-button" onClick={addLocation} type="button">
+            <Plus size={14} aria-hidden="true" /> Add location
+          </button>
+        </div>
       </section>
       <section className="admin-curation-grid" aria-label="Photo curation grid">
         {filteredPhotos.map((photo, index) => (
@@ -1012,6 +1063,9 @@ function AdminDashboard({ session }: { session: Session }) {
                 <div className="card-actions">
                   <button className="text-button edit-button" onClick={() => setEditingPhotoId(photo.id)} type="button">
                     <Pencil size={13} aria-hidden="true" /> Edit details
+                  </button>
+                  <button className="text-button danger" onClick={() => removePhoto(photo)} type="button">
+                    <Trash2 size={13} aria-hidden="true" /> Delete
                   </button>
                 </div>
                 <label>

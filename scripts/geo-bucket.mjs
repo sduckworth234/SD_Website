@@ -52,18 +52,37 @@ async function readMeta(file) {
   } catch { return {}; }
 }
 
+// Build a descriptive place name: prefer a named feature (landmark / beach /
+// suburb) combined with its city — e.g. "Banje Beach, Dubrovnik" or
+// "Grad, Dubrovnik" — falling back to city, then region/country.
+function placeName(a, fallback) {
+  const feature =
+    a.attraction || a.tourism || a.leisure || a.natural || a.beach || a.historic ||
+    a.neighbourhood || a.suburb || a.quarter || a.hamlet;
+  const locality = a.city || a.town || a.village || a.municipality;
+  const region = a.county || a.state;
+  const country = a.country;
+
+  if (feature && locality && feature !== locality) return `${feature}, ${locality}`;
+  if (feature) return feature !== country && country ? `${feature}, ${country}` : feature;
+  if (locality) return locality;
+  if (region) return country ? `${region}, ${country}` : region;
+  return country || fallback || "Unsorted";
+}
+
 const cache = new Map();
 async function geocode(lat, lon) {
-  const key = `${lat.toFixed(2)},${lon.toFixed(2)}`;
+  // ~110m buckets so distinct areas (a beach vs the old town) can split, while
+  // co-located drone frames still share one geocode call.
+  const key = `${lat.toFixed(3)},${lon.toFixed(3)}`;
   if (cache.has(key)) return cache.get(key);
   await sleep(DELAY_MS);
   let name = "Unsorted";
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=jsonv2&zoom=12&accept-language=en`;
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=jsonv2&zoom=16&accept-language=en`;
     const res = await fetch(url, { headers: { "User-Agent": "sd-website-geobucket/1.0" } });
     const data = await res.json();
-    const a = data.address || {};
-    name = a.city || a.town || a.village || a.municipality || a.county || a.state || data.name || "Unsorted";
+    name = placeName(data.address || {}, data.name);
   } catch { /* leave Unsorted */ }
   const result = tidy(name) || "Unsorted";
   cache.set(key, result);
