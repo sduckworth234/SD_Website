@@ -7,6 +7,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
+import type { CSSProperties, DependencyList } from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
   createPhotoRecord,
@@ -24,6 +25,39 @@ import type { GalleryLocation, LocationBucket, Photo } from "./types";
 
 const allLocations = "All work";
 type ActiveLocation = LocationBucket | typeof allLocations;
+
+function useScrollReveal(dependencies: DependencyList) {
+  useEffect(() => {
+    const elements = Array.from(
+      document.querySelectorAll<HTMLElement>(".scroll-reveal:not(.is-visible)"),
+    );
+
+    if (!elements.length) return;
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      elements.forEach((element) => element.classList.add("is-visible"));
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        });
+      },
+      {
+        rootMargin: "0px 0px -12% 0px",
+        threshold: 0.12,
+      },
+    );
+
+    elements.forEach((element) => observer.observe(element));
+
+    return () => observer.disconnect();
+  }, dependencies);
+}
 
 function App() {
   const [route, setRoute] = useState(window.location.pathname);
@@ -74,11 +108,13 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     return photos.filter((photo) => photo.location === activeLocation);
   }, [activeLocation, photos]);
 
+  useScrollReveal([isLoading, activeLocation, filteredPhotos.length]);
+
   return (
     <main>
       <Header onNavigate={onNavigate} />
       <Hero featuredPhotos={featuredPhotos} onSelectPhoto={setSelectedPhoto} />
-      <section className="intro-panel" id="galleries" aria-labelledby="gallery-heading">
+      <section className="intro-panel scroll-reveal" id="galleries" aria-labelledby="gallery-heading">
         <div>
           <p className="eyebrow">Northern Beaches / Travel</p>
           <h2 id="gallery-heading">A quiet archive for coast, altitude, and light.</h2>
@@ -138,32 +174,54 @@ function Hero({
   featuredPhotos: Photo[];
   onSelectPhoto: (photo: Photo) => void;
 }) {
+  const flagshipPhoto =
+    featuredPhotos.find((photo) => photo.aspect === "portrait") ?? featuredPhotos[0];
+  const floatingPhotos = featuredPhotos
+    .filter((photo) => photo.id !== flagshipPhoto?.id)
+    .slice(0, 2);
+
   return (
-    <section className="hero" id="top" aria-label="Featured photography">
-      <div className="hero-copy">
-        <p className="eyebrow">Sam Duckworth</p>
+    <section className="hero landing-stage" id="top" aria-label="Sam Duckworth Photography">
+      <div className="landing-loader" aria-hidden="true">
+        <span />
+      </div>
+      <div className="hero-copy landing-copy scroll-reveal is-visible">
+        <p className="eyebrow">White light / coastal archive</p>
         <h1>Sam Duckworth Photography.</h1>
         <p>
-          Coastal, drone, and travel photographs gathered into a quiet
-          image-first archive.
+          Northern Beaches drone and travel photography, collected into a quiet
+          image-first gallery.
         </p>
         <a className="hero-link" href="#galleries">
-          View galleries <ArrowUpRight size={16} aria-hidden="true" />
+          Scroll down to dive in <ArrowUpRight size={16} aria-hidden="true" />
         </a>
       </div>
-      <div className="feature-strip" aria-label="Prime photo selection">
-        {featuredPhotos.map((photo, index) => (
+      <div className="landing-art" aria-label="Flagship photo selection">
+        {flagshipPhoto ? (
           <button
-            className={`feature-card feature-card-${index + 1}`}
+            className="flagship-photo scroll-reveal is-visible"
+            onClick={() => onSelectPhoto(flagshipPhoto)}
+            type="button"
+          >
+            <img
+              src={flagshipPhoto.imageUrl}
+              alt={`${flagshipPhoto.title}, ${flagshipPhoto.location}`}
+            />
+            <div>
+              <span>{flagshipPhoto.location}</span>
+              {flagshipPhoto.year ? <small>{flagshipPhoto.year}</small> : null}
+            </div>
+          </button>
+        ) : null}
+        {floatingPhotos.map((photo, index) => (
+          <button
+            className={`floating-photo floating-photo-${index + 1} scroll-reveal is-visible`}
             key={photo.id}
             onClick={() => onSelectPhoto(photo)}
+            style={{ "--reveal-delay": `${420 + index * 140}ms` } as CSSProperties}
             type="button"
           >
             <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
-            <div>
-              <span>{photo.location}</span>
-              <strong>{photo.title}</strong>
-            </div>
           </button>
         ))}
       </div>
@@ -220,10 +278,10 @@ function Gallery({
     <section className="gallery" aria-label="Photography gallery">
       {photos.map((photo, index) => (
         <button
-          className={`photo-tile ${photo.aspect}`}
+          className={`photo-tile ${photo.aspect} scroll-reveal`}
           key={photo.id}
           onClick={() => onSelectPhoto(photo)}
-          style={{ "--stagger": `${Math.min(index, 8) * 34}ms` } as React.CSSProperties}
+          style={{ "--reveal-delay": `${Math.min(index, 10) * 42}ms` } as CSSProperties}
           type="button"
         >
           <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} loading="lazy" />
@@ -677,21 +735,21 @@ function UploadPanel({
 
 function ArchivePlan() {
   return (
-    <section className="archive-plan" id="about" aria-labelledby="about-heading">
+    <section className="archive-plan scroll-reveal" id="about" aria-labelledby="about-heading">
       <div>
         <p className="eyebrow">About Me</p>
         <h2 id="about-heading">Northern beaches from above and on foot.</h2>
       </div>
       <div className="plan-grid">
-        <article>
+        <article className="scroll-reveal" style={{ "--reveal-delay": "80ms" } as CSSProperties}>
           <h3>Home Coast</h3>
           <p>Most of this work is made around the Northern Beaches, from headlands, pools, ocean edges, and quiet stretches of coastline.</p>
         </article>
-        <article>
+        <article className="scroll-reveal" style={{ "--reveal-delay": "160ms" } as CSSProperties}>
           <h3>Drone / DSLR</h3>
           <p>I shoot from the air and from the ground, keeping the collection focused on place, light, and clean compositions.</p>
         </article>
-        <article>
+        <article className="scroll-reveal" style={{ "--reveal-delay": "240ms" } as CSSProperties}>
           <h3>Travel</h3>
           <p>Images from trips sit alongside the coastal work, grouped simply by location as the archive grows.</p>
         </article>
