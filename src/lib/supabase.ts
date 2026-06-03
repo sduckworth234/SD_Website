@@ -302,6 +302,39 @@ export async function updatePhotoCuration(
   if (error) throw error;
 }
 
+export async function bulkEditPhotos(
+  photoIds: string[],
+  input: { title?: string; locationId?: string | null },
+) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  if (!photoIds.length) return;
+
+  const updates: Record<string, string | null> = {};
+  if (typeof input.title === "string") updates.title = input.title.trim() || "Untitled";
+  if (input.locationId !== undefined) updates.location_id = input.locationId || null;
+  if (!Object.keys(updates).length) return;
+
+  const { error } = await supabase.from("photos").update(updates).in("id", photoIds);
+  if (error) throw error;
+}
+
+// The gallery feature image is the single published photo flagged is_featured.
+export async function setFeatureImage(photoId: string) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const { error: clearError } = await supabase
+    .from("photos")
+    .update({ is_featured: false })
+    .eq("is_featured", true);
+  if (clearError) throw clearError;
+
+  const { error } = await supabase
+    .from("photos")
+    .update({ is_featured: true })
+    .eq("id", photoId);
+  if (error) throw error;
+}
+
 export async function setHeroSlot(photoId: string, slot: 1 | 2 | 3) {
   if (!supabase) throw new Error("Supabase is not configured.");
 

@@ -2,23 +2,28 @@ import type { Session } from "@supabase/supabase-js";
 import {
   ArrowDown,
   Camera,
+  EyeOff,
   LayoutDashboard,
   LayoutGrid,
   Lock,
   LogOut,
   MapPin,
+  Pencil,
+  Star,
   Upload,
+  UserRound,
   X,
 } from "lucide-react";
 import type { CSSProperties, DependencyList } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  bulkEditPhotos,
   createPhotoRecord,
   getAdminPhotos,
   getGalleryData,
   hasSupabaseEnv,
   isCurrentUserAdmin,
-  setHeroSlot,
+  setFeatureImage,
   supabase,
   updatePhotoDetails,
   updatePhotoCuration,
@@ -87,10 +92,18 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [locations, setLocations] = useState<GalleryLocation[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [view, setView] = useState<GalleryView>("flow");
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  const loadGallery = useCallback(async () => {
+    const data = await getGalleryData();
+    setPhotos(data.photos);
+    setLocations(data.locations);
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setIsScrolled(window.scrollY > 24);
@@ -100,13 +113,38 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
   }, []);
 
   useEffect(() => {
-    getGalleryData()
-      .then((data) => {
-        setPhotos(data.photos);
-        setLocations(data.locations);
-      })
-      .finally(() => setIsLoading(false));
+    loadGallery().finally(() => setIsLoading(false));
+  }, [loadGallery]);
+
+  // Detect an admin session so the live gallery becomes editable in place.
+  useEffect(() => {
+    const sb = supabase;
+    if (!sb) return;
+    let active = true;
+    const check = async () => {
+      const { data } = await sb.auth.getSession();
+      if (!data.session) {
+        if (active) setIsAdmin(false);
+        return;
+      }
+      const ok = await isCurrentUserAdmin();
+      if (active) setIsAdmin(ok);
+    };
+    check();
+    const { data } = sb.auth.onAuthStateChange(() => check());
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
   }, []);
+
+  async function unpublishPhoto(photo: Photo) {
+    await updatePhotoVisibility(photo.id, {
+      featured: Boolean(photo.featured),
+      published: false,
+    });
+    await loadGallery();
+  }
 
   useEffect(() => {
     if (
@@ -122,7 +160,9 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     return photos.filter((photo) => photo.location === activeLocation);
   }, [activeLocation, photos]);
 
-  useScrollReveal([isLoading, activeLocation, filteredPhotos.length, view]);
+  const featurePhoto = photos.find((photo) => photo.featured) ?? null;
+
+  useScrollReveal([isLoading, activeLocation, filteredPhotos.length, view, featurePhoto?.id]);
 
   return (
     <main>
@@ -132,10 +172,10 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
         onOpenAbout={() => setIsAboutOpen(true)}
       />
       <Hero />
-      <section className="intro-panel scroll-reveal" id="galleries" aria-labelledby="gallery-heading">
-        <p className="eyebrow">Gallery</p>
-        <h2 id="gallery-heading">Coast, altitude, and light.</h2>
-      </section>
+      <div id="galleries" className="section-anchor" aria-hidden="true" />
+      {featurePhoto ? (
+        <FeatureImage onSelect={setSelectedPhoto} photo={featurePhoto} />
+      ) : null}
       <LocationRail
         activeLocation={activeLocation}
         locations={locations}
@@ -152,7 +192,10 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
             view={view}
           />
           <Gallery
+            isAdmin={isAdmin}
+            onEditPhoto={setEditingPhoto}
             onSelectPhoto={setSelectedPhoto}
+            onUnpublish={unpublishPhoto}
             photos={filteredPhotos}
             view={view}
           />
@@ -162,8 +205,41 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
       {selectedPhoto ? (
         <Lightbox photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
       ) : null}
+      {editingPhoto ? (
+        <PhotoEditOverlay
+          locations={locations}
+          onClose={() => setEditingPhoto(null)}
+          onSaved={loadGallery}
+          photo={editingPhoto}
+        />
+      ) : null}
       {isAboutOpen ? <AboutOverlay onClose={() => setIsAboutOpen(false)} /> : null}
     </main>
+  );
+}
+
+function FeatureImage({
+  onSelect,
+  photo,
+}: {
+  onSelect: (photo: Photo) => void;
+  photo: Photo;
+}) {
+  return (
+    <section className="feature-banner scroll-reveal" aria-label="Featured photograph">
+      <button
+        className="feature-frame"
+        onClick={() => onSelect(photo)}
+        type="button"
+      >
+        <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
+        <span className="feature-tag">
+          <MapPin size={13} aria-hidden="true" />
+          {photo.location}
+          {photo.year ? ` · ${photo.year}` : ""}
+        </span>
+      </button>
+    </section>
   );
 }
 
@@ -192,8 +268,8 @@ function Header({
         <button className="nav-button" onClick={onOpenAbout} type="button">
           About Me
         </button>
-        <a href="/admin" onClick={openAdmin}>
-          Admin
+        <a className="nav-icon" href="/admin" onClick={openAdmin} aria-label="Admin sign in" title="Admin">
+          <UserRound size={18} aria-hidden="true" />
         </a>
       </nav>
     </header>
@@ -298,23 +374,36 @@ function GalleryControls({
 }
 
 function Gallery({
-  photos,
+  isAdmin,
+  onEditPhoto,
   onSelectPhoto,
+  onUnpublish,
+  photos,
   view,
 }: {
-  photos: Photo[];
+  isAdmin: boolean;
+  onEditPhoto: (photo: Photo) => void;
   onSelectPhoto: (photo: Photo) => void;
+  onUnpublish: (photo: Photo) => void;
+  photos: Photo[];
   view: GalleryView;
 }) {
   return (
     <section className={`gallery view-${view}`} aria-label="Photography gallery">
       {photos.map((photo, index) => (
-        <button
-          className={`photo-tile ${photo.aspect} scroll-reveal`}
+        <div
+          className={`photo-tile ${photo.aspect} scroll-reveal${isAdmin ? " is-admin" : ""}`}
           key={photo.id}
           onClick={() => onSelectPhoto(photo)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              onSelectPhoto(photo);
+            }
+          }}
+          role="button"
+          tabIndex={0}
           style={{ "--reveal-delay": `${Math.min(index, 12) * 38}ms` } as CSSProperties}
-          type="button"
         >
           <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} loading="lazy" />
           <div className="photo-meta">
@@ -325,7 +414,33 @@ function Gallery({
             <strong>{photo.title}</strong>
             {photo.year ? <small>{photo.year}</small> : null}
           </div>
-        </button>
+          {isAdmin ? (
+            <div className="tile-admin-actions">
+              <button
+                aria-label="Edit photo"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onEditPhoto(photo);
+                }}
+                title="Edit"
+                type="button"
+              >
+                <Pencil size={14} aria-hidden="true" />
+              </button>
+              <button
+                aria-label="Unpublish photo"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onUnpublish(photo);
+                }}
+                title="Unpublish"
+                type="button"
+              >
+                <EyeOff size={14} aria-hidden="true" />
+              </button>
+            </div>
+          ) : null}
+        </div>
       ))}
     </section>
   );
@@ -510,6 +625,8 @@ function AdminDashboard({ session }: { session: Session }) {
     useState<ActiveLocation>(allLocations);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
   const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
+  const [bulkTitle, setBulkTitle] = useState("");
+  const [bulkLocationId, setBulkLocationId] = useState("");
   const [message, setMessage] = useState("");
 
   async function refresh() {
@@ -563,8 +680,34 @@ function AdminDashboard({ session }: { session: Session }) {
     await refresh();
   }
 
-  async function assignHeroSlot(photoId: string, slot: 1 | 2 | 3) {
-    await setHeroSlot(photoId, slot);
+  function selectAllFiltered() {
+    setSelectedPhotoIds(new Set(filteredPhotos.map((photo) => photo.id)));
+  }
+
+  async function bulkRename() {
+    const ids = [...selectedPhotoIds];
+    if (!ids.length || !bulkTitle.trim()) return;
+    await bulkEditPhotos(ids, { title: bulkTitle.trim() });
+    setBulkTitle("");
+    setSelectedPhotoIds(new Set());
+    setMessage(`Renamed ${ids.length} photo${ids.length === 1 ? "" : "s"}.`);
+    await refresh();
+  }
+
+  async function bulkSetLocation() {
+    const ids = [...selectedPhotoIds];
+    if (!ids.length) return;
+    const locationName = locations.find((l) => l.id === bulkLocationId)?.name ?? "Unsorted";
+    await bulkEditPhotos(ids, { locationId: bulkLocationId || null, title: locationName });
+    setBulkLocationId("");
+    setSelectedPhotoIds(new Set());
+    setMessage(`Moved ${ids.length} photo${ids.length === 1 ? "" : "s"} to ${locationName}.`);
+    await refresh();
+  }
+
+  async function makeFeature(photoId: string) {
+    await setFeatureImage(photoId);
+    setMessage("Set as the gallery feature image.");
     await refresh();
   }
 
@@ -607,18 +750,44 @@ function AdminDashboard({ session }: { session: Session }) {
       />
       <section className="admin-toolbar" aria-label="Bulk photo actions">
         <span>{selectedPhotoIds.size} selected</span>
+        <button className="text-button" onClick={selectAllFiltered} type="button">
+          Select all
+        </button>
+        <button className="text-button" onClick={() => setSelectedPhotoIds(new Set())} type="button">
+          Clear
+        </button>
         <button className="solid-button" onClick={() => bulkUpdate({ published: true })} type="button">
           Publish
         </button>
         <button className="text-button" onClick={() => bulkUpdate({ published: false })} type="button">
           Unpublish
         </button>
-        <button className="text-button" onClick={() => bulkUpdate({ featured: true })} type="button">
-          Feature
-        </button>
-        <button className="text-button" onClick={() => bulkUpdate({ featured: false })} type="button">
-          Unfeature
-        </button>
+      </section>
+      <section className="admin-bulk-edit" aria-label="Bulk edit selected">
+        <div>
+          <input
+            onChange={(event) => setBulkTitle(event.target.value)}
+            placeholder="Rename selected to…"
+            type="text"
+            value={bulkTitle}
+          />
+          <button className="text-button" onClick={bulkRename} type="button">
+            Rename
+          </button>
+        </div>
+        <div>
+          <select onChange={(event) => setBulkLocationId(event.target.value)} value={bulkLocationId}>
+            <option value="">Unsorted</option>
+            {locations.map((location) => (
+              <option key={location.id} value={location.id}>
+                {location.name}
+              </option>
+            ))}
+          </select>
+          <button className="text-button" onClick={bulkSetLocation} type="button">
+            Move to location
+          </button>
+        </div>
       </section>
       <section className="admin-curation-grid" aria-label="Photo curation grid">
         {filteredPhotos.map((photo, index) => (
@@ -653,16 +822,20 @@ function AdminDashboard({ session }: { session: Session }) {
                 {photo.description ? <p>{photo.description}</p> : null}
                 <small>
                   {photo.published ? "Published" : "Draft"}
-                  {photo.featured ? " / Featured" : ""}
+                  {photo.featured ? " / Feature image" : ""}
                 </small>
-                <div className="slot-actions">
-                  <button onClick={() => assignHeroSlot(photo.id, 1)} type="button">Hero 1</button>
-                  <button onClick={() => assignHeroSlot(photo.id, 2)} type="button">Hero 2</button>
-                  <button onClick={() => assignHeroSlot(photo.id, 3)} type="button">Hero 3</button>
+                <div className="card-actions">
+                  <button className="text-button edit-button" onClick={() => setEditingPhotoId(photo.id)} type="button">
+                    <Pencil size={13} aria-hidden="true" /> Edit details
+                  </button>
+                  <button
+                    className={`text-button${photo.featured ? " is-active" : ""}`}
+                    onClick={() => makeFeature(photo.id)}
+                    type="button"
+                  >
+                    <Star size={13} aria-hidden="true" /> {photo.featured ? "Feature image" : "Set as feature"}
+                  </button>
                 </div>
-                <button className="text-button edit-button" onClick={() => setEditingPhotoId(photo.id)} type="button">
-                  Edit details
-                </button>
                 <label>
                   <input
                     checked={Boolean(photo.published)}
@@ -675,19 +848,6 @@ function AdminDashboard({ session }: { session: Session }) {
                     type="checkbox"
                   />
                   Published
-                </label>
-                <label>
-                  <input
-                    checked={Boolean(photo.featured)}
-                    onChange={(event) =>
-                      updatePhotoVisibility(photo.id, {
-                        featured: event.target.checked,
-                        published: Boolean(photo.published),
-                      }).then(refresh)
-                    }
-                    type="checkbox"
-                  />
-                  Featured
                 </label>
               </div>
             )}
@@ -766,6 +926,73 @@ function PhotoEditForm({
         </button>
       </div>
     </form>
+  );
+}
+
+function PhotoEditOverlay({
+  locations,
+  onClose,
+  onSaved,
+  photo,
+}: {
+  locations: GalleryLocation[];
+  onClose: () => void;
+  onSaved: () => Promise<void> | void;
+  photo: Photo;
+}) {
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  async function save(formData: FormData) {
+    await updatePhotoDetails(photo.id, {
+      title: String(formData.get("title") || ""),
+      description: String(formData.get("description") || ""),
+      locationId: String(formData.get("locationId") || ""),
+      year: Number(formData.get("year")) || undefined,
+      aspect: String(formData.get("aspect") || "landscape") as Photo["aspect"],
+    });
+    await onSaved();
+    onClose();
+  }
+
+  async function makeFeature() {
+    try {
+      await setFeatureImage(photo.id);
+      setMessage("Set as the gallery feature image.");
+      await onSaved();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not set feature.");
+    }
+  }
+
+  return (
+    <div className="lightbox" role="dialog" aria-modal="true" aria-label={`Edit ${photo.title}`}>
+      <button className="lightbox-backdrop" onClick={onClose} type="button" aria-label="Close" />
+      <section className="edit-overlay-panel">
+        <button className="icon-button close-button" onClick={onClose} type="button" aria-label="Close">
+          <X size={18} aria-hidden="true" />
+        </button>
+        <div className="edit-overlay-preview">
+          <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
+        </div>
+        <div className="edit-overlay-body">
+          <p className="eyebrow">Edit photo</p>
+          <PhotoEditForm locations={locations} onCancel={onClose} onSave={save} photo={photo} />
+          <button className="text-button feature-button" onClick={makeFeature} type="button">
+            <Star size={14} aria-hidden="true" />
+            {photo.featured ? "Current feature image" : "Set as feature image"}
+          </button>
+          {message ? <p className="form-note">{message}</p> : null}
+        </div>
+      </section>
+    </div>
   );
 }
 
