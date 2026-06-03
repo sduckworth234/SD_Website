@@ -10,12 +10,14 @@ const compressedDir = process.argv[4] ?? "imports/compressed-drone";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseKey =
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_ANON_KEY;
+  process.env.SUPABASE_SERVICE_ROLE_KEY ??
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+  process.env.VITE_SUPABASE_ANON_KEY;
 const bucket = process.env.VITE_SUPABASE_PHOTO_BUCKET ?? "photos";
 const skipUpload = process.env.SKIP_UPLOAD === "1";
 
 if (!skipUpload && (!supabaseUrl || !supabaseKey)) {
-  throw new Error("Missing VITE_SUPABASE_URL or VITE_SUPABASE_PUBLISHABLE_KEY.");
+  throw new Error("Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.");
 }
 
 await mkdir(compressedDir, { recursive: true });
