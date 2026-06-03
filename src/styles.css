@@ -410,9 +410,9 @@ h1 {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  max-width: 1080px;
+  max-width: 80vw;
   margin-inline: auto;
-  padding: clamp(18px, 4vw, 56px) clamp(18px, 4vw, 56px) 0;
+  padding: clamp(18px, 4vw, 56px) clamp(12px, 2vw, 28px) 0;
 }
 
 .gallery-count {
@@ -454,9 +454,9 @@ h1 {
 }
 
 .gallery {
-  max-width: 1080px;
+  max-width: 80vw;
   margin-inline: auto;
-  padding: clamp(18px, 3vw, 40px) clamp(18px, 4vw, 56px) clamp(28px, 5vw, 72px);
+  padding: clamp(18px, 3vw, 40px) clamp(12px, 2vw, 28px) clamp(28px, 5vw, 72px);
 }
 
 /* "Box grid" — uniform cropped tiles, three columns max */
@@ -513,32 +513,34 @@ h1 {
 
 .photo-meta {
   position: absolute;
-  right: 14px;
-  bottom: 14px;
-  left: 14px;
+  right: auto;
+  bottom: 12px;
+  left: 12px;
   z-index: 1;
   display: grid;
-  gap: 4px;
+  gap: 2px;
+  max-width: 60%;
   color: var(--foam);
   text-transform: uppercase;
+  opacity: 0.72;
 }
 
 .photo-meta span {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.6rem;
+  gap: 4px;
+  font-size: 0.5rem;
   letter-spacing: 0.03em;
 }
 
 .photo-meta span svg {
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
 }
 
 .photo-meta strong {
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(0.95rem, 1.5vw, 1.4rem);
+  font-size: clamp(0.66rem, 0.9vw, 0.85rem);
   font-weight: 400;
   letter-spacing: 0;
   line-height: 1;
@@ -547,7 +549,7 @@ h1 {
 
 .photo-meta small {
   color: rgba(248, 246, 240, 0.82);
-  font-size: 0.58rem;
+  font-size: 0.48rem;
   letter-spacing: 0.03em;
 }
 
@@ -1132,6 +1134,11 @@ footer {
   .hero,
   .intro-panel {
     grid-template-columns: 1fr;
+  }
+
+  .gallery,
+  .gallery-controls {
+    max-width: 92vw;
   }
 
   .gallery.view-box {
