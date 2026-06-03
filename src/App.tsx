@@ -122,7 +122,7 @@ function Header({ onNavigate }: { onNavigate: (route: string) => void }) {
       </a>
       <nav aria-label="Primary navigation">
         <a href="#galleries">Galleries</a>
-        <a href="#archive">Archive</a>
+        <a href="#about">About Me</a>
         <a href="/admin" onClick={openAdmin}>
           Admin
         </a>
@@ -677,23 +677,23 @@ function UploadPanel({
 
 function ArchivePlan() {
   return (
-    <section className="archive-plan" id="archive" aria-labelledby="archive-heading">
+    <section className="archive-plan" id="about" aria-labelledby="about-heading">
       <div>
-        <p className="eyebrow">Archive</p>
-        <h2 id="archive-heading">Coast, altitude, and distance.</h2>
+        <p className="eyebrow">About Me</p>
+        <h2 id="about-heading">Northern beaches from above and on foot.</h2>
       </div>
       <div className="plan-grid">
         <article>
-          <h3>Northern Beaches</h3>
-          <p>Coastal images from the beaches, headlands, pools, and ocean edges around home.</p>
+          <h3>Home Coast</h3>
+          <p>Most of this work is made around the Northern Beaches, from headlands, pools, ocean edges, and quiet stretches of coastline.</p>
+        </article>
+        <article>
+          <h3>Drone / DSLR</h3>
+          <p>I shoot from the air and from the ground, keeping the collection focused on place, light, and clean compositions.</p>
         </article>
         <article>
           <h3>Travel</h3>
-          <p>Frames made away from Sydney, kept simple and grouped by place.</p>
-        </article>
-        <article>
-          <h3>Prints</h3>
-          <p>A small print catalogue will come later. For now, this is a working gallery of selected images.</p>
+          <p>Images from trips sit alongside the coastal work, grouped simply by location as the archive grows.</p>
         </article>
       </div>
     </section>
