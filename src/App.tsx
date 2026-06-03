@@ -2,6 +2,8 @@ import type { Session } from "@supabase/supabase-js";
 import {
   ArrowDown,
   Camera,
+  LayoutDashboard,
+  LayoutGrid,
   Lock,
   LogOut,
   MapPin,
@@ -87,7 +89,15 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [view, setView] = useState<GalleryView>("flow");
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     getGalleryData()
@@ -116,7 +126,11 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
 
   return (
     <main>
-      <Header onNavigate={onNavigate} onOpenAbout={() => setIsAboutOpen(true)} />
+      <Header
+        isScrolled={isScrolled}
+        onNavigate={onNavigate}
+        onOpenAbout={() => setIsAboutOpen(true)}
+      />
       <Hero />
       <section className="intro-panel scroll-reveal" id="galleries" aria-labelledby="gallery-heading">
         <p className="eyebrow">Gallery</p>
@@ -154,9 +168,11 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
 }
 
 function Header({
+  isScrolled,
   onNavigate,
   onOpenAbout,
 }: {
+  isScrolled: boolean;
   onNavigate: (route: string) => void;
   onOpenAbout: () => void;
 }) {
@@ -167,7 +183,7 @@ function Header({
   }
 
   return (
-    <header className="site-header">
+    <header className={`site-header${isScrolled ? " is-visible" : ""}`}>
       <a className="brand" href="#top" aria-label="SD Gallery home">
         SD
       </a>
@@ -187,9 +203,6 @@ function Header({
 function Hero() {
   return (
     <section className="hero landing-stage" id="top" aria-label="Sam Duckworth Photography">
-      <div className="landing-loader" aria-hidden="true">
-        <span />
-      </div>
       <div className="landing-copy scroll-reveal is-visible">
         <p className="eyebrow">My Photography Gallery</p>
         <h1>Sam Duckworth Photography.</h1>
@@ -260,20 +273,24 @@ function GalleryControls({
       </span>
       <div className="view-toggle" role="group" aria-label="Gallery layout">
         <button
+          aria-label="As they appear"
           aria-pressed={view === "flow"}
           className={view === "flow" ? "active" : ""}
           onClick={() => onChange("flow")}
+          title="As they appear"
           type="button"
         >
-          As they appear
+          <LayoutDashboard size={16} aria-hidden="true" />
         </button>
         <button
+          aria-label="Box grid"
           aria-pressed={view === "box"}
           className={view === "box" ? "active" : ""}
           onClick={() => onChange("box")}
+          title="Box grid"
           type="button"
         >
-          Box grid
+          <LayoutGrid size={16} aria-hidden="true" />
         </button>
       </div>
     </div>
