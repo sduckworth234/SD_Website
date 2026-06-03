@@ -323,20 +323,29 @@ function AdminNotice() {
 
 function AdminLogin() {
   const [email, setEmail] = useState("");
+  const [isSending, setIsSending] = useState(false);
   const [message, setMessage] = useState("");
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!supabase) return;
+    if (!supabase || isSending) return;
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/admin`,
-      },
-    });
+    setIsSending(true);
+    setMessage("");
 
-    setMessage(error ? error.message : "Check your email for the login link.");
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/admin`,
+          shouldCreateUser: false,
+        },
+      });
+
+      setMessage(error ? error.message : "Check your email for the login link.");
+    } finally {
+      setIsSending(false);
+    }
   }
 
   return (
@@ -357,8 +366,8 @@ function AdminLogin() {
             value={email}
           />
         </label>
-        <button className="solid-button" type="submit">
-          Send magic link
+        <button className="solid-button" disabled={isSending} type="submit">
+          {isSending ? "Sending" : "Send magic link"}
         </button>
         {message ? <p className="form-note">{message}</p> : null}
       </form>
