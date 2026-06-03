@@ -199,6 +199,18 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     return photos.filter((photo) => photo.location === activeLocation);
   }, [activeLocation, photos]);
 
+  // Real shoot locations (in curated order) for the hero's rotating ticker.
+  const locationNames = useMemo(() => {
+    const present = new Set(photos.map((photo) => photo.location));
+    const ordered = locations
+      .map((location) => location.name)
+      .filter((name) => present.has(name) && name !== "Unsorted");
+    const extra = [...present].filter(
+      (name) => name && name !== "Unsorted" && !locations.some((l) => l.name === name),
+    );
+    return [...ordered, ...extra];
+  }, [photos, locations]);
+
   useScrollReveal([isLoading, activeLocation, filteredPhotos.length, view, recentPhotos.length]);
 
   return (
@@ -208,7 +220,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
         onNavigate={onNavigate}
         onOpenAbout={() => setIsAboutOpen(true)}
       />
-      <Hero />
+      <Hero locations={locationNames} />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
       {recentPhotos.length >= 5 ? (
         <RecentWork
@@ -422,22 +434,53 @@ function Header({
   );
 }
 
-function Hero() {
+function Hero({ locations }: { locations: string[] }) {
   return (
     <section className="hero landing-stage" id="top" aria-label="Sam Duckworth Photography">
       <div className="landing-copy scroll-reveal is-visible">
         <p className="eyebrow">My Photography Gallery</p>
         <h1>Sam Duckworth Photography.</h1>
-        <p>
-          Northern Beaches drone and travel photography, collected into a quiet
-          image-first gallery.
-        </p>
+        <RotatingLocations locations={locations} />
       </div>
       <a className="scroll-cue" href="#galleries" aria-label="Scroll down to the gallery">
         <span>Scroll</span>
         <ArrowDown size={18} aria-hidden="true" />
       </a>
     </section>
+  );
+}
+
+// A slowly rotating, gently pulsing line of the locations the photos come from.
+function RotatingLocations({ locations }: { locations: string[] }) {
+  const [index, setIndex] = useState(0);
+  const count = Math.min(3, locations.length);
+
+  useEffect(() => {
+    if (locations.length <= count) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = window.setInterval(() => setIndex((i) => i + 1), 4200);
+    return () => window.clearInterval(id);
+  }, [locations.length, count]);
+
+  if (!locations.length) return null;
+
+  const start = (index * count) % locations.length;
+  const shown = Array.from(
+    { length: count },
+    (_, k) => locations[(start + k) % locations.length],
+  );
+
+  return (
+    <p className="hero-locations" aria-label="Locations in the gallery">
+      <span className="hero-locations-set" key={index}>
+        {shown.map((name, i) => (
+          <span key={`${index}-${name}-${i}`}>
+            {i > 0 ? <span className="loc-dot" aria-hidden="true"> · </span> : null}
+            {name}
+          </span>
+        ))}
+      </span>
+    </p>
   );
 }
 
