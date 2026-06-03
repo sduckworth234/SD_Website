@@ -302,6 +302,28 @@ export async function updatePhotoCuration(
   if (error) throw error;
 }
 
+// "Send to top" curation: give the photo a sort_order below every other photo
+// so it leads its category (the gallery is ordered by sort_order ascending).
+// Doing it globally keeps each category's relative order intact while letting
+// the admin promote favourites to the front of whichever category is shown.
+export async function sendPhotoToTop(photoId: string) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const { data, error: readError } = await supabase
+    .from("photos")
+    .select("sort_order")
+    .order("sort_order", { ascending: true })
+    .limit(1);
+  if (readError) throw readError;
+
+  const min = data?.[0]?.sort_order ?? 0;
+  const { error } = await supabase
+    .from("photos")
+    .update({ sort_order: min - 1 })
+    .eq("id", photoId);
+  if (error) throw error;
+}
+
 export async function deletePhoto(photoId: string, storagePath?: string | null) {
   if (!supabase) throw new Error("Supabase is not configured.");
 

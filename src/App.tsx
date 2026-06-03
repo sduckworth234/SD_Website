@@ -1,6 +1,7 @@
 import type { Session } from "@supabase/supabase-js";
 import {
   ArrowDown,
+  ArrowUpToLine,
   Camera,
   EyeOff,
   Images,
@@ -30,6 +31,7 @@ import {
   getRecentPhotos,
   hasSupabaseEnv,
   isCurrentUserAdmin,
+  sendPhotoToTop,
   supabase,
   updatePhotoDetails,
   updatePhotoCuration,
@@ -139,6 +141,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminChecked, setAdminChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadGallery = useCallback(async () => {
@@ -162,16 +165,25 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
   // Detect an admin session so the live gallery becomes editable in place.
   useEffect(() => {
     const sb = supabase;
-    if (!sb) return;
+    if (!sb) {
+      setAdminChecked(true);
+      return;
+    }
     let active = true;
     const check = async () => {
       const { data } = await sb.auth.getSession();
       if (!data.session) {
-        if (active) setIsAdmin(false);
+        if (active) {
+          setIsAdmin(false);
+          setAdminChecked(true);
+        }
         return;
       }
       const ok = await isCurrentUserAdmin();
-      if (active) setIsAdmin(ok);
+      if (active) {
+        setIsAdmin(ok);
+        setAdminChecked(true);
+      }
     };
     check();
     const { data } = sb.auth.onAuthStateChange(() => check());
@@ -189,6 +201,12 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     await loadGallery();
   }
 
+  // Admin "send to top": promote a favourite to the front of its category.
+  async function sendToTop(photo: Photo) {
+    await sendPhotoToTop(photo.id);
+    await loadGallery();
+  }
+
   // Unsorted photos are kept out of the public gallery entirely (admin still
   // sees them in the dashboard to sort/fix).
   const publicPhotos = useMemo(
@@ -196,21 +214,8 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     [photos],
   );
 
-  useEffect(() => {
-    if (
-      activeLocation !== allLocations &&
-      !publicPhotos.some((photo) => photo.location === activeLocation)
-    ) {
-      setActiveLocation(allLocations);
-    }
-  }, [activeLocation, publicPhotos]);
-
-  const filteredPhotos = useMemo(() => {
-    if (activeLocation === allLocations) return publicPhotos;
-    return publicPhotos.filter((photo) => photo.location === activeLocation);
-  }, [activeLocation, publicPhotos]);
-
-  // Real shoot locations (in curated order) for the hero's rotating ticker.
+  // Real shoot locations (in curated order) that actually have public photos.
+  // Used both for the hero ticker and as the set of selectable categories.
   const locationNames = useMemo(() => {
     const present = new Set(publicPhotos.map((photo) => photo.location));
     const ordered = locations
@@ -221,6 +226,29 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     );
     return [...ordered, ...extra];
   }, [publicPhotos, locations]);
+
+  // "All work" is admin-only; the public always browses one category at a time.
+  const publicView = adminChecked && !isAdmin;
+
+  useEffect(() => {
+    // A selected category that no longer has photos falls back to "All work"…
+    if (
+      activeLocation !== allLocations &&
+      !publicPhotos.some((photo) => photo.location === activeLocation)
+    ) {
+      setActiveLocation(allLocations);
+      return;
+    }
+    // …but the public never sits on "All work" — land them on the first category.
+    if (publicView && activeLocation === allLocations && locationNames.length) {
+      setActiveLocation(locationNames[0]);
+    }
+  }, [activeLocation, publicPhotos, publicView, locationNames]);
+
+  const filteredPhotos = useMemo(() => {
+    if (activeLocation === allLocations) return publicPhotos;
+    return publicPhotos.filter((photo) => photo.location === activeLocation);
+  }, [activeLocation, publicPhotos]);
 
   useScrollReveal([isLoading, activeLocation, filteredPhotos.length, view, recentPhotos.length]);
 
@@ -245,6 +273,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
       <LocationRail
         activeLocation={activeLocation}
         excludeUnsorted
+        includeAllWork={isAdmin}
         locations={locations}
         photos={publicPhotos}
         onChange={setActiveLocation}
@@ -258,6 +287,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
             isAdmin={isAdmin}
             onEditPhoto={setEditingPhoto}
             onSelectPhoto={setSelectedPhoto}
+            onSendToTop={sendToTop}
             onUnpublish={unpublishPhoto}
             photos={filteredPhotos}
             view={view}
@@ -499,19 +529,21 @@ function RotatingLocations({ locations }: { locations: string[] }) {
 function LocationRail({
   activeLocation,
   excludeUnsorted = false,
+  includeAllWork = true,
   locations,
   photos,
   onChange,
 }: {
   activeLocation: ActiveLocation;
   excludeUnsorted?: boolean;
+  includeAllWork?: boolean;
   locations: GalleryLocation[];
   photos: Photo[];
   onChange: (location: ActiveLocation) => void;
 }) {
   const photoLocationNames = new Set(photos.map((photo) => photo.location));
   const visibleLocations: ActiveLocation[] = [
-    allLocations,
+    ...(includeAllWork ? [allLocations] : []),
     ...locations
       .map((location) => location.name)
       .filter((locationName) => photoLocationNames.has(locationName)),
@@ -575,6 +607,7 @@ function Gallery({
   isAdmin,
   onEditPhoto,
   onSelectPhoto,
+  onSendToTop,
   onUnpublish,
   photos,
   view,
@@ -582,6 +615,7 @@ function Gallery({
   isAdmin: boolean;
   onEditPhoto: (photo: Photo) => void;
   onSelectPhoto: (photo: Photo) => void;
+  onSendToTop: (photo: Photo) => void;
   onUnpublish: (photo: Photo) => void;
   photos: Photo[];
   view: GalleryView;
@@ -614,6 +648,17 @@ function Gallery({
           </div>
           {isAdmin ? (
             <div className="tile-admin-actions">
+              <button
+                aria-label="Send to top of this category"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSendToTop(photo);
+                }}
+                title="Send to top"
+                type="button"
+              >
+                <ArrowUpToLine size={14} aria-hidden="true" />
+              </button>
               <button
                 aria-label="Edit photo"
                 onClick={(event) => {
