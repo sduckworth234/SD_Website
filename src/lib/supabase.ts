@@ -253,3 +253,46 @@ export async function updatePhotoVisibility(
 
   if (error) throw error;
 }
+
+export async function updatePhotoCuration(
+  photoIds: string[],
+  input: { featured?: boolean; published?: boolean; sortOrder?: number },
+) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  if (!photoIds.length) return;
+
+  const updates: Record<string, boolean | number> = {};
+  if (typeof input.featured === "boolean") updates.is_featured = input.featured;
+  if (typeof input.published === "boolean") updates.is_published = input.published;
+  if (typeof input.sortOrder === "number") updates.sort_order = input.sortOrder;
+
+  const { error } = await supabase
+    .from("photos")
+    .update(updates)
+    .in("id", photoIds);
+
+  if (error) throw error;
+}
+
+export async function setHeroSlot(photoId: string, slot: 1 | 2 | 3) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const { error: clearError } = await supabase
+    .from("photos")
+    .update({ is_featured: false })
+    .eq("is_featured", true)
+    .eq("sort_order", slot);
+
+  if (clearError) throw clearError;
+
+  const { error } = await supabase
+    .from("photos")
+    .update({
+      is_featured: true,
+      is_published: true,
+      sort_order: slot,
+    })
+    .eq("id", photoId);
+
+  if (error) throw error;
+}

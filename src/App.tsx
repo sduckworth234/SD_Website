@@ -1,8 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import {
   ArrowUpRight,
-  Camera,
-  Grid3X3,
   Lock,
   LogOut,
   MapPin,
@@ -16,7 +14,9 @@ import {
   getGalleryData,
   hasSupabaseEnv,
   isCurrentUserAdmin,
+  setHeroSlot,
   supabase,
+  updatePhotoCuration,
   updatePhotoVisibility,
   uploadPhotoAsset,
 } from "./lib/supabase";
@@ -131,10 +131,10 @@ function Hero({
     <section className="hero" id="top" aria-label="Featured photography">
       <div className="hero-copy">
         <p className="eyebrow">Sam Duckworth</p>
-        <h1>Northern Beaches from above and on foot.</h1>
+        <h1>Sam Duckworth Photography.</h1>
         <p>
-          Drone-led coastal studies, travel landscapes, and grounded DSLR frames
-          gathered into a calm, image-first archive.
+          Coastal, drone, and travel photographs gathered into a quiet
+          image-first archive.
         </p>
         <a className="hero-link" href="#galleries">
           View galleries <ArrowUpRight size={16} aria-hidden="true" />
@@ -214,9 +214,7 @@ function Gallery({
               {photo.location}
             </span>
             <strong>{photo.title}</strong>
-            <small>
-              {photo.kind} {photo.year ? `/ ${photo.year}` : ""}
-            </small>
+            {photo.year ? <small>{photo.year}</small> : null}
           </div>
         </button>
       ))}
@@ -244,12 +242,11 @@ function Lightbox({ photo, onClose }: { photo: Photo; onClose: () => void }) {
           <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
         </div>
         <aside className="lightbox-copy">
-          <p className="eyebrow">{photo.location}</p>
+          <p className="eyebrow">
+            {photo.location}
+            {photo.year ? ` / ${photo.year}` : ""}
+          </p>
           <h2>{photo.title}</h2>
-          <p>{photo.description || "A quiet frame from the archive."}</p>
-          <small>
-            {photo.kind} {photo.year ? `/ ${photo.year}` : ""}
-          </small>
         </aside>
       </section>
     </div>
@@ -399,6 +396,9 @@ function NotAdmin({ email }: { email: string }) {
 function AdminDashboard({ session }: { session: Session }) {
   const [locations, setLocations] = useState<GalleryLocation[]>([]);
   const [adminPhotos, setAdminPhotos] = useState<Photo[]>([]);
+  const [activeLocation, setActiveLocation] =
+    useState<ActiveLocation>(allLocations);
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState("");
 
   async function refresh() {
@@ -414,8 +414,38 @@ function AdminDashboard({ session }: { session: Session }) {
     refresh().catch((error) => setMessage(error.message));
   }, []);
 
+  const filteredPhotos = useMemo(() => {
+    if (activeLocation === allLocations) return adminPhotos;
+    return adminPhotos.filter((photo) => photo.location === activeLocation);
+  }, [activeLocation, adminPhotos]);
+
   async function signOut() {
     await supabase?.auth.signOut();
+  }
+
+  function toggleSelection(photoId: string) {
+    setSelectedPhotoIds((current) => {
+      const next = new Set(current);
+      if (next.has(photoId)) {
+        next.delete(photoId);
+      } else {
+        next.add(photoId);
+      }
+      return next;
+    });
+  }
+
+  async function bulkUpdate(input: { featured?: boolean; published?: boolean }) {
+    const ids = [...selectedPhotoIds];
+    if (!ids.length) return;
+    await updatePhotoCuration(ids, input);
+    setSelectedPhotoIds(new Set());
+    await refresh();
+  }
+
+  async function assignHeroSlot(photoId: string, slot: 1 | 2 | 3) {
+    await setHeroSlot(photoId, slot);
+    await refresh();
   }
 
   return (
@@ -432,40 +462,84 @@ function AdminDashboard({ session }: { session: Session }) {
       </div>
       <UploadPanel locations={locations} onUploaded={refresh} setMessage={setMessage} />
       {message ? <p className="form-note">{message}</p> : null}
-      <section className="admin-photo-list" aria-label="Photo records">
-        {adminPhotos.map((photo) => (
-          <article className="admin-photo-row" key={photo.id}>
-            <img src={photo.imageUrl} alt={photo.title} />
-            <div>
+      <LocationRail
+        activeLocation={activeLocation}
+        locations={locations}
+        onChange={setActiveLocation}
+      />
+      <section className="admin-toolbar" aria-label="Bulk photo actions">
+        <span>{selectedPhotoIds.size} selected</span>
+        <button className="solid-button" onClick={() => bulkUpdate({ published: true })} type="button">
+          Publish
+        </button>
+        <button className="text-button" onClick={() => bulkUpdate({ published: false })} type="button">
+          Unpublish
+        </button>
+        <button className="text-button" onClick={() => bulkUpdate({ featured: true })} type="button">
+          Feature
+        </button>
+        <button className="text-button" onClick={() => bulkUpdate({ featured: false })} type="button">
+          Unfeature
+        </button>
+      </section>
+      <section className="admin-curation-grid" aria-label="Photo curation grid">
+        {filteredPhotos.map((photo, index) => (
+          <article
+            className={`admin-curation-card ${photo.aspect} ${
+              selectedPhotoIds.has(photo.id) ? "selected" : ""
+            }`}
+            key={photo.id}
+          >
+            <button
+              className="admin-card-image"
+              onClick={() => toggleSelection(photo.id)}
+              type="button"
+            >
+              <img src={photo.imageUrl} alt={photo.title} loading="lazy" />
+              <span className="selection-dot">{selectedPhotoIds.has(photo.id) ? "Selected" : "Select"}</span>
+            </button>
+            <div className="admin-card-meta">
+              <span>
+                {photo.location}
+                {photo.year ? ` / ${photo.year}` : ""}
+              </span>
               <strong>{photo.title}</strong>
-              <span>{photo.location} / {photo.kind}</span>
+              <small>
+                {photo.published ? "Published" : "Draft"}
+                {photo.featured ? " / Featured" : ""}
+              </small>
+              <div className="slot-actions">
+                <button onClick={() => assignHeroSlot(photo.id, 1)} type="button">Hero 1</button>
+                <button onClick={() => assignHeroSlot(photo.id, 2)} type="button">Hero 2</button>
+                <button onClick={() => assignHeroSlot(photo.id, 3)} type="button">Hero 3</button>
+              </div>
+              <label>
+                <input
+                  checked={Boolean(photo.published)}
+                  onChange={(event) =>
+                    updatePhotoVisibility(photo.id, {
+                      featured: Boolean(photo.featured),
+                      published: event.target.checked,
+                    }).then(refresh)
+                  }
+                  type="checkbox"
+                />
+                Published
+              </label>
+              <label>
+                <input
+                  checked={Boolean(photo.featured)}
+                  onChange={(event) =>
+                    updatePhotoVisibility(photo.id, {
+                      featured: event.target.checked,
+                      published: Boolean(photo.published),
+                    }).then(refresh)
+                  }
+                  type="checkbox"
+                />
+                Featured
+              </label>
             </div>
-            <label>
-              <input
-                checked={Boolean(photo.published)}
-                onChange={(event) =>
-                  updatePhotoVisibility(photo.id, {
-                    featured: Boolean(photo.featured),
-                    published: event.target.checked,
-                  }).then(refresh)
-                }
-                type="checkbox"
-              />
-              Published
-            </label>
-            <label>
-              <input
-                checked={Boolean(photo.featured)}
-                onChange={(event) =>
-                  updatePhotoVisibility(photo.id, {
-                    featured: event.target.checked,
-                    published: Boolean(photo.published),
-                  }).then(refresh)
-                }
-                type="checkbox"
-              />
-              Featured
-            </label>
           </article>
         ))}
       </section>
@@ -584,24 +658,21 @@ function ArchivePlan() {
   return (
     <section className="archive-plan" id="archive" aria-labelledby="archive-heading">
       <div>
-        <p className="eyebrow">Architecture</p>
-        <h2 id="archive-heading">Ready for the real collection.</h2>
+        <p className="eyebrow">Archive</p>
+        <h2 id="archive-heading">Coast, altitude, and distance.</h2>
       </div>
       <div className="plan-grid">
         <article>
-          <Camera size={18} aria-hidden="true" />
-          <h3>Supabase Storage</h3>
-          <p>Store compressed uploads in the `photos` bucket and serve public transformed URLs.</p>
+          <h3>Northern Beaches</h3>
+          <p>Drone and coastal images from the beaches, headlands, pools, and ocean edges around home.</p>
         </article>
         <article>
-          <Grid3X3 size={18} aria-hidden="true" />
-          <h3>Photo Metadata</h3>
-          <p>Title, description, location, type, featured state, and publish state live in Postgres.</p>
+          <h3>Travel</h3>
+          <p>Ground and aerial frames made away from Sydney, kept simple and grouped by place.</p>
         </article>
         <article>
-          <MapPin size={18} aria-hidden="true" />
-          <h3>Location Buckets</h3>
-          <p>Public visitors only see published work, grouped into clean coastal and travel buckets.</p>
+          <h3>Prints</h3>
+          <p>A small print catalogue will come later. For now, this is a working gallery of selected images.</p>
         </article>
       </div>
     </section>

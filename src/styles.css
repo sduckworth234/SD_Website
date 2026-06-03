@@ -456,57 +456,45 @@ footer {
   position: relative;
   z-index: 1;
   display: grid;
-  width: min(1040px, 92vw);
+  width: min(980px, 90vw);
   max-height: calc(100vh - 96px);
   grid-template-rows: minmax(0, 1fr) auto;
-  background: rgba(248, 246, 240, 0.94);
+  background: rgba(248, 246, 240, 0.9);
   box-shadow: 0 24px 90px rgba(32, 29, 25, 0.28);
 }
 
 .lightbox-image {
   display: grid;
-  max-height: calc(100vh - 260px);
+  max-height: calc(100vh - 212px);
   min-height: 0;
   place-items: center;
-  background: rgba(227, 210, 188, 0.42);
-  padding: clamp(12px, 2vw, 22px);
+  background: transparent;
+  padding: clamp(10px, 1.5vw, 18px);
 }
 
 .lightbox-image img {
   width: auto;
   height: auto;
   max-width: 100%;
-  max-height: calc(100vh - 304px);
+  max-height: calc(100vh - 248px);
   object-fit: contain;
 }
 
 .lightbox-copy {
   display: grid;
-  grid-template-columns: minmax(180px, 0.55fr) minmax(220px, 1fr) auto;
-  gap: clamp(16px, 3vw, 34px);
-  align-items: end;
+  grid-template-columns: minmax(160px, 0.34fr) 1fr;
+  gap: clamp(12px, 2vw, 24px);
+  align-items: baseline;
   border-top: 1px solid var(--line);
-  padding: clamp(18px, 2.4vw, 28px);
+  padding: clamp(14px, 1.8vw, 22px);
 }
 
 .lightbox-copy h2 {
   margin-bottom: 0;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(2rem, 3vw, 3.7rem);
+  font-size: clamp(1.55rem, 2.3vw, 2.9rem);
   font-weight: 400;
   line-height: 0.95;
-}
-
-.lightbox-copy p:not(.eyebrow) {
-  margin-bottom: 0;
-  color: var(--muted);
-  line-height: 1.55;
-}
-
-.lightbox-copy small {
-  color: var(--sea);
-  text-transform: uppercase;
-  white-space: nowrap;
 }
 
 .icon-button {
@@ -579,7 +567,7 @@ footer {
 .admin-login,
 .admin-dashboard {
   display: grid;
-  gap: clamp(24px, 4vw, 52px);
+  gap: clamp(18px, 3vw, 38px);
   padding: clamp(36px, 6vw, 82px) clamp(18px, 4vw, 56px);
 }
 
@@ -630,6 +618,32 @@ footer {
   margin: 0;
   color: var(--sea);
   line-height: 1.55;
+}
+
+.admin-dashboard .location-rail {
+  position: sticky;
+  top: 83px;
+}
+
+.admin-toolbar {
+  position: sticky;
+  top: 139px;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+  border-block: 1px solid var(--line);
+  background: rgba(243, 238, 229, 0.92);
+  padding: 12px 0;
+  backdrop-filter: blur(18px);
+}
+
+.admin-toolbar span {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
 }
 
 .upload-panel {
@@ -685,6 +699,118 @@ footer {
 .admin-photo-row label {
   color: var(--muted);
   font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.admin-curation-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-auto-flow: dense;
+  grid-auto-rows: 62px;
+  gap: clamp(10px, 1.2vw, 16px);
+}
+
+.admin-curation-card {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 320px;
+  border: 1px solid var(--line);
+  background: rgba(248, 246, 240, 0.42);
+}
+
+.admin-curation-card.landscape {
+  grid-column: span 4;
+  grid-row: span 7;
+}
+
+.admin-curation-card.portrait {
+  grid-column: span 3;
+  grid-row: span 9;
+}
+
+.admin-curation-card.square {
+  grid-column: span 3;
+  grid-row: span 7;
+}
+
+.admin-curation-card.wide {
+  grid-column: span 6;
+  grid-row: span 7;
+}
+
+.admin-curation-card.selected {
+  outline: 3px solid var(--sea);
+  outline-offset: -3px;
+}
+
+.admin-card-image {
+  position: relative;
+  min-height: 0;
+  background: var(--paper-deep);
+  cursor: pointer;
+  padding: 0;
+}
+
+.admin-card-image img {
+  transition: filter 160ms ease;
+}
+
+.admin-curation-card.selected .admin-card-image img {
+  filter: saturate(0.82) brightness(0.76);
+}
+
+.selection-dot {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  border: 1px solid rgba(248, 246, 240, 0.72);
+  background: rgba(32, 29, 25, 0.62);
+  color: var(--foam);
+  padding: 7px 9px;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+}
+
+.admin-card-meta {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+}
+
+.admin-card-meta span,
+.admin-card-meta small,
+.admin-card-meta label {
+  color: var(--muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.admin-card-meta strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.25rem, 1.7vw, 2rem);
+  font-weight: 400;
+  line-height: 1;
+}
+
+.admin-card-meta label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slot-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line);
+}
+
+.slot-actions button {
+  background: rgba(248, 246, 240, 0.8);
+  color: var(--ink);
+  cursor: pointer;
+  padding: 8px 6px;
+  font-size: 0.64rem;
   text-transform: uppercase;
 }
 
@@ -751,11 +877,11 @@ footer {
   }
 
   .lightbox-image {
-    max-height: calc(100vh - 268px);
+    max-height: calc(100vh - 230px);
   }
 
   .lightbox-image img {
-    max-height: calc(100vh - 306px);
+    max-height: calc(100vh - 254px);
   }
 
   .lightbox-copy {
@@ -765,6 +891,21 @@ footer {
 
   .upload-panel {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-curation-grid {
+    grid-template-columns: repeat(6, 1fr);
+    grid-auto-rows: 58px;
+  }
+
+  .admin-curation-card.landscape,
+  .admin-curation-card.portrait,
+  .admin-curation-card.square {
+    grid-column: span 3;
+  }
+
+  .admin-curation-card.wide {
+    grid-column: span 6;
   }
 
   .plan-grid article {
@@ -842,12 +983,12 @@ footer {
   }
 
   .lightbox-image {
-    max-height: calc(100vh - 246px);
+    max-height: calc(100vh - 210px);
     padding: 10px;
   }
 
   .lightbox-image img {
-    max-height: calc(100vh - 266px);
+    max-height: calc(100vh - 230px);
   }
 
   .lightbox-copy {
@@ -856,7 +997,7 @@ footer {
   }
 
   .lightbox-copy h2 {
-    font-size: clamp(1.8rem, 10vw, 2.8rem);
+    font-size: clamp(1.6rem, 8vw, 2.4rem);
   }
 
   .close-button {
@@ -865,8 +1006,23 @@ footer {
   }
 
   .upload-panel,
-  .admin-photo-row {
+  .admin-photo-row,
+  .admin-curation-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-curation-card,
+  .admin-curation-card.landscape,
+  .admin-curation-card.portrait,
+  .admin-curation-card.square,
+  .admin-curation-card.wide {
+    grid-column: auto;
+    grid-row: auto;
+    min-height: 0;
+  }
+
+  .admin-card-image {
+    height: 300px;
   }
 
   .upload-panel label:nth-child(1),
