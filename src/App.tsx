@@ -3,13 +3,13 @@ import {
   ArrowDown,
   Camera,
   EyeOff,
+  Instagram,
   LayoutDashboard,
   LayoutGrid,
   Lock,
   LogOut,
   MapPin,
   Pencil,
-  Star,
   Upload,
   UserRound,
   X,
@@ -21,9 +21,9 @@ import {
   createPhotoRecord,
   getAdminPhotos,
   getGalleryData,
+  getRecentPhotos,
   hasSupabaseEnv,
   isCurrentUserAdmin,
-  setFeatureImage,
   supabase,
   updatePhotoDetails,
   updatePhotoCuration,
@@ -90,6 +90,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [activeLocation, setActiveLocation] =
     useState<ActiveLocation>(allLocations);
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [recentPhotos, setRecentPhotos] = useState<Photo[]>([]);
   const [locations, setLocations] = useState<GalleryLocation[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
@@ -100,9 +101,10 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [isLoading, setIsLoading] = useState(true);
 
   const loadGallery = useCallback(async () => {
-    const data = await getGalleryData();
+    const [data, recent] = await Promise.all([getGalleryData(), getRecentPhotos(5)]);
     setPhotos(data.photos);
     setLocations(data.locations);
+    setRecentPhotos(recent);
   }, []);
 
   useEffect(() => {
@@ -160,9 +162,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     return photos.filter((photo) => photo.location === activeLocation);
   }, [activeLocation, photos]);
 
-  const featurePhoto = photos.find((photo) => photo.featured) ?? null;
-
-  useScrollReveal([isLoading, activeLocation, filteredPhotos.length, view, featurePhoto?.id]);
+  useScrollReveal([isLoading, activeLocation, filteredPhotos.length, view, recentPhotos.length]);
 
   return (
     <main>
@@ -173,13 +173,8 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
       />
       <Hero />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
-      {featurePhoto ? (
-        <FeatureImage
-          isAdmin={isAdmin}
-          onEditPhoto={setEditingPhoto}
-          onSelect={setSelectedPhoto}
-          photo={featurePhoto}
-        />
+      {recentPhotos.length >= 5 ? (
+        <RecentWork onSelect={setSelectedPhoto} photos={recentPhotos} />
       ) : null}
       <LocationRail
         activeLocation={activeLocation}
@@ -219,56 +214,50 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
         />
       ) : null}
       {isAboutOpen ? <AboutOverlay onClose={() => setIsAboutOpen(false)} /> : null}
+      <InstagramRail />
     </main>
   );
 }
 
-function FeatureImage({
-  isAdmin,
-  onEditPhoto,
-  onSelect,
-  photo,
-}: {
-  isAdmin: boolean;
-  onEditPhoto: (photo: Photo) => void;
-  onSelect: (photo: Photo) => void;
-  photo: Photo;
-}) {
+function InstagramRail() {
   return (
-    <section className="feature-banner scroll-reveal" aria-label="Featured photograph">
-      <div
-        className={`feature-frame${isAdmin ? " is-admin" : ""}`}
-        onClick={() => onSelect(photo)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            onSelect(photo);
-          }
-        }}
-        role="button"
-        tabIndex={0}
-      >
-        <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
-        <span className="feature-tag">
-          <MapPin size={13} aria-hidden="true" />
-          {photo.location}
-          {photo.year ? ` · ${photo.year}` : ""}
-        </span>
-        {isAdmin ? (
-          <div className="tile-admin-actions">
-            <button
-              aria-label="Edit feature image"
-              onClick={(event) => {
-                event.stopPropagation();
-                onEditPhoto(photo);
-              }}
-              title="Edit feature image"
-              type="button"
-            >
-              <Pencil size={14} aria-hidden="true" />
-            </button>
-          </div>
-        ) : null}
+    <a
+      className="ig-rail"
+      href="https://instagram.com/sam.duckworth"
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Instagram: sam.duckworth"
+    >
+      <Instagram size={16} aria-hidden="true" />
+      <span>sam.duckworth</span>
+    </a>
+  );
+}
+
+function RecentWork({
+  onSelect,
+  photos,
+}: {
+  onSelect: (photo: Photo) => void;
+  photos: Photo[];
+}) {
+  const tiles = photos.slice(0, 5);
+
+  return (
+    <section className="recent-work scroll-reveal" aria-label="Recent work">
+      <h2 className="recent-heading">Recent Work</h2>
+      <div className="recent-mosaic">
+        {tiles.map((photo, index) => (
+          <button
+            className={`recent-tile recent-tile-${index + 1} scroll-reveal`}
+            key={photo.id}
+            onClick={() => onSelect(photo)}
+            style={{ "--reveal-delay": `${index * 80}ms` } as CSSProperties}
+            type="button"
+          >
+            <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} loading="lazy" />
+          </button>
+        ))}
       </div>
     </section>
   );
@@ -736,12 +725,6 @@ function AdminDashboard({ session }: { session: Session }) {
     await refresh();
   }
 
-  async function makeFeature(photoId: string) {
-    await setFeatureImage(photoId);
-    setMessage("Set as the gallery feature image.");
-    await refresh();
-  }
-
   async function savePhotoDetails(photoId: string, formData: FormData) {
     try {
       await updatePhotoDetails(photoId, {
@@ -851,20 +834,10 @@ function AdminDashboard({ session }: { session: Session }) {
                 </span>
                 <strong>{photo.title}</strong>
                 {photo.description ? <p>{photo.description}</p> : null}
-                <small>
-                  {photo.published ? "Published" : "Draft"}
-                  {photo.featured ? " / Feature image" : ""}
-                </small>
+                <small>{photo.published ? "Published" : "Draft"}</small>
                 <div className="card-actions">
                   <button className="text-button edit-button" onClick={() => setEditingPhotoId(photo.id)} type="button">
                     <Pencil size={13} aria-hidden="true" /> Edit details
-                  </button>
-                  <button
-                    className={`text-button${photo.featured ? " is-active" : ""}`}
-                    onClick={() => makeFeature(photo.id)}
-                    type="button"
-                  >
-                    <Star size={13} aria-hidden="true" /> {photo.featured ? "Feature image" : "Set as feature"}
                   </button>
                 </div>
                 <label>
@@ -982,24 +955,18 @@ function PhotoEditOverlay({
   }, [onClose]);
 
   async function save(formData: FormData) {
-    await updatePhotoDetails(photo.id, {
-      title: String(formData.get("title") || ""),
-      description: String(formData.get("description") || ""),
-      locationId: String(formData.get("locationId") || ""),
-      year: Number(formData.get("year")) || undefined,
-      aspect: String(formData.get("aspect") || "landscape") as Photo["aspect"],
-    });
-    await onSaved();
-    onClose();
-  }
-
-  async function makeFeature() {
     try {
-      await setFeatureImage(photo.id);
-      setMessage("Set as the gallery feature image.");
+      await updatePhotoDetails(photo.id, {
+        title: String(formData.get("title") || ""),
+        description: String(formData.get("description") || ""),
+        locationId: String(formData.get("locationId") || ""),
+        year: Number(formData.get("year")) || undefined,
+        aspect: String(formData.get("aspect") || "landscape") as Photo["aspect"],
+      });
       await onSaved();
+      onClose();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not set feature.");
+      setMessage(error instanceof Error ? error.message : "Could not save changes.");
     }
   }
 
@@ -1016,10 +983,6 @@ function PhotoEditOverlay({
         <div className="edit-overlay-body">
           <p className="eyebrow">Edit photo</p>
           <PhotoEditForm locations={locations} onCancel={onClose} onSave={save} photo={photo} />
-          <button className="text-button feature-button" onClick={makeFeature} type="button">
-            <Star size={14} aria-hidden="true" />
-            {photo.featured ? "Current feature image" : "Set as feature image"}
-          </button>
           {message ? <p className="form-note">{message}</p> : null}
         </div>
       </section>

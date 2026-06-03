@@ -318,21 +318,21 @@ export async function bulkEditPhotos(
   if (error) throw error;
 }
 
-// The gallery feature image is the single published photo flagged is_featured.
-export async function setFeatureImage(photoId: string) {
-  if (!supabase) throw new Error("Supabase is not configured.");
+// Most recent published photos, for the "Recent Work" mosaic.
+export async function getRecentPhotos(limit = 5): Promise<Photo[]> {
+  if (!supabase) return [];
 
-  const { error: clearError } = await supabase
+  const { data, error } = await supabase
     .from("photos")
-    .update({ is_featured: false })
-    .eq("is_featured", true);
-  if (clearError) throw clearError;
+    .select(
+      "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)",
+    )
+    .eq("is_published", true)
+    .order("created_at", { ascending: false })
+    .limit(limit);
 
-  const { error } = await supabase
-    .from("photos")
-    .update({ is_featured: true })
-    .eq("id", photoId);
-  if (error) throw error;
+  if (error) return [];
+  return ((data ?? []) as unknown as PhotoRow[]).map(mapPhoto);
 }
 
 export async function setHeroSlot(photoId: string, slot: 1 | 2 | 3) {
