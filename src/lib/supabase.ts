@@ -318,21 +318,71 @@ export async function bulkEditPhotos(
   if (error) throw error;
 }
 
-// Most recent published photos, for the "Recent Work" mosaic.
+const RECENT_SELECT =
+  "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)";
+
+// The "Recent Work" mosaic: admin-pinned photos (is_featured) sit in their
+// chosen slot (sort_order 1..limit); any empty slots are filled with the most
+// recent published photos.
 export async function getRecentPhotos(limit = 5): Promise<Photo[]> {
   if (!supabase) return [];
 
-  const { data, error } = await supabase
-    .from("photos")
-    .select(
-      "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)",
-    )
-    .eq("is_published", true)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  const [pinnedResult, recentResult] = await Promise.all([
+    supabase
+      .from("photos")
+      .select(RECENT_SELECT)
+      .eq("is_published", true)
+      .eq("is_featured", true)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("photos")
+      .select(RECENT_SELECT)
+      .eq("is_published", true)
+      .order("created_at", { ascending: false })
+      .limit(limit * 3),
+  ]);
 
-  if (error) return [];
-  return ((data ?? []) as unknown as PhotoRow[]).map(mapPhoto);
+  const pinned = ((pinnedResult.data ?? []) as unknown as PhotoRow[]).map(mapPhoto);
+  const recent = ((recentResult.data ?? []) as unknown as PhotoRow[]).map(mapPhoto);
+
+  const slots: (Photo | null)[] = new Array(limit).fill(null);
+  for (const photo of pinned) {
+    let idx = Math.min(Math.max((photo.sortOrder ?? 1) - 1, 0), limit - 1);
+    while (idx < limit && slots[idx]) idx += 1;
+    if (idx < limit) slots[idx] = photo;
+  }
+
+  const placed = new Set(slots.filter(Boolean).map((p) => (p as Photo).id));
+  let ri = 0;
+  for (let i = 0; i < limit; i += 1) {
+    if (slots[i]) continue;
+    while (ri < recent.length && placed.has(recent[ri].id)) ri += 1;
+    if (ri < recent.length) {
+      slots[i] = recent[ri];
+      placed.add(recent[ri].id);
+      ri += 1;
+    }
+  }
+
+  return slots.filter(Boolean) as Photo[];
+}
+
+// Pin a photo into a Recent Work slot (1-based), replacing whatever was there.
+export async function assignRecentSlot(slot: number, photoId: string) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const { error: clearError } = await supabase
+    .from("photos")
+    .update({ is_featured: false })
+    .eq("is_featured", true)
+    .eq("sort_order", slot);
+  if (clearError) throw clearError;
+
+  const { error } = await supabase
+    .from("photos")
+    .update({ is_featured: true, sort_order: slot })
+    .eq("id", photoId);
+  if (error) throw error;
 }
 
 export async function setHeroSlot(photoId: string, slot: 1 | 2 | 3) {

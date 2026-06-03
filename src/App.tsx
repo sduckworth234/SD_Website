@@ -3,6 +3,7 @@ import {
   ArrowDown,
   Camera,
   EyeOff,
+  Images,
   Instagram,
   LayoutDashboard,
   LayoutGrid,
@@ -15,8 +16,9 @@ import {
   X,
 } from "lucide-react";
 import type { CSSProperties, DependencyList } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  assignRecentSlot,
   bulkEditPhotos,
   createPhotoRecord,
   getAdminPhotos,
@@ -70,6 +72,40 @@ function useScrollReveal(dependencies: DependencyList) {
   }, dependencies);
 }
 
+// Image with a shimmer skeleton + fade-in, so partially-loaded images never
+// flash in half-rendered. Skeleton is removed from the DOM once loaded.
+function SmartImage({
+  alt,
+  className,
+  src,
+}: {
+  alt: string;
+  className?: string;
+  src: string;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const ref = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (ref.current?.complete) setLoaded(true);
+  }, [src]);
+
+  return (
+    <>
+      {loaded ? null : <span className="img-skeleton" aria-hidden="true" />}
+      <img
+        alt={alt}
+        className={`smart-img${loaded ? " is-loaded" : ""}${className ? ` ${className}` : ""}`}
+        decoding="async"
+        loading="lazy"
+        onLoad={() => setLoaded(true)}
+        ref={ref}
+        src={src}
+      />
+    </>
+  );
+}
+
 function App() {
   const [route, setRoute] = useState(window.location.pathname);
 
@@ -94,6 +130,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [locations, setLocations] = useState<GalleryLocation[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
+  const [recentSlot, setRecentSlot] = useState<number | null>(null);
   const [view, setView] = useState<GalleryView>("flow");
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -174,7 +211,13 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
       <Hero />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
       {recentPhotos.length >= 5 ? (
-        <RecentWork onSelect={setSelectedPhoto} photos={recentPhotos} />
+        <RecentWork
+          isAdmin={isAdmin}
+          onChangePhoto={setRecentSlot}
+          onEditPhoto={setEditingPhoto}
+          onSelect={setSelectedPhoto}
+          photos={recentPhotos}
+        />
       ) : null}
       <LocationRail
         activeLocation={activeLocation}
@@ -214,6 +257,17 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
         />
       ) : null}
       {isAboutOpen ? <AboutOverlay onClose={() => setIsAboutOpen(false)} /> : null}
+      {recentSlot !== null ? (
+        <RecentPicker
+          onClose={() => setRecentSlot(null)}
+          onPick={async (photo) => {
+            await assignRecentSlot(recentSlot, photo.id);
+            await loadGallery();
+            setRecentSlot(null);
+          }}
+          photos={photos}
+        />
+      ) : null}
       <InstagramRail />
     </main>
   );
@@ -235,9 +289,15 @@ function InstagramRail() {
 }
 
 function RecentWork({
+  isAdmin,
+  onChangePhoto,
+  onEditPhoto,
   onSelect,
   photos,
 }: {
+  isAdmin: boolean;
+  onChangePhoto: (slot: number) => void;
+  onEditPhoto: (photo: Photo) => void;
   onSelect: (photo: Photo) => void;
   photos: Photo[];
 }) {
@@ -248,18 +308,88 @@ function RecentWork({
       <h2 className="recent-heading">Recent Work</h2>
       <div className="recent-mosaic">
         {tiles.map((photo, index) => (
-          <button
-            className={`recent-tile recent-tile-${index + 1} scroll-reveal`}
+          <div
+            className={`recent-tile recent-tile-${index + 1} scroll-reveal${isAdmin ? " is-admin" : ""}`}
             key={photo.id}
             onClick={() => onSelect(photo)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onSelect(photo);
+              }
+            }}
+            role="button"
+            tabIndex={0}
             style={{ "--reveal-delay": `${index * 80}ms` } as CSSProperties}
-            type="button"
           >
-            <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} loading="lazy" />
-          </button>
+            <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
+            {isAdmin ? (
+              <div className="tile-admin-actions">
+                <button
+                  aria-label="Edit photo details"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onEditPhoto(photo);
+                  }}
+                  title="Edit details"
+                  type="button"
+                >
+                  <Pencil size={14} aria-hidden="true" />
+                </button>
+                <button
+                  aria-label="Change photo"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onChangePhoto(index + 1);
+                  }}
+                  title="Change photo"
+                  type="button"
+                >
+                  <Images size={14} aria-hidden="true" />
+                </button>
+              </div>
+            ) : null}
+          </div>
         ))}
       </div>
     </section>
+  );
+}
+
+function RecentPicker({
+  onClose,
+  onPick,
+  photos,
+}: {
+  onClose: () => void;
+  onPick: (photo: Photo) => void;
+  photos: Photo[];
+}) {
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="lightbox" role="dialog" aria-modal="true" aria-label="Choose a photo for Recent Work">
+      <button className="lightbox-backdrop" onClick={onClose} type="button" aria-label="Close" />
+      <section className="picker-panel">
+        <button className="icon-button close-button" onClick={onClose} type="button" aria-label="Close">
+          <X size={18} aria-hidden="true" />
+        </button>
+        <p className="eyebrow">Choose a photo for Recent Work</p>
+        <div className="picker-grid">
+          {photos.map((photo) => (
+            <button className="picker-tile" key={photo.id} onClick={() => onPick(photo)} type="button">
+              <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
+            </button>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -425,7 +555,7 @@ function Gallery({
           tabIndex={0}
           style={{ "--reveal-delay": `${Math.min(index, 12) * 38}ms` } as CSSProperties}
         >
-          <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} loading="lazy" />
+          <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
           <div className="photo-meta">
             <span>
               <MapPin size={13} aria-hidden="true" />
@@ -483,7 +613,7 @@ function Lightbox({ photo, onClose }: { photo: Photo; onClose: () => void }) {
           <X size={18} aria-hidden="true" />
         </button>
         <div className="lightbox-image">
-          <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
+          <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
         </div>
         <aside className="lightbox-copy">
           <span className="lightbox-location">
@@ -816,7 +946,7 @@ function AdminDashboard({ session }: { session: Session }) {
               onClick={() => toggleSelection(photo.id)}
               type="button"
             >
-              <img src={photo.imageUrl} alt={photo.title} loading="lazy" />
+              <SmartImage src={photo.imageUrl} alt={photo.title} />
               <span className="selection-dot">{selectedPhotoIds.has(photo.id) ? "Selected" : "Select"}</span>
             </button>
             {editingPhotoId === photo.id ? (
@@ -978,7 +1108,7 @@ function PhotoEditOverlay({
           <X size={18} aria-hidden="true" />
         </button>
         <div className="edit-overlay-preview">
-          <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
+          <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
         </div>
         <div className="edit-overlay-body">
           <p className="eyebrow">Edit photo</p>
