@@ -21,8 +21,8 @@ if (locationError) throw locationError;
 
 const locationByName = new Map(locations.map((location) => [location.name, location.id]));
 const rows = manifest.map((photo) => ({
-  title: photo.title,
-  slug: photo.slug,
+  title: photo.locationName,
+  slug: `${slugify(photo.locationName) || "photo"}-${photo.slug.split("-").at(-1)}`,
   description: photo.description,
   location_id: locationByName.get(photo.locationName) ?? locationByName.get("Travels") ?? null,
   kind: photo.kind,
@@ -40,4 +40,12 @@ for (let index = 0; index < rows.length; index += 25) {
   const { error } = await supabase.from("photos").insert(chunk);
   if (error) throw error;
   console.log(`Inserted ${Math.min(index + 25, rows.length)}/${rows.length}`);
+}
+
+function slugify(value) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
