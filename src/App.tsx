@@ -12,7 +12,6 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import {
   createPhotoRecord,
-  getAdminRedirectUrl,
   getAdminPhotos,
   getGalleryData,
   hasSupabaseEnv,
@@ -324,6 +323,7 @@ function AdminNotice() {
 
 function AdminLogin() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -335,15 +335,12 @@ function AdminLogin() {
     setMessage("");
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        options: {
-          emailRedirectTo: getAdminRedirectUrl(),
-          shouldCreateUser: false,
-        },
+        password,
       });
 
-      setMessage(error ? error.message : "Check your email for the login link.");
+      setMessage(error ? error.message : "");
     } finally {
       setIsSending(false);
     }
@@ -367,8 +364,19 @@ function AdminLogin() {
             value={email}
           />
         </label>
+        <label>
+          Password
+          <input
+            autoComplete="current-password"
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="Password"
+            required
+            type="password"
+            value={password}
+          />
+        </label>
         <button className="solid-button" disabled={isSending} type="submit">
-          {isSending ? "Sending" : "Send magic link"}
+          {isSending ? "Signing in" : "Sign in"}
         </button>
         {message ? <p className="form-note">{message}</p> : null}
       </form>

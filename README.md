@@ -29,7 +29,7 @@ If you use a custom domain later, add that domain there too.
 
 ## Admin Access
 
-The `/admin` route uses Supabase magic-link auth. A signed-in user can manage
+The `/admin` route uses Supabase email/password auth. A signed-in user can manage
 photos only when their email exists in `public.admin_users`.
 
 Add yourself in Supabase SQL Editor:
@@ -40,7 +40,8 @@ values ('your-email@example.com')
 on conflict (email) do nothing;
 ```
 
-After that, visit `/admin`, request a magic link, and sign in.
+After that, create or update the matching user in Supabase
+**Authentication > Users** and set their password. Then visit `/admin` and sign in.
 
 ## Local Dev
 
