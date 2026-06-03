@@ -1,21 +1,29 @@
 export type PhotoKind = "Drone" | "Landscape" | "Travel";
 
-export type LocationBucket =
-  | "Palm Beach"
-  | "Avalon"
-  | "Whale Beach"
-  | "Narrabeen"
-  | "Manly"
-  | "Travels";
+export type LocationBucket = string;
+
+export type GalleryLocation = {
+  id: string;
+  slug: string;
+  name: string;
+  region: string;
+  description?: string | null;
+  sortOrder: number;
+};
 
 export type Photo = {
   id: string;
   title: string;
+  slug: string;
+  description?: string | null;
   location: LocationBucket;
+  locationId?: string | null;
   kind: PhotoKind;
   year: string;
   aspect: "portrait" | "landscape" | "square" | "wide";
   featured?: boolean;
+  published?: boolean;
   imageUrl: string;
   storagePath?: string;
+  sortOrder?: number;
 };

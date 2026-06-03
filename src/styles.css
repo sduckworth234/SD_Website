@@ -44,6 +44,21 @@ button {
   font: inherit;
 }
 
+input,
+select,
+textarea {
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: rgba(248, 246, 240, 0.76);
+  color: var(--ink);
+  font: inherit;
+  padding: 12px 13px;
+}
+
+textarea {
+  resize: vertical;
+}
+
 img {
   display: block;
   width: 100%;
@@ -170,7 +185,10 @@ h1 {
   position: relative;
   overflow: hidden;
   isolation: isolate;
+  border: 0;
   background: var(--paper-deep);
+  cursor: zoom-in;
+  padding: 0;
   animation: rise 780ms ease both;
 }
 
@@ -303,8 +321,12 @@ h1 {
 .photo-tile {
   position: relative;
   overflow: hidden;
+  border: 0;
   min-height: 220px;
   background: var(--paper-deep);
+  cursor: zoom-in;
+  padding: 0;
+  text-align: left;
   animation: rise 680ms ease both;
   animation-delay: var(--stagger);
 }
@@ -406,6 +428,253 @@ footer {
   text-transform: uppercase;
 }
 
+.loading-note {
+  padding: 34px clamp(18px, 4vw, 56px);
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: clamp(14px, 3vw, 34px);
+}
+
+.lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(32, 29, 25, 0.62);
+  cursor: zoom-out;
+}
+
+.lightbox-panel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: min(1180px, 100%);
+  max-height: min(820px, 92vh);
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+  background: rgba(248, 246, 240, 0.94);
+  box-shadow: 0 24px 90px rgba(32, 29, 25, 0.28);
+}
+
+.lightbox-image {
+  min-height: 46vh;
+  background: var(--paper-deep);
+}
+
+.lightbox-image img {
+  object-fit: contain;
+}
+
+.lightbox-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border-left: 1px solid var(--line);
+  padding: clamp(22px, 4vw, 42px);
+}
+
+.lightbox-copy h2 {
+  margin-bottom: 18px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.2rem, 4vw, 4.4rem);
+  font-weight: 400;
+  line-height: 0.95;
+}
+
+.lightbox-copy p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.lightbox-copy small {
+  color: var(--sea);
+  text-transform: uppercase;
+}
+
+.icon-button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: rgba(248, 246, 240, 0.82);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.close-button {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+}
+
+.admin-shell {
+  min-height: 100vh;
+  background: var(--paper);
+}
+
+.admin-header,
+.admin-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px clamp(18px, 4vw, 56px);
+  border-bottom: 1px solid var(--line);
+}
+
+.admin-header .brand {
+  background: transparent;
+  cursor: pointer;
+}
+
+.text-button,
+.solid-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.text-button {
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.solid-button {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--foam);
+  padding: 13px 16px;
+  font-size: 0.76rem;
+}
+
+.solid-button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.admin-login,
+.admin-dashboard {
+  display: grid;
+  gap: clamp(24px, 4vw, 52px);
+  padding: clamp(36px, 6vw, 82px) clamp(18px, 4vw, 56px);
+}
+
+.admin-login {
+  grid-template-columns: minmax(260px, 0.8fr) minmax(280px, 0.7fr);
+  align-items: start;
+}
+
+.admin-login h1,
+.admin-title h1 {
+  max-width: 11ch;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.8rem, 6vw, 6.6rem);
+  font-weight: 400;
+  line-height: 0.9;
+}
+
+.admin-title p:not(.eyebrow) {
+  color: var(--muted);
+}
+
+.admin-card,
+.upload-panel {
+  display: grid;
+  gap: 18px;
+  border: 1px solid var(--line);
+  background: rgba(248, 246, 240, 0.5);
+  padding: clamp(18px, 3vw, 30px);
+}
+
+.admin-card label,
+.upload-panel label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.admin-card h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 2rem;
+  font-weight: 400;
+}
+
+.form-note {
+  margin: 0;
+  color: var(--sea);
+  line-height: 1.55;
+}
+
+.upload-panel {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.upload-panel label:nth-child(1),
+.upload-panel label:nth-child(3) {
+  grid-column: span 2;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.check-row label,
+.admin-photo-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-photo-list {
+  display: grid;
+  gap: 1px;
+  background: var(--line);
+}
+
+.admin-photo-row {
+  display: grid;
+  grid-template-columns: 96px minmax(180px, 1fr) auto auto;
+  gap: 18px;
+  align-items: center;
+  background: var(--paper);
+  padding: 12px;
+}
+
+.admin-photo-row img {
+  width: 96px;
+  height: 72px;
+  background: var(--paper-deep);
+  object-fit: cover;
+}
+
+.admin-photo-row div {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-photo-row span,
+.admin-photo-row label {
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
 @keyframes rise {
   from {
     opacity: 0;
@@ -456,6 +725,20 @@ footer {
 
   .plan-grid {
     grid-template-columns: 1fr;
+  }
+
+  .lightbox-panel,
+  .admin-login {
+    grid-template-columns: 1fr;
+  }
+
+  .lightbox-copy {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .upload-panel {
+    grid-template-columns: 1fr 1fr;
   }
 
   .plan-grid article {
@@ -521,5 +804,20 @@ footer {
 
   footer {
     flex-direction: column;
+  }
+
+  .upload-panel,
+  .admin-photo-row {
+    grid-template-columns: 1fr;
+  }
+
+  .upload-panel label:nth-child(1),
+  .upload-panel label:nth-child(3) {
+    grid-column: auto;
+  }
+
+  .admin-photo-row img {
+    width: 100%;
+    height: 220px;
   }
 }

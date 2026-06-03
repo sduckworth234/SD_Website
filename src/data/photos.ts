@@ -1,4 +1,4 @@
-import type { LocationBucket, Photo } from "../types";
+import type { GalleryLocation, LocationBucket, Photo } from "../types";
 
 export const locationBuckets: LocationBucket[] = [
   "Palm Beach",
@@ -9,10 +9,22 @@ export const locationBuckets: LocationBucket[] = [
   "Travels",
 ];
 
+export const fallbackLocations: GalleryLocation[] = locationBuckets.map(
+  (name, index) => ({
+    id: name.toLowerCase().replace(/\s+/g, "-"),
+    slug: name.toLowerCase().replace(/\s+/g, "-"),
+    name,
+    region: name === "Travels" ? "Elsewhere" : "Northern Beaches",
+    sortOrder: (index + 1) * 10,
+  }),
+);
+
 export const photos: Photo[] = [
   {
     id: "palm-beach-tide-lines",
     title: "Tide Lines",
+    slug: "tide-lines",
+    description: "Early water lines cutting across the sand at first light.",
     location: "Palm Beach",
     kind: "Drone",
     year: "2026",
@@ -25,6 +37,8 @@ export const photos: Photo[] = [
   {
     id: "avalon-green-room",
     title: "Green Room",
+    slug: "green-room",
+    description: "A clean wall of green water before it folds into shore.",
     location: "Avalon",
     kind: "Drone",
     year: "2025",
@@ -37,6 +51,8 @@ export const photos: Photo[] = [
   {
     id: "whale-beach-sand-map",
     title: "Sand Map",
+    slug: "sand-map",
+    description: "Tide, reef, and sand forming a temporary coastal drawing.",
     location: "Whale Beach",
     kind: "Drone",
     year: "2025",
@@ -49,6 +65,8 @@ export const photos: Photo[] = [
   {
     id: "narrabeen-lagoon-still",
     title: "Lagoon Still",
+    slug: "lagoon-still",
+    description: "A quiet ground frame near the lagoon edge.",
     location: "Narrabeen",
     kind: "Landscape",
     year: "2024",
@@ -60,6 +78,8 @@ export const photos: Photo[] = [
   {
     id: "manly-ocean-pool",
     title: "Ocean Pool",
+    slug: "ocean-pool",
+    description: "Saltwater geometry against the edge of the beach.",
     location: "Manly",
     kind: "Drone",
     year: "2025",
@@ -71,6 +91,8 @@ export const photos: Photo[] = [
   {
     id: "travels-ridge-light",
     title: "Ridge Light",
+    slug: "ridge-light",
+    description: "A travel frame from the ridge line after weather moved through.",
     location: "Travels",
     kind: "Travel",
     year: "2023",
@@ -82,6 +104,8 @@ export const photos: Photo[] = [
   {
     id: "avalon-rock-shelf",
     title: "Rock Shelf",
+    slug: "rock-shelf",
+    description: "Low-tide shelf and sandstone texture.",
     location: "Avalon",
     kind: "Landscape",
     year: "2024",
@@ -93,6 +117,8 @@ export const photos: Photo[] = [
   {
     id: "palm-beach-barrenjoey",
     title: "Barrenjoey",
+    slug: "barrenjoey",
+    description: "Headland, water, and the northern edge of the beaches.",
     location: "Palm Beach",
     kind: "Drone",
     year: "2026",
@@ -104,6 +130,8 @@ export const photos: Photo[] = [
   {
     id: "travels-desert-track",
     title: "Desert Track",
+    slug: "desert-track",
+    description: "A dry travel frame from the road.",
     location: "Travels",
     kind: "Travel",
     year: "2024",
@@ -115,6 +143,8 @@ export const photos: Photo[] = [
   {
     id: "narrabeen-evening-set",
     title: "Evening Set",
+    slug: "evening-set",
+    description: "Evening swell lines arriving in sets.",
     location: "Narrabeen",
     kind: "Drone",
     year: "2025",
@@ -126,6 +156,8 @@ export const photos: Photo[] = [
   {
     id: "manly-ferry-wake",
     title: "Ferry Wake",
+    slug: "ferry-wake",
+    description: "A soft wake across open water.",
     location: "Manly",
     kind: "Landscape",
     year: "2025",
@@ -137,6 +169,8 @@ export const photos: Photo[] = [
   {
     id: "whale-beach-crescent",
     title: "Crescent",
+    slug: "crescent",
+    description: "Curve of beach and ocean from above.",
     location: "Whale Beach",
     kind: "Drone",
     year: "2025",
