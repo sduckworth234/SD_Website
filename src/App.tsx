@@ -1,6 +1,7 @@
 import type { Session } from "@supabase/supabase-js";
 import {
-  ArrowUpRight,
+  ArrowDown,
+  Camera,
   Lock,
   LogOut,
   MapPin,
@@ -26,6 +27,8 @@ import type { GalleryLocation, LocationBucket, Photo } from "./types";
 
 const allLocations = "All work";
 type ActiveLocation = LocationBucket | typeof allLocations;
+
+type GalleryView = "flow" | "box";
 
 function useScrollReveal(dependencies: DependencyList) {
   useEffect(() => {
@@ -82,6 +85,8 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [locations, setLocations] = useState<GalleryLocation[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [view, setView] = useState<GalleryView>("flow");
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -92,8 +97,6 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
       })
       .finally(() => setIsLoading(false));
   }, []);
-
-  const featuredPhotos = photos.filter((photo) => photo.featured).slice(0, 3);
 
   useEffect(() => {
     if (
@@ -109,21 +112,15 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     return photos.filter((photo) => photo.location === activeLocation);
   }, [activeLocation, photos]);
 
-  useScrollReveal([isLoading, activeLocation, filteredPhotos.length]);
+  useScrollReveal([isLoading, activeLocation, filteredPhotos.length, view]);
 
   return (
     <main>
-      <Header onNavigate={onNavigate} />
-      <Hero featuredPhotos={featuredPhotos} onSelectPhoto={setSelectedPhoto} />
+      <Header onNavigate={onNavigate} onOpenAbout={() => setIsAboutOpen(true)} />
+      <Hero />
       <section className="intro-panel scroll-reveal" id="galleries" aria-labelledby="gallery-heading">
-        <div>
-          <p className="eyebrow">Northern Beaches / Travel</p>
-          <h2 id="gallery-heading">A quiet archive for coast, altitude, and light.</h2>
-        </div>
-        <p>
-          Built as a gallery first: fast browsing, location buckets, flexible
-          image ratios, and a Supabase-backed archive for the full collection.
-        </p>
+        <p className="eyebrow">Gallery</p>
+        <h2 id="gallery-heading">Coast, altitude, and light.</h2>
       </section>
       <LocationRail
         activeLocation={activeLocation}
@@ -134,18 +131,35 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
       {isLoading ? (
         <p className="loading-note">Loading gallery</p>
       ) : (
-        <Gallery photos={filteredPhotos} onSelectPhoto={setSelectedPhoto} />
+        <>
+          <GalleryControls
+            count={filteredPhotos.length}
+            onChange={setView}
+            view={view}
+          />
+          <Gallery
+            onSelectPhoto={setSelectedPhoto}
+            photos={filteredPhotos}
+            view={view}
+          />
+        </>
       )}
-      <ArchivePlan />
       <Footer />
       {selectedPhoto ? (
         <Lightbox photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
       ) : null}
+      {isAboutOpen ? <AboutOverlay onClose={() => setIsAboutOpen(false)} /> : null}
     </main>
   );
 }
 
-function Header({ onNavigate }: { onNavigate: (route: string) => void }) {
+function Header({
+  onNavigate,
+  onOpenAbout,
+}: {
+  onNavigate: (route: string) => void;
+  onOpenAbout: () => void;
+}) {
   function openAdmin(event: React.MouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
     window.history.pushState({}, "", "/admin");
@@ -159,7 +173,9 @@ function Header({ onNavigate }: { onNavigate: (route: string) => void }) {
       </a>
       <nav aria-label="Primary navigation">
         <a href="#galleries">Galleries</a>
-        <a href="#about">About Me</a>
+        <button className="nav-button" onClick={onOpenAbout} type="button">
+          About Me
+        </button>
         <a href="/admin" onClick={openAdmin}>
           Admin
         </a>
@@ -168,64 +184,24 @@ function Header({ onNavigate }: { onNavigate: (route: string) => void }) {
   );
 }
 
-function Hero({
-  featuredPhotos,
-  onSelectPhoto,
-}: {
-  featuredPhotos: Photo[];
-  onSelectPhoto: (photo: Photo) => void;
-}) {
-  const flagshipPhoto =
-    featuredPhotos.find((photo) => photo.aspect === "portrait") ?? featuredPhotos[0];
-  const floatingPhotos = featuredPhotos
-    .filter((photo) => photo.id !== flagshipPhoto?.id)
-    .slice(0, 2);
-
+function Hero() {
   return (
     <section className="hero landing-stage" id="top" aria-label="Sam Duckworth Photography">
       <div className="landing-loader" aria-hidden="true">
         <span />
       </div>
-      <div className="hero-copy landing-copy scroll-reveal is-visible">
-        <p className="eyebrow">White light / coastal archive</p>
+      <div className="landing-copy scroll-reveal is-visible">
+        <p className="eyebrow">My Photography Gallery</p>
         <h1>Sam Duckworth Photography.</h1>
         <p>
           Northern Beaches drone and travel photography, collected into a quiet
           image-first gallery.
         </p>
-        <a className="hero-link" href="#galleries">
-          Scroll down to dive in <ArrowUpRight size={16} aria-hidden="true" />
-        </a>
       </div>
-      <div className="landing-art" aria-label="Flagship photo selection">
-        {flagshipPhoto ? (
-          <button
-            className="flagship-photo scroll-reveal is-visible"
-            onClick={() => onSelectPhoto(flagshipPhoto)}
-            type="button"
-          >
-            <img
-              src={flagshipPhoto.imageUrl}
-              alt={`${flagshipPhoto.title}, ${flagshipPhoto.location}`}
-            />
-            <div>
-              <span>{flagshipPhoto.location}</span>
-              {flagshipPhoto.year ? <small>{flagshipPhoto.year}</small> : null}
-            </div>
-          </button>
-        ) : null}
-        {floatingPhotos.map((photo, index) => (
-          <button
-            className={`floating-photo floating-photo-${index + 1} scroll-reveal is-visible`}
-            key={photo.id}
-            onClick={() => onSelectPhoto(photo)}
-            style={{ "--reveal-delay": `${420 + index * 140}ms` } as CSSProperties}
-            type="button"
-          >
-            <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
-          </button>
-        ))}
-      </div>
+      <a className="scroll-cue" href="#galleries" aria-label="Scroll down to the gallery">
+        <span>Scroll</span>
+        <ArrowDown size={18} aria-hidden="true" />
+      </a>
     </section>
   );
 }
@@ -268,21 +244,59 @@ function LocationRail({
   );
 }
 
+function GalleryControls({
+  count,
+  onChange,
+  view,
+}: {
+  count: number;
+  onChange: (view: GalleryView) => void;
+  view: GalleryView;
+}) {
+  return (
+    <div className="gallery-controls">
+      <span className="gallery-count">
+        {count} {count === 1 ? "photograph" : "photographs"}
+      </span>
+      <div className="view-toggle" role="group" aria-label="Gallery layout">
+        <button
+          aria-pressed={view === "flow"}
+          className={view === "flow" ? "active" : ""}
+          onClick={() => onChange("flow")}
+          type="button"
+        >
+          As they appear
+        </button>
+        <button
+          aria-pressed={view === "box"}
+          className={view === "box" ? "active" : ""}
+          onClick={() => onChange("box")}
+          type="button"
+        >
+          Box grid
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Gallery({
   photos,
   onSelectPhoto,
+  view,
 }: {
   photos: Photo[];
   onSelectPhoto: (photo: Photo) => void;
+  view: GalleryView;
 }) {
   return (
-    <section className="gallery" aria-label="Photography gallery">
+    <section className={`gallery view-${view}`} aria-label="Photography gallery">
       {photos.map((photo, index) => (
         <button
           className={`photo-tile ${photo.aspect} scroll-reveal`}
           key={photo.id}
           onClick={() => onSelectPhoto(photo)}
-          style={{ "--reveal-delay": `${Math.min(index, 10) * 42}ms` } as CSSProperties}
+          style={{ "--reveal-delay": `${Math.min(index, 12) * 38}ms` } as CSSProperties}
           type="button"
         >
           <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} loading="lazy" />
@@ -320,11 +334,12 @@ function Lightbox({ photo, onClose }: { photo: Photo; onClose: () => void }) {
           <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
         </div>
         <aside className="lightbox-copy">
-          <p className="eyebrow">
+          <span className="lightbox-location">
+            <MapPin size={13} aria-hidden="true" />
             {photo.location}
-            {photo.year ? ` / ${photo.year}` : ""}
-          </p>
+          </span>
           <h2>{photo.title}</h2>
+          {photo.year ? <small>{photo.year}</small> : null}
         </aside>
       </section>
     </div>
@@ -836,28 +851,41 @@ function UploadPanel({
   );
 }
 
-function ArchivePlan() {
+function AboutOverlay({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   return (
-    <section className="archive-plan scroll-reveal" id="about" aria-labelledby="about-heading">
-      <div>
-        <p className="eyebrow">About Me</p>
-        <h2 id="about-heading">Northern beaches from above and on foot.</h2>
-      </div>
-      <div className="plan-grid">
-        <article className="scroll-reveal" style={{ "--reveal-delay": "80ms" } as CSSProperties}>
-          <h3>Home Coast</h3>
-          <p>Most of this work is made around the Northern Beaches, from headlands, pools, ocean edges, and quiet stretches of coastline.</p>
-        </article>
-        <article className="scroll-reveal" style={{ "--reveal-delay": "160ms" } as CSSProperties}>
-          <h3>Drone / DSLR</h3>
-          <p>I shoot from the air and from the ground, keeping the collection focused on place, light, and clean compositions.</p>
-        </article>
-        <article className="scroll-reveal" style={{ "--reveal-delay": "240ms" } as CSSProperties}>
-          <h3>Travel</h3>
-          <p>Images from trips sit alongside the coastal work, grouped simply by location as the archive grows.</p>
-        </article>
-      </div>
-    </section>
+    <div className="about-overlay" role="dialog" aria-modal="true" aria-label="About Sam Duckworth">
+      <button className="about-backdrop" onClick={onClose} type="button" aria-label="Close" />
+      <section className="about-panel">
+        <button className="icon-button close-button" onClick={onClose} type="button" aria-label="Close">
+          <X size={18} aria-hidden="true" />
+        </button>
+        <div className="about-portrait" aria-hidden="true">
+          <Camera size={28} />
+          <span>Portrait placeholder</span>
+        </div>
+        <div className="about-copy">
+          <p className="eyebrow">About Me</p>
+          <h2>Sam Duckworth</h2>
+          <p>
+            Placeholder bio — a short introduction goes here. Northern Beaches
+            based photographer shooting coast and travel, from the air and on
+            foot.
+          </p>
+          <p>
+            More to come: a proper photo, a few lines about the work, and how to
+            get in touch.
+          </p>
+        </div>
+      </section>
+    </div>
   );
 }
 
