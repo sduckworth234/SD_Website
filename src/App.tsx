@@ -605,7 +605,7 @@ function UploadPanel({
         title: String(formData.get("title") || file.name.replace(/\.[^/.]+$/, "")),
         description: String(formData.get("description") || ""),
         locationId: String(formData.get("locationId") || ""),
-        kind: String(formData.get("kind") || "Drone") as Photo["kind"],
+        kind: "Drone",
         year: Number(formData.get("year")) || undefined,
         aspect: String(formData.get("aspect") || "landscape") as Photo["aspect"],
         storagePath,
@@ -648,14 +648,6 @@ function UploadPanel({
         </select>
       </label>
       <label>
-        Kind
-        <select name="kind" defaultValue="Drone">
-          <option>Drone</option>
-          <option>Landscape</option>
-          <option>Travel</option>
-        </select>
-      </label>
-      <label>
         Year
         <input name="year" placeholder="2026" type="number" />
       </label>
@@ -693,11 +685,11 @@ function ArchivePlan() {
       <div className="plan-grid">
         <article>
           <h3>Northern Beaches</h3>
-          <p>Drone and coastal images from the beaches, headlands, pools, and ocean edges around home.</p>
+          <p>Coastal images from the beaches, headlands, pools, and ocean edges around home.</p>
         </article>
         <article>
           <h3>Travel</h3>
-          <p>Ground and aerial frames made away from Sydney, kept simple and grouped by place.</p>
+          <p>Frames made away from Sydney, kept simple and grouped by place.</p>
         </article>
         <article>
           <h3>Prints</h3>
@@ -712,7 +704,7 @@ function Footer() {
   return (
     <footer>
       <span>SD Gallery</span>
-      <span>Drone / coast / travel</span>
+      <span>Photography by Sam Duckworth</span>
     </footer>
   );
 }
