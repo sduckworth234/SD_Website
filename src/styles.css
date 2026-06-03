@@ -250,7 +250,15 @@ nav a:hover,
   min-height: 1.6em;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  animation: loc-pulse 4.2s ease-in-out infinite;
+  animation: loc-pulse 3.2s ease-in-out infinite;
+}
+
+/* Wider than the subtitle so the ticker stays on one line, with extra
+   breathing room under the title. */
+.landing-copy p.hero-locations {
+  max-width: min(1180px, 94vw);
+  margin-top: clamp(16px, 2vw, 26px);
+  white-space: nowrap;
 }
 
 .hero-locations-set {
@@ -1581,6 +1589,13 @@ footer {
 
   .landing-copy p:not(.eyebrow) {
     font-size: 1rem;
+  }
+
+  .landing-copy p.hero-locations {
+    max-width: min(1180px, 94vw);
+    white-space: normal;
+    line-height: 2;
+    letter-spacing: 0.2em;
   }
 
   .recent-work {

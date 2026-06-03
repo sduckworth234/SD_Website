@@ -458,7 +458,7 @@ function RotatingLocations({ locations }: { locations: string[] }) {
   useEffect(() => {
     if (locations.length <= count) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const id = window.setInterval(() => setIndex((i) => i + 1), 4200);
+    const id = window.setInterval(() => setIndex((i) => i + 1), 2600);
     return () => window.clearInterval(id);
   }, [locations.length, count]);
 
