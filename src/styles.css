@@ -224,7 +224,8 @@ nav a:hover,
 .landing-copy {
   position: relative;
   z-index: 1;
-  max-width: 760px;
+  width: 100%;
+  max-width: min(1180px, 94vw);
   --reveal-distance: 18px;
 }
 
@@ -427,18 +428,11 @@ h1 {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 16px;
   max-width: 80vw;
   margin-inline: auto;
   padding: clamp(18px, 4vw, 56px) clamp(12px, 2vw, 28px) 0;
-}
-
-.gallery-count {
-  color: var(--muted);
-  font-size: 0.74rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .view-toggle {

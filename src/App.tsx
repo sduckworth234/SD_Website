@@ -229,11 +229,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
         <p className="loading-note">Loading gallery</p>
       ) : (
         <>
-          <GalleryControls
-            count={filteredPhotos.length}
-            onChange={setView}
-            view={view}
-          />
+          <GalleryControls onChange={setView} view={view} />
           <Gallery
             isAdmin={isAdmin}
             onEditPhoto={setEditingPhoto}
@@ -484,19 +480,14 @@ function LocationRail({
 }
 
 function GalleryControls({
-  count,
   onChange,
   view,
 }: {
-  count: number;
   onChange: (view: GalleryView) => void;
   view: GalleryView;
 }) {
   return (
     <div className="gallery-controls">
-      <span className="gallery-count">
-        {count} {count === 1 ? "photograph" : "photographs"}
-      </span>
       <div className="view-toggle" role="group" aria-label="Gallery layout">
         <button
           aria-label="As they appear"
