@@ -338,6 +338,7 @@ export async function getRecentPhotos(limit = 5): Promise<Photo[]> {
       .from("photos")
       .select(RECENT_SELECT)
       .eq("is_published", true)
+      .not("location_id", "is", null)
       .order("created_at", { ascending: false })
       .limit(limit * 3),
   ]);

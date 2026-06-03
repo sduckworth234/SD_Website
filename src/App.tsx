@@ -185,23 +185,30 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     await loadGallery();
   }
 
+  // Unsorted photos are kept out of the public gallery entirely (admin still
+  // sees them in the dashboard to sort/fix).
+  const publicPhotos = useMemo(
+    () => photos.filter((photo) => photo.location !== "Unsorted"),
+    [photos],
+  );
+
   useEffect(() => {
     if (
       activeLocation !== allLocations &&
-      !photos.some((photo) => photo.location === activeLocation)
+      !publicPhotos.some((photo) => photo.location === activeLocation)
     ) {
       setActiveLocation(allLocations);
     }
-  }, [activeLocation, photos]);
+  }, [activeLocation, publicPhotos]);
 
   const filteredPhotos = useMemo(() => {
-    if (activeLocation === allLocations) return photos;
-    return photos.filter((photo) => photo.location === activeLocation);
-  }, [activeLocation, photos]);
+    if (activeLocation === allLocations) return publicPhotos;
+    return publicPhotos.filter((photo) => photo.location === activeLocation);
+  }, [activeLocation, publicPhotos]);
 
   // Real shoot locations (in curated order) for the hero's rotating ticker.
   const locationNames = useMemo(() => {
-    const present = new Set(photos.map((photo) => photo.location));
+    const present = new Set(publicPhotos.map((photo) => photo.location));
     const ordered = locations
       .map((location) => location.name)
       .filter((name) => present.has(name) && name !== "Unsorted");
@@ -209,7 +216,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
       (name) => name && name !== "Unsorted" && !locations.some((l) => l.name === name),
     );
     return [...ordered, ...extra];
-  }, [photos, locations]);
+  }, [publicPhotos, locations]);
 
   useScrollReveal([isLoading, activeLocation, filteredPhotos.length, view, recentPhotos.length]);
 
@@ -235,7 +242,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
         activeLocation={activeLocation}
         excludeUnsorted
         locations={locations}
-        photos={photos}
+        photos={publicPhotos}
         onChange={setActiveLocation}
       />
       {isLoading ? (
