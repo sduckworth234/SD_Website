@@ -174,7 +174,12 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
       <Hero />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
       {featurePhoto ? (
-        <FeatureImage onSelect={setSelectedPhoto} photo={featurePhoto} />
+        <FeatureImage
+          isAdmin={isAdmin}
+          onEditPhoto={setEditingPhoto}
+          onSelect={setSelectedPhoto}
+          photo={featurePhoto}
+        />
       ) : null}
       <LocationRail
         activeLocation={activeLocation}
@@ -219,18 +224,29 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
 }
 
 function FeatureImage({
+  isAdmin,
+  onEditPhoto,
   onSelect,
   photo,
 }: {
+  isAdmin: boolean;
+  onEditPhoto: (photo: Photo) => void;
   onSelect: (photo: Photo) => void;
   photo: Photo;
 }) {
   return (
     <section className="feature-banner scroll-reveal" aria-label="Featured photograph">
-      <button
-        className="feature-frame"
+      <div
+        className={`feature-frame${isAdmin ? " is-admin" : ""}`}
         onClick={() => onSelect(photo)}
-        type="button"
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onSelect(photo);
+          }
+        }}
+        role="button"
+        tabIndex={0}
       >
         <img src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
         <span className="feature-tag">
@@ -238,7 +254,22 @@ function FeatureImage({
           {photo.location}
           {photo.year ? ` · ${photo.year}` : ""}
         </span>
-      </button>
+        {isAdmin ? (
+          <div className="tile-admin-actions">
+            <button
+              aria-label="Edit feature image"
+              onClick={(event) => {
+                event.stopPropagation();
+                onEditPhoto(photo);
+              }}
+              title="Edit feature image"
+              type="button"
+            >
+              <Pencil size={14} aria-hidden="true" />
+            </button>
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }

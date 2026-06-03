@@ -131,10 +131,17 @@ main {
 
 nav {
   display: flex;
+  align-items: center;
   gap: clamp(14px, 3vw, 34px);
   color: var(--muted);
   font-size: 0.78rem;
   text-transform: uppercase;
+}
+
+nav a,
+.nav-button {
+  display: inline-flex;
+  align-items: center;
 }
 
 nav a,
@@ -755,7 +762,7 @@ footer {
 
 /* Admin-selectable feature image — wide cinematic banner above the gallery */
 .feature-banner {
-  padding: clamp(28px, 6vw, 88px) clamp(18px, 4vw, 56px) clamp(8px, 2vw, 24px);
+  padding: clamp(28px, 6vw, 72px) clamp(18px, 4vw, 56px);
   --reveal-distance: 30px;
   --reveal-scale: 0.985;
 }
