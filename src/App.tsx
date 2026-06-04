@@ -1395,8 +1395,8 @@ function AboutOverlay({ onClose }: { onClose: () => void }) {
             Northern Beaches.
           </p>
           <p>
-            Ten years behind the drone — shooting the coastline from the air and
-            on foot.
+            With ten years of experience, I have a passion for aerial and
+            landscape photography.
           </p>
         </div>
       </section>
