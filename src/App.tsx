@@ -45,6 +45,18 @@ type ActiveLocation = LocationBucket | typeof allLocations;
 
 type GalleryView = "flow" | "box";
 
+// Pick a pseudo-random landing category, avoiding the one shown last time so
+// reloads cycle through the locations rather than repeating.
+function pickLandingLocation(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? allLocations;
+  let last = "";
+  try { last = window.localStorage.getItem("sd_last_location") ?? ""; } catch { /* ignore */ }
+  const pool = names.filter((name) => name !== last);
+  const choice = pool[Math.floor(Math.random() * pool.length)] ?? names[0];
+  try { window.localStorage.setItem("sd_last_location", choice); } catch { /* ignore */ }
+  return choice;
+}
+
 function useScrollReveal(dependencies: DependencyList) {
   useEffect(() => {
     const elements = Array.from(
@@ -227,23 +239,16 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     return [...ordered, ...extra];
   }, [publicPhotos, locations]);
 
-  // "All work" is admin-only; the public always browses one category at a time.
-  const publicView = adminChecked && !isAdmin;
-
+  // There's no "All work" view — the gallery always shows one category. On load
+  // (or if the active category vanished) land on a pseudo-random one.
   useEffect(() => {
-    // A selected category that no longer has photos falls back to "All work"…
-    if (
+    const valid =
       activeLocation !== allLocations &&
-      !publicPhotos.some((photo) => photo.location === activeLocation)
-    ) {
-      setActiveLocation(allLocations);
-      return;
+      publicPhotos.some((photo) => photo.location === activeLocation);
+    if (!valid && locationNames.length) {
+      setActiveLocation(pickLandingLocation(locationNames));
     }
-    // …but the public never sits on "All work" — land them on the first category.
-    if (publicView && activeLocation === allLocations && locationNames.length) {
-      setActiveLocation(locationNames[0]);
-    }
-  }, [activeLocation, publicPhotos, publicView, locationNames]);
+  }, [activeLocation, publicPhotos, locationNames]);
 
   const filteredPhotos = useMemo(() => {
     if (activeLocation === allLocations) return publicPhotos;
@@ -255,7 +260,6 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
   return (
     <main>
       <Header
-        isAdmin={isAdmin}
         isScrolled={isScrolled}
         onNavigate={onNavigate}
         onOpenAbout={() => setIsAboutOpen(true)}
@@ -274,7 +278,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
       <LocationRail
         activeLocation={activeLocation}
         excludeUnsorted
-        includeAllWork={isAdmin}
+        includeAllWork={false}
         locations={locations}
         photos={publicPhotos}
         onChange={setActiveLocation}
@@ -445,12 +449,10 @@ function RecentPicker({
 }
 
 function Header({
-  isAdmin,
   isScrolled,
   onNavigate,
   onOpenAbout,
 }: {
-  isAdmin: boolean;
   isScrolled: boolean;
   onNavigate: (route: string) => void;
   onOpenAbout: () => void;
@@ -468,14 +470,7 @@ function Header({
       </a>
       <nav aria-label="Primary navigation">
         <a href="#galleries">Galleries</a>
-        {/* About Me is paused for the public (placeholder content); admins can
-            still open it to preview/edit. */}
-        <button
-          className="nav-button"
-          disabled={!isAdmin}
-          onClick={isAdmin ? onOpenAbout : undefined}
-          type="button"
-        >
+        <button className="nav-button" onClick={onOpenAbout} type="button">
           About Me
         </button>
         <a className="nav-icon" href="/admin" onClick={openAdmin} aria-label="Admin sign in" title="Admin">
@@ -1390,19 +1385,18 @@ function AboutOverlay({ onClose }: { onClose: () => void }) {
         </button>
         <div className="about-portrait" aria-hidden="true">
           <Camera size={28} />
-          <span>Portrait placeholder</span>
+          <span>Photo coming soon</span>
         </div>
         <div className="about-copy">
           <p className="eyebrow">About Me</p>
           <h2>Sam Duckworth</h2>
           <p>
-            Placeholder bio — a short introduction goes here. Northern Beaches
-            based photographer shooting coast and travel, from the air and on
-            foot.
+            Photographer and videographer, born in Manly and based on Sydney's
+            Northern Beaches.
           </p>
           <p>
-            More to come: a proper photo, a few lines about the work, and how to
-            get in touch.
+            Ten years behind the drone — shooting the coastline from the air and
+            on foot.
           </p>
         </div>
       </section>
