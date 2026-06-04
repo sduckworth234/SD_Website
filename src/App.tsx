@@ -255,6 +255,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
   return (
     <main>
       <Header
+        isAdmin={isAdmin}
         isScrolled={isScrolled}
         onNavigate={onNavigate}
         onOpenAbout={() => setIsAboutOpen(true)}
@@ -444,10 +445,12 @@ function RecentPicker({
 }
 
 function Header({
+  isAdmin,
   isScrolled,
   onNavigate,
   onOpenAbout,
 }: {
+  isAdmin: boolean;
   isScrolled: boolean;
   onNavigate: (route: string) => void;
   onOpenAbout: () => void;
@@ -465,7 +468,14 @@ function Header({
       </a>
       <nav aria-label="Primary navigation">
         <a href="#galleries">Galleries</a>
-        <button className="nav-button" onClick={onOpenAbout} type="button">
+        {/* About Me is paused for the public (placeholder content); admins can
+            still open it to preview/edit. */}
+        <button
+          className="nav-button"
+          disabled={!isAdmin}
+          onClick={isAdmin ? onOpenAbout : undefined}
+          type="button"
+        >
           About Me
         </button>
         <a className="nav-icon" href="/admin" onClick={openAdmin} aria-label="Admin sign in" title="Admin">
