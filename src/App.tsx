@@ -295,27 +295,32 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
       />
       <Hero locations={locationNames} />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
-      {recentPhotos.length >= 5 ? (
-        <RecentWork
-          isAdmin={isAdmin}
-          onChangePhoto={setRecentSlot}
-          onEditPhoto={setEditingPhoto}
-          onSelect={setSelectedPhoto}
-          photos={recentPhotos}
-        />
-      ) : null}
-      <LocationRail
-        activeLocation={activeLocation}
-        excludeUnsorted
-        includeAllWork={false}
-        locations={locations}
-        photos={publicPhotos}
-        onChange={setActiveLocation}
-      />
       {isLoading ? (
-        <GalleryLoader />
+        <>
+          <RecentWorkSkeleton />
+          <LocationRailSkeleton />
+          <GalleryControls onChange={setView} view={view} />
+          <GallerySkeleton view={view} />
+        </>
       ) : (
         <>
+          {recentPhotos.length >= 5 ? (
+            <RecentWork
+              isAdmin={isAdmin}
+              onChangePhoto={setRecentSlot}
+              onEditPhoto={setEditingPhoto}
+              onSelect={setSelectedPhoto}
+              photos={recentPhotos}
+            />
+          ) : null}
+          <LocationRail
+            activeLocation={activeLocation}
+            excludeUnsorted
+            includeAllWork={false}
+            locations={locations}
+            photos={publicPhotos}
+            onChange={setActiveLocation}
+          />
           <GalleryControls onChange={setView} view={view} />
           <Gallery
             isAdmin={isAdmin}
@@ -638,19 +643,60 @@ function GalleryControls({
   );
 }
 
-function GalleryLoader() {
+// Minimal skeleton placeholder that mirrors the gallery grid while photos load.
+// Just shimmering tiles — no imagery. Box view = uniform tiles; flow view = varied
+// heights so the masonry reads like real photos.
+const SKELETON_FLOW_RATIOS = ["3 / 4", "4 / 3", "1 / 1", "5 / 7", "4 / 5", "3 / 2", "16 / 10", "2 / 3", "1 / 1"];
+
+function GallerySkeleton({ view }: { view: GalleryView }) {
+  const count = view === "box" ? 9 : SKELETON_FLOW_RATIOS.length;
   return (
-    <section className="gallery-loader" aria-label="Preparing gallery">
-      <div className="loader-orbit" aria-hidden="true">
-        {Array.from({ length: 9 }, (_, index) => (
-          <span
-            className={`loader-frame loader-frame-${index + 1}`}
-            key={index}
-            style={{ "--loader-index": index } as CSSProperties}
-          />
+    <section
+      className={`gallery view-${view} is-skeleton`}
+      role="status"
+      aria-label="Loading gallery"
+    >
+      {Array.from({ length: count }, (_, index) => (
+        <div
+          className="skeleton-tile"
+          key={index}
+          aria-hidden="true"
+          style={
+            view === "flow"
+              ? ({ aspectRatio: SKELETON_FLOW_RATIOS[index] } as CSSProperties)
+              : undefined
+          }
+        />
+      ))}
+    </section>
+  );
+}
+
+// Skeleton for the Recent Work mosaic — reuses the real mosaic grid classes so
+// the placeholder sits exactly where the photos will land (no layout shift).
+function RecentWorkSkeleton() {
+  return (
+    <section className="recent-work" aria-label="Loading recent work">
+      <h2 className="recent-heading">Recent Work</h2>
+      <div className="recent-mosaic" aria-hidden="true">
+        {Array.from({ length: 5 }, (_, index) => (
+          <div className={`recent-tile recent-tile-${index + 1} skeleton-tile`} key={index} />
         ))}
       </div>
-      <p>Framing the next set</p>
+    </section>
+  );
+}
+
+// Skeleton for the location filter rail — a row of pill placeholders matching
+// the real rail's sticky bar and button sizing.
+const SKELETON_RAIL_WIDTHS = [64, 88, 72, 96, 70, 82];
+
+function LocationRailSkeleton() {
+  return (
+    <section className="location-rail" aria-hidden="true">
+      {SKELETON_RAIL_WIDTHS.map((width, index) => (
+        <span className="rail-skeleton" key={index} style={{ width } as CSSProperties} />
+      ))}
     </section>
   );
 }
