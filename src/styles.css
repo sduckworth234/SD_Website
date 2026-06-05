@@ -1848,3 +1848,255 @@ footer {
     filter: none;
   }
 }
+
+/* ---- Map page ---- */
+.map-shell {
+  min-height: 100dvh;
+  background: var(--paper);
+}
+
+.map-stage {
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.map-intro {
+  position: absolute;
+  top: clamp(80px, 13vh, 128px);
+  left: clamp(18px, 4vw, 56px);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.map-intro h1 {
+  margin: 4px 0 0;
+  font-family: "Bebas Neue", Impact, "Arial Narrow", sans-serif;
+  font-size: clamp(1.8rem, 4vw, 3.2rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: rgba(32, 29, 25, 0.72);
+}
+
+.map-hint {
+  margin: 10px 0 0;
+  max-width: 22ch;
+  color: var(--muted);
+  font-size: 0.66rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+/* MapLibre canvas fills the stage; the fixed site header floats over its top. */
+.map-gl {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 650ms ease;
+}
+
+.map-gl.is-ready {
+  opacity: 1;
+}
+
+/* Theme MapLibre's zoom control to the site. */
+.map-stage .maplibregl-ctrl-group {
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: rgba(248, 246, 240, 0.85);
+  box-shadow: none;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.map-stage .maplibregl-ctrl-group button {
+  width: 34px;
+  height: 34px;
+}
+
+.map-stage .maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--line);
+}
+
+.map-stage .maplibregl-ctrl-attrib {
+  background: rgba(248, 246, 240, 0.7);
+  font-size: 0.62rem;
+}
+
+/* Hover preview popup. */
+.maplibregl-popup.map-pop-wrap .maplibregl-popup-content {
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: rgba(248, 246, 240, 0.97);
+  box-shadow: 0 16px 40px rgba(32, 29, 25, 0.22);
+}
+
+.maplibregl-popup.map-pop-wrap .maplibregl-popup-tip {
+  display: none;
+}
+
+.map-pop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 240px;
+  padding: 8px;
+  text-align: left;
+}
+
+.map-pop-thumb {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 54px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--paper-deep);
+}
+
+.map-pop-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.map-pop-meta {
+  display: grid;
+  gap: 3px;
+  padding-right: 6px;
+}
+
+.map-pop-meta strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.92rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.map-pop-meta small {
+  color: var(--muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Map photo lightbox: the copy block is taller here (it has a "View gallery"
+   button), so use a flex column where the image takes only the leftover space
+   above the copy and contains itself — no overflow, consistent box, any aspect. */
+.lightbox-panel.is-map {
+  display: flex;
+  flex-direction: column;
+}
+
+.lightbox-panel.is-map .lightbox-image {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+
+.lightbox-panel.is-map .lightbox-image img {
+  max-height: 100%;
+}
+
+.lightbox-panel.is-map .lightbox-copy {
+  flex: 0 0 auto;
+}
+
+.lightbox-panel.is-map .lightbox-copy .solid-button {
+  margin-top: 4px;
+}
+
+/* Loading screen shown until the first frame is computed, then it fades as the
+   map fades in. */
+.map-loading-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 16px;
+  color: var(--muted);
+}
+
+.map-loading-screen p {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.map-loading-pulse {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--sea);
+  animation: map-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes map-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+/* "View on map" button in the gallery controls */
+.map-link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  background: rgba(248, 246, 240, 0.6);
+  color: var(--muted);
+  cursor: var(--circle-cursor), pointer;
+  padding: 9px 13px;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition:
+    background 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+}
+
+.map-link-button:hover {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--foam);
+}
+
+.site-header nav .nav-link.is-active {
+  color: var(--ink);
+}
+
+@media (max-width: 720px) {
+  .map-intro {
+    top: clamp(64px, 10vh, 90px);
+    left: clamp(14px, 4vw, 24px);
+    right: clamp(14px, 4vw, 24px);
+  }
+
+  .map-intro h1 {
+    font-size: clamp(1.5rem, 6vw, 2.2rem);
+  }
+
+  .map-intro .map-hint {
+    display: none;
+  }
+
+  /* Bigger touch targets for the zoom control on phones. */
+  .map-stage .maplibregl-ctrl-group button {
+    width: 42px;
+    height: 42px;
+  }
+
+  /* Full-width gallery action so it's easy to tap. */
+  .lightbox-panel.is-map .lightbox-copy .solid-button {
+    width: 100%;
+    justify-content: center;
+  }
+}

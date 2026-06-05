@@ -29,4 +29,7 @@ export type Photo = {
   // Drone flight height in metres above the takeoff point (DJI RelativeAltitude).
   // Null/absent for non-drone photos.
   relativeAltitude?: number | null;
+  // Capture coordinates (decimal degrees). Null/absent when the source had no GPS.
+  latitude?: number | null;
+  longitude?: number | null;
 };

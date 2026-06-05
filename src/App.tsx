@@ -5,6 +5,7 @@ import {
   ArrowUpToLine,
   Camera,
   EyeOff,
+  Globe,
   Images,
   Instagram,
   LayoutDashboard,
@@ -16,11 +17,10 @@ import {
   Plus,
   Trash2,
   Upload,
-  UserRound,
   X,
 } from "lucide-react";
 import type { CSSProperties, DependencyList } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   assignRecentSlot,
   bulkEditPhotos,
@@ -40,6 +40,11 @@ import {
   uploadPhotoAsset,
 } from "./lib/supabase";
 import type { GalleryLocation, LocationBucket, Photo } from "./types";
+import { Header } from "./components/Header";
+import { SmartImage } from "./components/SmartImage";
+
+// Lazy-loaded so MapLibre + the basemap stay out of the main gallery bundle.
+const MapPage = lazy(() => import("./MapPage"));
 
 const allLocations = "All work";
 type ActiveLocation = LocationBucket | typeof allLocations;
@@ -56,6 +61,12 @@ function pickLandingLocation(names: string[]): string {
   const choice = pool[Math.floor(Math.random() * pool.length)] ?? names[0];
   try { window.localStorage.setItem("sd_last_location", choice); } catch { /* ignore */ }
   return choice;
+}
+
+// Deep link the map's markers use: /?location=Name opens the gallery on that
+// category. Falls back to the random landing when absent or invalid.
+function readLocationParam(): string | null {
+  try { return new URLSearchParams(window.location.search).get("location"); } catch { return null; }
 }
 
 function useScrollReveal(dependencies: DependencyList) {
@@ -119,40 +130,6 @@ function AltitudeBadge({ photo }: { photo: Photo }) {
   );
 }
 
-// Image with a shimmer skeleton + fade-in, so partially-loaded images never
-// flash in half-rendered. Skeleton is removed from the DOM once loaded.
-function SmartImage({
-  alt,
-  className,
-  src,
-}: {
-  alt: string;
-  className?: string;
-  src: string;
-}) {
-  const [loaded, setLoaded] = useState(false);
-  const ref = useRef<HTMLImageElement | null>(null);
-
-  useEffect(() => {
-    if (ref.current?.complete) setLoaded(true);
-  }, [src]);
-
-  return (
-    <>
-      {loaded ? null : <span className="img-skeleton" aria-hidden="true" />}
-      <img
-        alt={alt}
-        className={`smart-img${loaded ? " is-loaded" : ""}${className ? ` ${className}` : ""}`}
-        decoding="async"
-        loading="lazy"
-        onLoad={() => setLoaded(true)}
-        ref={ref}
-        src={src}
-      />
-    </>
-  );
-}
-
 function App() {
   const [route, setRoute] = useState(window.location.pathname);
 
@@ -166,12 +143,20 @@ function App() {
     return <AdminApp onNavigate={setRoute} />;
   }
 
+  if (route.startsWith("/map")) {
+    return (
+      <Suspense fallback={<div className="map-shell map-loading" aria-label="Loading map" />}>
+        <MapPage onNavigate={setRoute} />
+      </Suspense>
+    );
+  }
+
   return <PublicGallery onNavigate={setRoute} />;
 }
 
 function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) {
   const [activeLocation, setActiveLocation] =
-    useState<ActiveLocation>(allLocations);
+    useState<ActiveLocation>(() => readLocationParam() ?? allLocations);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [recentPhotos, setRecentPhotos] = useState<Photo[]>([]);
   const [locations, setLocations] = useState<GalleryLocation[]>([]);
@@ -248,6 +233,14 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     await loadGallery();
   }
 
+  // Open the map, framed on the current category when one is selected.
+  function viewOnMap() {
+    const query =
+      activeLocation !== allLocations ? `?focus=${encodeURIComponent(activeLocation)}` : "";
+    window.history.pushState({}, "", `/map${query}`);
+    onNavigate("/map");
+  }
+
   // Unsorted photos are kept out of the public gallery entirely (admin still
   // sees them in the dashboard to sort/fix).
   const publicPhotos = useMemo(
@@ -321,7 +314,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
             photos={publicPhotos}
             onChange={setActiveLocation}
           />
-          <GalleryControls onChange={setView} view={view} />
+          <GalleryControls onChange={setView} onViewOnMap={viewOnMap} view={view} />
           <Gallery
             isAdmin={isAdmin}
             onEditPhoto={setEditingPhoto}
@@ -483,39 +476,6 @@ function RecentPicker({
   );
 }
 
-function Header({
-  isScrolled,
-  onNavigate,
-  onOpenAbout,
-}: {
-  isScrolled: boolean;
-  onNavigate: (route: string) => void;
-  onOpenAbout: () => void;
-}) {
-  function openAdmin(event: React.MouseEvent<HTMLAnchorElement>) {
-    event.preventDefault();
-    window.history.pushState({}, "", "/admin");
-    onNavigate("/admin");
-  }
-
-  return (
-    <header className={`site-header${isScrolled ? " is-visible" : ""}`}>
-      <a className="brand" href="#top" aria-label="SD Gallery home">
-        SD
-      </a>
-      <nav aria-label="Primary navigation">
-        <a href="#galleries">Galleries</a>
-        <button className="nav-button" onClick={onOpenAbout} type="button">
-          About Me
-        </button>
-        <a className="nav-icon" href="/admin" onClick={openAdmin} aria-label="Admin sign in" title="Admin">
-          <UserRound size={18} aria-hidden="true" />
-        </a>
-      </nav>
-    </header>
-  );
-}
-
 function Hero({ locations }: { locations: string[] }) {
   return (
     <section className="hero landing-stage" id="top" aria-label="Sam Duckworth Photography">
@@ -610,13 +570,21 @@ function LocationRail({
 
 function GalleryControls({
   onChange,
+  onViewOnMap,
   view,
 }: {
   onChange: (view: GalleryView) => void;
+  onViewOnMap?: () => void;
   view: GalleryView;
 }) {
   return (
     <div className="gallery-controls">
+      {onViewOnMap ? (
+        <button className="map-link-button" onClick={onViewOnMap} type="button">
+          <Globe size={14} aria-hidden="true" />
+          View on map
+        </button>
+      ) : null}
       <div className="view-toggle" role="group" aria-label="Gallery layout">
         <button
           aria-label="As they appear"
