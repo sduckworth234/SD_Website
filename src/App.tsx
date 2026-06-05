@@ -35,6 +35,7 @@ import {
   photoBucket,
   isCurrentUserAdmin,
   sendPhotoToTop,
+  setLocationFeedOrder,
   setMapFeature,
   supabase,
   updatePhotoDetails,
@@ -353,7 +354,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
               photos={recentPhotos}
             />
           ) : null}
-          <MapPromo photos={publicPhotos} onOpen={goToMap} />
+          <MapPromo photos={publicPhotos} locations={locations} onOpen={goToMap} />
           <LocationRail
             activeLocation={activeLocation}
             excludeUnsorted
@@ -627,42 +628,65 @@ function LocationRail({
 // Slim teaser strip between Recent Work and the gallery: copy on the left, a small
 // data-driven minimap on the right that cycles a highlight through the locations.
 // Inline SVG (no MapLibre) so the home page stays light; the whole strip opens /map.
-function MapPromo({ photos, onOpen }: { photos: Photo[]; onOpen: () => void }) {
-  // One representative photo per location (prefer one with altitude), top by
-  // photo count, capped — each becomes a "drone-feed" frame: image + telemetry.
+function MapPromo({
+  photos,
+  locations,
+  onOpen,
+}: {
+  photos: Photo[];
+  locations: GalleryLocation[];
+  onOpen: () => void;
+}) {
+  // Each "drone-feed" frame is image + telemetry. If admins have chosen feature
+  // photos, the feed is exactly those (ordered by the location's feed order).
+  // Otherwise it auto-picks one landscape-first shot per location.
   const frames = useMemo(() => {
+    const usable = photos.filter(
+      (p) => p.location && p.location !== "Unsorted" && p.latitude != null && p.longitude != null && p.imageUrl,
+    );
+    const order = new Map(locations.map((l) => [l.name, l.mapFeedOrder ?? 0]));
+    const toFrame = (p: Photo) => ({
+      name: p.location,
+      lat: p.latitude as number,
+      lon: p.longitude as number,
+      alt: p.relativeAltitude ?? null,
+      image: p.storagePath ? getTransformedPublicUrl(photoBucket, p.storagePath, 640) : p.imageUrl,
+    });
+
+    const featured = usable.filter((p) => p.mapFeature);
+    if (featured.length) {
+      return featured
+        .sort(
+          (a, b) =>
+            (order.get(a.location) ?? 0) - (order.get(b.location) ?? 0) ||
+            (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
+        )
+        .slice(0, 12)
+        .map(toFrame);
+    }
+
+    // Auto fallback: one photo per location, preferring landscape (least cropped).
+    const isLandscape = (p: Photo) => p.aspect === "landscape" || p.aspect === "wide";
     const byLoc = new Map<string, Photo[]>();
-    for (const p of photos) {
-      if (!p.location || p.location === "Unsorted") continue;
-      if (p.latitude == null || p.longitude == null || !p.imageUrl) continue;
+    for (const p of usable) {
       const list = byLoc.get(p.location);
       if (list) list.push(p);
       else byLoc.set(p.location, [p]);
     }
     return [...byLoc.entries()]
-      .map(([name, list]) => {
-        const flagged = list.find((p) => p.mapFeature);
-        return {
-          name,
-          count: list.length,
-          flagged: Boolean(flagged),
-          // admin pick > a shot with altitude > first
-          sample: flagged ?? list.find((p) => p.relativeAltitude != null) ?? list[0],
-        };
-      })
-      // admin-flagged places lead the feed, then the most-shot places fill it
-      .sort((a, b) => Number(b.flagged) - Number(a.flagged) || b.count - a.count)
-      .slice(0, 10)
-      .map(({ name, sample }) => ({
+      .map(([name, list]) => ({
         name,
-        lat: sample.latitude as number,
-        lon: sample.longitude as number,
-        alt: sample.relativeAltitude ?? null,
-        image: sample.storagePath
-          ? getTransformedPublicUrl(photoBucket, sample.storagePath, 480)
-          : sample.imageUrl,
-      }));
-  }, [photos]);
+        count: list.length,
+        sample:
+          list.find((p) => isLandscape(p) && p.relativeAltitude != null) ??
+          list.find(isLandscape) ??
+          list.find((p) => p.relativeAltitude != null) ??
+          list[0],
+      }))
+      .sort((a, b) => (order.get(a.name) ?? 0) - (order.get(b.name) ?? 0) || b.count - a.count)
+      .slice(0, 10)
+      .map(({ sample }) => toFrame(sample));
+  }, [photos, locations]);
 
   const [active, setActive] = useState(0);
   const [typed, setTyped] = useState("");
@@ -725,6 +749,154 @@ function MapPromo({ photos, onOpen }: { photos: Photo[]; onOpen: () => void }) {
         <span className="map-promo-cta">View map →</span>
       </button>
     </div>
+  );
+}
+
+// Admin panel: curate the home page map-promo "drone feed" — pick which photos
+// front each place, remove them, and order which place leads.
+function MapFeedAdmin({
+  photos,
+  locations,
+  onChanged,
+}: {
+  photos: Photo[];
+  locations: GalleryLocation[];
+  onChanged: () => Promise<void> | void;
+}) {
+  const [pickId, setPickId] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  // Only published, geotagged photos can actually appear in the feed.
+  const eligible = useMemo(
+    () =>
+      photos.filter(
+        (p) => p.published && p.latitude != null && p.longitude != null && p.imageUrl && p.location && p.location !== "Unsorted",
+      ),
+    [photos],
+  );
+  const featured = useMemo(() => eligible.filter((p) => p.mapFeature), [eligible]);
+  const orderByName = useMemo(() => new Map(locations.map((l) => [l.name, l.mapFeedOrder ?? 0])), [locations]);
+  const idByName = useMemo(() => new Map(locations.map((l) => [l.name, l.id])), [locations]);
+
+  const featuredLocs = useMemo(() => {
+    const m = new Map<string, Photo[]>();
+    for (const p of featured) {
+      const list = m.get(p.location);
+      if (list) list.push(p);
+      else m.set(p.location, [p]);
+    }
+    return [...m.entries()].sort(
+      (a, b) => (orderByName.get(a[0]) ?? 0) - (orderByName.get(b[0]) ?? 0) || a[0].localeCompare(b[0]),
+    );
+  }, [featured, orderByName]);
+
+  const pickPhotos = useMemo(() => eligible.filter((p) => p.locationId === pickId), [eligible, pickId]);
+  const locationsWithPhotos = locations.filter((l) => eligible.some((p) => p.locationId === l.id));
+
+  async function toggle(photo: Photo) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await setMapFeature(photo.id, !photo.mapFeature);
+      await onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function move(index: number, dir: -1 | 1) {
+    const names = featuredLocs.map(([name]) => name);
+    const j = index + dir;
+    if (j < 0 || j >= names.length || busy) return;
+    [names[index], names[j]] = [names[j], names[index]];
+    setBusy(true);
+    try {
+      await Promise.all(
+        names.map((name, i) => {
+          const id = idByName.get(name);
+          return id ? setLocationFeedOrder(id, i + 1) : Promise.resolve();
+        }),
+      );
+      await onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="map-feed-admin" aria-label="Drone feed curation">
+      <div className="map-feed-head">
+        <p className="eyebrow">Drone feed</p>
+        <h2>Home map promo</h2>
+      </div>
+      <p className="map-feed-note">
+        Choose the photos that front each place on the home page map card, and order which place leads.
+        With nothing chosen it auto-picks a landscape shot per location.
+      </p>
+
+      <div className="map-feed-current">
+        {featuredLocs.length === 0 ? (
+          <p className="map-feed-empty">No features chosen yet — the feed is auto-picking.</p>
+        ) : (
+          featuredLocs.map(([name, pics], i) => (
+            <div className="map-feed-loc" key={name}>
+              <div className="map-feed-loc-head">
+                <span className="map-feed-rank">{i + 1}</span>
+                <strong>{name}</strong>
+                <div className="map-feed-move">
+                  <button type="button" disabled={i === 0 || busy} onClick={() => move(i, -1)} aria-label={`Move ${name} earlier`}>
+                    ↑
+                  </button>
+                  <button type="button" disabled={i === featuredLocs.length - 1 || busy} onClick={() => move(i, 1)} aria-label={`Move ${name} later`}>
+                    ↓
+                  </button>
+                </div>
+              </div>
+              <div className="map-feed-thumbs">
+                {pics.map((p) => (
+                  <button className="map-feed-thumb is-on" key={p.id} type="button" onClick={() => toggle(p)} title="Remove from feed">
+                    <SmartImage src={p.imageUrl} alt={p.title} />
+                    <span className="map-feed-badge remove"><X size={12} aria-hidden="true" /></span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <label className="map-feed-picker-label">
+        Add from a location
+        <select value={pickId} onChange={(e) => setPickId(e.target.value)}>
+          <option value="">Choose a location…</option>
+          {locationsWithPhotos.map((l) => (
+            <option key={l.id} value={l.id}>{l.name}</option>
+          ))}
+        </select>
+      </label>
+      {pickId ? (
+        <div className="map-feed-grid">
+          {pickPhotos.length === 0 ? (
+            <p className="map-feed-empty">No eligible (published, geotagged) photos here.</p>
+          ) : (
+            pickPhotos.map((p) => (
+              <button
+                className={`map-feed-thumb${p.mapFeature ? " is-on" : ""}`}
+                key={p.id}
+                type="button"
+                onClick={() => toggle(p)}
+                title={p.mapFeature ? "Remove from feed" : "Add to feed"}
+              >
+                <SmartImage src={p.imageUrl} alt={p.title} />
+                <span className={`map-feed-badge${p.mapFeature ? " remove" : " add"}`}>
+                  {p.mapFeature ? <X size={12} aria-hidden="true" /> : <Crosshair size={12} aria-hidden="true" />}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -1257,6 +1429,7 @@ function AdminDashboard({ session }: { session: Session }) {
       </div>
       <UploadPanel locations={locations} onUploaded={refresh} setMessage={setMessage} />
       {message ? <p className="form-note">{message}</p> : null}
+      <MapFeedAdmin photos={adminPhotos} locations={locations} onChanged={refresh} />
       <LocationRail
         activeLocation={activeLocation}
         locations={locations}

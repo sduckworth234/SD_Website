@@ -1131,6 +1131,171 @@ footer {
   border-color: var(--foam);
 }
 
+/* ---- Admin: drone-feed curation panel ---- */
+.map-feed-admin {
+  margin: 8px 0 4px;
+  padding: clamp(18px, 2.4vw, 28px);
+  border: 1px solid var(--line);
+  background: rgba(248, 246, 240, 0.5);
+}
+
+.map-feed-head .eyebrow {
+  color: var(--muted);
+}
+
+.map-feed-head h2 {
+  margin: 2px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.3rem;
+  font-weight: 400;
+}
+
+.map-feed-note {
+  margin: 8px 0 18px;
+  max-width: 64ch;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.map-feed-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.map-feed-current {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.map-feed-loc {
+  display: grid;
+  gap: 8px;
+}
+
+.map-feed-loc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.map-feed-loc-head strong {
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.map-feed-rank {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--sea);
+  color: var(--foam);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.map-feed-move {
+  display: inline-flex;
+  margin-left: auto;
+  border: 1px solid var(--line);
+}
+
+.map-feed-move button {
+  width: 26px;
+  height: 24px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.map-feed-move button + button {
+  border-left: 1px solid var(--line);
+}
+
+.map-feed-move button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.map-feed-thumbs,
+.map-feed-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.map-feed-grid {
+  margin-top: 12px;
+}
+
+.map-feed-thumb {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--paper-deep);
+  cursor: pointer;
+  padding: 0;
+}
+
+.map-feed-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.map-feed-thumb.is-on {
+  outline: 2px solid var(--sea);
+  outline-offset: -2px;
+}
+
+.map-feed-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: var(--foam);
+}
+
+.map-feed-badge.add {
+  background: rgba(32, 29, 25, 0.55);
+}
+
+.map-feed-badge.remove {
+  background: var(--sea);
+}
+
+.map-feed-picker-label {
+  display: grid;
+  gap: 6px;
+  max-width: 320px;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.map-feed-picker-label select {
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  background: var(--foam);
+  font-size: 0.85rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+
 .tile-admin-actions button:hover {
   background: rgba(32, 29, 25, 0.9);
 }

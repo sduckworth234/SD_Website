@@ -75,6 +75,7 @@ type LocationRow = {
   region: string;
   description: string | null;
   sort_order: number;
+  map_feed_order: number | null;
 };
 
 function publicImageUrl(row: Pick<PhotoRow, "storage_bucket" | "storage_path" | "image_url">) {
@@ -93,6 +94,7 @@ function mapLocation(row: LocationRow): GalleryLocation {
     region: row.region,
     description: row.description,
     sortOrder: row.sort_order,
+    mapFeedOrder: row.map_feed_order ?? 0,
   };
 }
 
@@ -132,7 +134,7 @@ export async function getGalleryData() {
     await Promise.all([
       supabase
         .from("locations")
-        .select("id, slug, name, region, description, sort_order")
+        .select("id, slug, name, region, description, sort_order, map_feed_order")
         .eq("is_visible", true)
         .order("sort_order", { ascending: true }),
       supabase
@@ -270,6 +272,16 @@ export async function setMapFeature(photoId: string, value: boolean) {
     .from("photos")
     .update({ is_map_feature: value })
     .eq("id", photoId);
+  if (error) throw error;
+}
+
+// Set a location's position in the map-promo feed (lower = earlier).
+export async function setLocationFeedOrder(locationId: string, order: number) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const { error } = await supabase
+    .from("locations")
+    .update({ map_feed_order: order })
+    .eq("id", locationId);
   if (error) throw error;
 }
 

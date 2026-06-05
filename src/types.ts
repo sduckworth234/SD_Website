@@ -9,6 +9,8 @@ export type GalleryLocation = {
   region: string;
   description?: string | null;
   sortOrder: number;
+  // Order of this location in the home page map-promo "drone feed".
+  mapFeedOrder?: number;
 };
 
 export type Photo = {
