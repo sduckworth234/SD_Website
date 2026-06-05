@@ -10,8 +10,9 @@ travel work). React/Vite SPA, Supabase backend (Postgres + Storage + Auth),
 deployed on Vercel at **https://samduckworth.com**.
 
 - **Stack:** React 19, Vite 6, TypeScript, `@supabase/supabase-js`,
-  `lucide-react` (icons), plain CSS (no Tailwind). `sharp` + `exif-reader` are
-  used only by the Node import scripts, not the app bundle.
+  `lucide-react` (icons), plain CSS (no Tailwind). `maplibre-gl` powers the `/map`
+  page and is **lazy-loaded** (kept out of the main gallery bundle). `sharp` +
+  `exif-reader` are used only by the Node import scripts, not the app bundle.
 - **Hosting:** Vercel, auto-deploys on push to `main`. The gallery reads
   Supabase at runtime, so **published data changes go live with no redeploy**.
 
@@ -32,30 +33,50 @@ deployed on Vercel at **https://samduckworth.com**.
 ```
 index.html            meta/title/favicon/OG tags + Google font (Bebas Neue)
 src/
-  App.tsx             the whole app — public gallery (/) + admin (/admin)
+  App.tsx             gallery (/) + admin (/admin); hand-rolled router in App()
+  MapPage.tsx         the /map page (MapLibre); lazy-loaded
+  components/         shared bits: Header.tsx (nav), SmartImage.tsx
   lib/supabase.ts     all Supabase data access (read + write helpers)
   types.ts            Photo, GalleryLocation types
   data/photos.ts      fallback data when Supabase env is absent
   styles.css          all styling
 public/               favicon.svg, apple-touch-icon.png, og-image.png
 supabase/migrations/  DB schema + RLS + storage bucket
-scripts/              import / geo / ops pipeline (Node ESM .mjs)
+scripts/              import / geo / altitude / coords / ops pipeline (Node ESM .mjs)
 ```
 
-### App.tsx components (single file)
+Routing is hand-rolled in `App()` (reads `window.location.pathname`, `popstate`,
+`history.pushState`): `/admin` → AdminApp, `/map` → lazy MapPage, else PublicGallery.
+
+### Components
 - **PublicGallery** (`/`): Hero (rotating location ticker), RecentWork mosaic,
-  LocationRail (filter tabs), GalleryControls (flow/box view toggle), Gallery,
-  Lightbox, AboutOverlay, InstagramRail. When an admin is signed in, tiles get
-  inline edit/unpublish/send-to-top and a RecentPicker.
-- **AdminApp** (`/admin`): email/password login → AdminDashboard (upload,
-  bulk publish/rename/move, per-photo edit/delete/feature, create location).
-- **SmartImage**: shimmer skeleton + fade-in so images never flash half-loaded.
+  LocationRail (filter tabs), GalleryControls (flow/box toggle + **View on map**),
+  Gallery, Lightbox, AboutOverlay, InstagramRail. Drone tiles + the lightbox show
+  a bottom-right **altitude badge** (`relative_altitude_m`). Lands on a random
+  category unless deep-linked via `/?location=Name` (used by the map). When an
+  admin is signed in, tiles get inline edit/unpublish/send-to-top + RecentPicker.
+- **MapPage** (`/map`): MapLibre + keyless **OpenFreeMap** basemap (warmed to the
+  palette). Clustered location bubbles (count-sized, name-labelled) that hold
+  regions like Europe together and split on zoom; cluster-click dives in; close up
+  the bubble dissolves into individual photo pins; clicking a pin opens a lightbox
+  of that image with a button to its gallery. Frame-to-extent on load.
+- **AdminApp** (`/admin`): login → AdminDashboard (upload, bulk publish/rename/
+  move, per-photo edit/delete/feature, create location).
+- **GallerySkeleton / RecentWorkSkeleton / LocationRailSkeleton**: minimal shimmer
+  placeholders mirroring the real layout during load.
+- **SmartImage** (`components/`): shimmer skeleton + fade-in. **Header**
+  (`components/`): shared nav (Galleries / Map / About / admin), used by both
+  PublicGallery and MapPage.
 
 ## Data model & conventions (Supabase)
 
 `photos`: `title`, `slug` (unique), `location_id` → `locations`, `kind`,
 `year_taken`, `aspect` (`portrait|landscape|square|wide`), `storage_bucket`,
-`storage_path`, `is_featured`, `is_published`, `sort_order`.
+`storage_path`, `is_featured`, `is_published`, `sort_order`,
+`relative_altitude_m` (drone height above takeoff, nullable),
+`latitude` / `longitude` (capture coords, nullable). The last three are
+backfilled from the original JPGs (see the altitude/coords scripts) since WebP
+compression strips EXIF/XMP.
 
 `locations`: `name`, `slug` (unique), `region`, `sort_order`, `is_visible`.
 
@@ -84,6 +105,11 @@ Conventions the gallery relies on:
   policies are needed.
 - Admin = add the email to `public.admin_users` + create the Auth user, then
   sign in at `/admin`.
+- **Schema changes can't be applied programmatically here.** The service key does
+  rows, not DDL (PostgREST), and the `supabase` CLI is logged into a different
+  account, so `db push` won't reach this project. Write the migration file in
+  `supabase/migrations/`, then **Sam runs the SQL by hand in the Supabase SQL
+  editor**. Data backfills then go through the service key as normal.
 
 ## Deploy / domain
 
@@ -133,6 +159,18 @@ disabled.
   `imports/geo-existing-analysis.json`.
 - `geo-update-existing.mjs` sets `location`+`title` from that analysis, skipping
   generic (city-only) and no-GPS photos.
+
+**Backfill altitude + coordinates** (same manifest-mapping pattern; analyze→apply,
+both read the original JPGs since WebP stripped EXIF/XMP). Run analyze with the
+sandbox disabled (reads `/Volumes`); both need `--env-file=.env.local`:
+- `altitude-analyze.mjs` → `imports/altitude-analysis.json`, then
+  `altitude-backfill.mjs` writes `relative_altitude_m` (DJI XMP `RelativeAltitude`;
+  drops one impossible reading). `probe-altitude.mjs` is a spot-check tool.
+- `coords-analyze.mjs` → `imports/coords-analysis.json` (EXIF GPS, DJI-XMP
+  fallback), then `coords-backfill.mjs` writes `latitude`/`longitude` (rounded to
+  ~3dp). Both support `DRY_RUN=1`. Requires the columns to exist first (DDL — see
+  Supabase section). Locations with no GPS get an app-side fallback coord in
+  `MapPage.tsx` (`LOCATION_FALLBACK_COORDS`).
 
 **Manifests** (in `imports/`, the storage_path → sourcePath maps):
 `uploaded-drone-manifest.json` (original 103), `import-batch-manifest.json`
