@@ -6,3 +6,6 @@ dist/
 .env.local
 .vercel/
 imports/
+
+# Supabase CLI scratch
+supabase/.temp/

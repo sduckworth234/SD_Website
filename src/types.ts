@@ -26,4 +26,7 @@ export type Photo = {
   imageUrl: string;
   storagePath?: string;
   sortOrder?: number;
+  // Drone flight height in metres above the takeoff point (DJI RelativeAltitude).
+  // Null/absent for non-drone photos.
+  relativeAltitude?: number | null;
 };

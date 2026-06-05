@@ -1,6 +1,7 @@
 import type { Session } from "@supabase/supabase-js";
 import {
   ArrowDown,
+  ArrowUpFromLine,
   ArrowUpToLine,
   Camera,
   EyeOff,
@@ -88,6 +89,34 @@ function useScrollReveal(dependencies: DependencyList) {
 
     return () => observer.disconnect();
   }, dependencies);
+}
+
+// Drone flight height for the corner badge: rounded to whole metres, and only
+// when the reading is a meaningful positive height. This hides non-drone photos
+// (no altitude), negatives / ~0m "flown below launch" frames, and any single
+// out-of-range barometric fault that slipped through the backfill.
+function altitudeMeters(photo: Photo): number | null {
+  const a = photo.relativeAltitude;
+  if (a == null) return null;
+  const m = Math.round(a);
+  return m >= 1 && m <= 1000 ? m : null;
+}
+
+// Small "203 m" altitude badge pinned to the bottom-right of a drone photo.
+// Renders nothing when the photo has no usable height.
+function AltitudeBadge({ photo }: { photo: Photo }) {
+  const m = altitudeMeters(photo);
+  if (m === null) return null;
+  return (
+    <span
+      className="alt-badge"
+      title={`Flown at ${m} m above launch`}
+      aria-label={`Altitude ${m} metres`}
+    >
+      <ArrowUpFromLine size={11} aria-hidden="true" />
+      {m} m
+    </span>
+  );
 }
 
 // Image with a shimmer skeleton + fade-in, so partially-loaded images never
@@ -284,7 +313,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
         onChange={setActiveLocation}
       />
       {isLoading ? (
-        <p className="loading-note">Loading gallery</p>
+        <GalleryLoader />
       ) : (
         <>
           <GalleryControls onChange={setView} view={view} />
@@ -378,6 +407,7 @@ function RecentWork({
             style={{ "--reveal-delay": `${index * 80}ms` } as CSSProperties}
           >
             <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
+            <AltitudeBadge photo={photo} />
             {isAdmin ? (
               <div className="tile-admin-actions">
                 <button
@@ -608,6 +638,23 @@ function GalleryControls({
   );
 }
 
+function GalleryLoader() {
+  return (
+    <section className="gallery-loader" aria-label="Preparing gallery">
+      <div className="loader-orbit" aria-hidden="true">
+        {Array.from({ length: 9 }, (_, index) => (
+          <span
+            className={`loader-frame loader-frame-${index + 1}`}
+            key={index}
+            style={{ "--loader-index": index } as CSSProperties}
+          />
+        ))}
+      </div>
+      <p>Framing the next set</p>
+    </section>
+  );
+}
+
 function Gallery({
   isAdmin,
   onEditPhoto,
@@ -651,6 +698,7 @@ function Gallery({
             <strong>{photo.title}</strong>
             {photo.year ? <small>{photo.year}</small> : null}
           </div>
+          <AltitudeBadge photo={photo} />
           {isAdmin ? (
             <div className="tile-admin-actions">
               <button
@@ -712,6 +760,7 @@ function Lightbox({ photo, onClose }: { photo: Photo; onClose: () => void }) {
         </button>
         <div className="lightbox-image">
           <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
+          <AltitudeBadge photo={photo} />
         </div>
         <aside className="lightbox-copy">
           <span className="lightbox-location">

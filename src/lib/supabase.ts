@@ -51,6 +51,7 @@ type PhotoRow = {
   storage_bucket: string;
   storage_path: string | null;
   image_url: string | null;
+  relative_altitude_m: number | null;
   is_featured: boolean;
   is_published: boolean;
   sort_order: number;
@@ -108,6 +109,7 @@ function mapPhoto(row: PhotoRow): Photo {
     imageUrl: publicImageUrl(row),
     storagePath: row.storage_path ?? undefined,
     sortOrder: row.sort_order,
+    relativeAltitude: row.relative_altitude_m,
   };
 }
 
@@ -130,7 +132,7 @@ export async function getGalleryData() {
       supabase
         .from("photos")
         .select(
-          "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)",
+          "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)",
         )
         .eq("is_published", true)
         .order("sort_order", { ascending: true })
@@ -159,7 +161,7 @@ export async function getAdminPhotos() {
   const { data, error } = await supabase
     .from("photos")
     .select(
-      "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)",
+      "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)",
     )
     .order("created_at", { ascending: false });
 
@@ -372,7 +374,7 @@ export async function bulkEditPhotos(
 }
 
 const RECENT_SELECT =
-  "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)";
+  "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)";
 
 // The "Recent Work" mosaic: admin-pinned photos (is_featured) sit in their
 // chosen slot (sort_order 1..limit); any empty slots are filled with the most
