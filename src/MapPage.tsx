@@ -234,7 +234,8 @@ export default function MapPage({ onNavigate }: { onNavigate: (route: string) =>
           bounds.extend(f.geometry.coordinates as [number, number]);
         }
         if (!bounds.isEmpty()) {
-          map.fitBounds(bounds, { padding: { top: 80, bottom: 48, left: 48, right: 48 }, maxZoom: focus ? 12.5 : 7, duration: 0 });
+          // Tight frame: just the captured places + a slight buffer, not the whole world.
+          map.fitBounds(bounds, { padding: { top: 66, bottom: 30, left: 26, right: 26 }, maxZoom: focus ? 12.5 : 8, duration: 0 });
         }
         setReady(true);
 

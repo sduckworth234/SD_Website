@@ -333,11 +333,35 @@ h1 {
   font-size: 0.7rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  animation: cue-fade-in 900ms ease 2400ms both;
+  animation: cue-fade-in 700ms ease 1400ms both;
 }
 
-.scroll-cue svg {
-  animation: cue-bounce 1700ms cubic-bezier(0.5, 0, 0.4, 1) infinite;
+/* Stacked chevrons that fade downward in sequence. */
+.scroll-chevrons {
+  display: grid;
+  gap: 5px;
+}
+
+.scroll-chev {
+  width: 12px;
+  height: 12px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  animation: scroll-chev-fade 1.6s ease-in-out infinite;
+}
+
+.scroll-chev:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.scroll-chev:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes scroll-chev-fade {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
 }
 
 .scroll-cue:hover {
@@ -851,7 +875,7 @@ footer {
 
 /* "Recent Work" — editorial mosaic of the latest photos above the gallery */
 .recent-work {
-  padding: clamp(36px, 7vw, 84px) clamp(18px, 4vw, 56px);
+  padding: clamp(36px, 7vw, 84px) clamp(18px, 4vw, 56px) clamp(18px, 2.6vw, 34px);
   --reveal-distance: 30px;
   --reveal-scale: 0.99;
 }
@@ -1099,6 +1123,12 @@ footer {
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   transition: background 160ms ease;
+}
+
+/* Active state for the "feature in map feed" crosshair toggle. */
+.tile-admin-actions button.is-active {
+  background: var(--sea);
+  border-color: var(--foam);
 }
 
 .tile-admin-actions button:hover {
@@ -2073,6 +2103,184 @@ footer {
   color: var(--ink);
 }
 
+/* Map teaser strip between Recent Work and the gallery. Full-width top hairline
+   (the divider), but the text + minimap sit centred together so there's no dead
+   space in the middle. Only the minimap is clickable. */
+.map-promo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(34px, 6vw, 84px);
+  width: min(80vw, 100%);
+  margin: clamp(6px, 2vw, 18px) auto 0;
+  padding: clamp(26px, 3.4vw, 44px) clamp(12px, 2vw, 28px);
+  border-top: 1px solid var(--line);
+  text-align: left;
+}
+
+.map-promo-text {
+  display: grid;
+  gap: 6px;
+}
+
+.map-promo-text strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.1rem, 2.2vw, 1.7rem);
+  font-weight: 400;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+/* Typewriter line with a blinking caret. */
+.map-promo-rotator {
+  display: inline-block;
+  min-height: 1em;
+  color: var(--sea);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.map-promo-rotator::after {
+  content: "";
+  display: inline-block;
+  width: 1px;
+  height: 0.95em;
+  margin-left: 2px;
+  vertical-align: -0.12em;
+  background: var(--sea);
+  animation: promo-caret 0.8s steps(1) infinite;
+}
+
+@keyframes promo-caret {
+  50% { opacity: 0; }
+}
+
+.map-promo-mini {
+  position: relative;
+  flex: 0 0 auto;
+  width: clamp(200px, 30vw, 340px);
+  aspect-ratio: 16 / 10;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--paper-deep);
+  cursor: var(--circle-cursor), pointer;
+  transition:
+    transform 300ms ease,
+    box-shadow 300ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.map-promo-mini:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(32, 29, 25, 0.16);
+}
+
+/* D4 "drone feed": cross-fading frames under an aerial HUD overlay. */
+.map-promo-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 900ms ease;
+}
+
+.map-promo-frame.is-on {
+  opacity: 1;
+}
+
+/* Darken + faint scanlines so the HUD stays legible over any photo. */
+.map-promo-mini::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(32, 29, 25, 0.12), rgba(32, 29, 25, 0.5)),
+    repeating-linear-gradient(0deg, rgba(248, 246, 240, 0.06) 0 1px, transparent 1px 22px);
+}
+
+.map-promo-bracket {
+  position: absolute;
+  z-index: 2;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--foam);
+  opacity: 0.85;
+}
+.map-promo-bracket.tl { top: 9px; left: 9px; border-right: 0; border-bottom: 0; }
+.map-promo-bracket.tr { top: 9px; right: 9px; border-left: 0; border-bottom: 0; }
+.map-promo-bracket.bl { bottom: 9px; left: 9px; border-right: 0; border-top: 0; }
+.map-promo-bracket.br { bottom: 9px; right: 9px; border-left: 0; border-top: 0; }
+
+.map-promo-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  height: 26px;
+  pointer-events: none;
+  background: linear-gradient(rgba(248, 246, 240, 0.22), transparent);
+  animation: promo-scan 3.4s linear infinite;
+}
+
+@keyframes promo-scan {
+  from { top: -26px; }
+  to { top: 100%; }
+}
+
+.map-promo-read {
+  position: absolute;
+  left: 12px;
+  bottom: 11px;
+  z-index: 3;
+  display: grid;
+  gap: 3px;
+  animation: promo-fade 500ms ease;
+}
+
+.map-promo-read strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  font-size: 1.02rem;
+  line-height: 1;
+  color: var(--foam);
+}
+
+.map-promo-read small {
+  font: 0.58rem/1 ui-monospace, Menlo, monospace;
+  letter-spacing: 0.04em;
+  color: rgba(248, 246, 240, 0.82);
+}
+
+@keyframes promo-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.map-promo-cta {
+  position: absolute;
+  z-index: 3;
+  right: 8px;
+  bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(32, 29, 25, 0.52);
+  color: var(--foam);
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
 @media (max-width: 720px) {
   .map-intro {
     top: clamp(64px, 10vh, 90px);
@@ -2098,5 +2306,13 @@ footer {
   .lightbox-panel.is-map .lightbox-copy .solid-button {
     width: 100%;
     justify-content: center;
+  }
+
+  .map-promo {
+    gap: 16px;
+  }
+
+  .map-promo-mini {
+    width: clamp(120px, 40vw, 180px);
   }
 }

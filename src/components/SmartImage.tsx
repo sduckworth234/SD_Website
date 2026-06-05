@@ -5,10 +5,12 @@ import { useEffect, useRef, useState } from "react";
 export function SmartImage({
   alt,
   className,
+  eager = false,
   src,
 }: {
   alt: string;
   className?: string;
+  eager?: boolean;
   src: string;
 }) {
   const [loaded, setLoaded] = useState(false);
@@ -25,7 +27,7 @@ export function SmartImage({
         alt={alt}
         className={`smart-img${loaded ? " is-loaded" : ""}${className ? ` ${className}` : ""}`}
         decoding="async"
-        loading="lazy"
+        loading={eager ? "eager" : "lazy"}
         onLoad={() => setLoaded(true)}
         ref={ref}
         src={src}

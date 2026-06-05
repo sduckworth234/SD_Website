@@ -54,6 +54,7 @@ type PhotoRow = {
   relative_altitude_m: number | null;
   latitude: number | null;
   longitude: number | null;
+  is_map_feature: boolean;
   is_featured: boolean;
   is_published: boolean;
   sort_order: number;
@@ -114,6 +115,7 @@ function mapPhoto(row: PhotoRow): Photo {
     relativeAltitude: row.relative_altitude_m,
     latitude: row.latitude,
     longitude: row.longitude,
+    mapFeature: row.is_map_feature,
   };
 }
 
@@ -136,7 +138,7 @@ export async function getGalleryData() {
       supabase
         .from("photos")
         .select(
-          "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)",
+          "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)",
         )
         .eq("is_published", true)
         .order("sort_order", { ascending: true })
@@ -165,7 +167,7 @@ export async function getAdminPhotos() {
   const { data, error } = await supabase
     .from("photos")
     .select(
-      "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)",
+      "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)",
     )
     .order("created_at", { ascending: false });
 
@@ -257,6 +259,17 @@ export async function updatePhotoVisibility(
     })
     .eq("id", photoId);
 
+  if (error) throw error;
+}
+
+// Toggle whether a photo is the admin-picked feature for its location in the
+// home page map-promo "drone feed".
+export async function setMapFeature(photoId: string, value: boolean) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const { error } = await supabase
+    .from("photos")
+    .update({ is_map_feature: value })
+    .eq("id", photoId);
   if (error) throw error;
 }
 
@@ -378,7 +391,7 @@ export async function bulkEditPhotos(
 }
 
 const RECENT_SELECT =
-  "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)";
+  "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)";
 
 // The "Recent Work" mosaic: admin-pinned photos (is_featured) sit in their
 // chosen slot (sort_order 1..limit); any empty slots are filled with the most

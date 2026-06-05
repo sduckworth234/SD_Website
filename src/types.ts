@@ -32,4 +32,6 @@ export type Photo = {
   // Capture coordinates (decimal degrees). Null/absent when the source had no GPS.
   latitude?: number | null;
   longitude?: number | null;
+  // Admin-picked feature photo for its location in the home page map promo feed.
+  mapFeature?: boolean;
 };

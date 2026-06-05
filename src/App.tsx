@@ -1,9 +1,9 @@
 import type { Session } from "@supabase/supabase-js";
 import {
-  ArrowDown,
   ArrowUpFromLine,
   ArrowUpToLine,
   Camera,
+  Crosshair,
   EyeOff,
   Globe,
   Images,
@@ -30,9 +30,12 @@ import {
   getAdminPhotos,
   getGalleryData,
   getRecentPhotos,
+  getTransformedPublicUrl,
   hasSupabaseEnv,
+  photoBucket,
   isCurrentUserAdmin,
   sendPhotoToTop,
+  setMapFeature,
   supabase,
   updatePhotoDetails,
   updatePhotoCuration,
@@ -169,6 +172,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminChecked, setAdminChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [imagesReady, setImagesReady] = useState(false);
 
   const loadGallery = useCallback(async () => {
     const [data, recent] = await Promise.all([getGalleryData(), getRecentPhotos(5)]);
@@ -233,11 +237,23 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     await loadGallery();
   }
 
+  // Admin: pick/unpick this photo as its location's drone-feed feature.
+  async function toggleMapFeature(photo: Photo) {
+    await setMapFeature(photo.id, !photo.mapFeature);
+    await loadGallery();
+  }
+
   // Open the map, framed on the current category when one is selected.
   function viewOnMap() {
     const query =
       activeLocation !== allLocations ? `?focus=${encodeURIComponent(activeLocation)}` : "";
     window.history.pushState({}, "", `/map${query}`);
+    onNavigate("/map");
+  }
+
+  // Open the full map (no category focus) — used by the promo strip.
+  function goToMap() {
+    window.history.pushState({}, "", "/map");
     onNavigate("/map");
   }
 
@@ -277,7 +293,38 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     return publicPhotos.filter((photo) => photo.location === activeLocation);
   }, [activeLocation, publicPhotos]);
 
-  useScrollReveal([isLoading, activeLocation, filteredPhotos.length, view, recentPhotos.length]);
+  // Preload the active category's images and hold the skeleton until they're
+  // decoded, so the masonry lays out with known heights — no reflow/"shove" as
+  // images pop in. A timeout reveals anyway so a slow image can't stall the grid.
+  useEffect(() => {
+    // Skip the brief "all work" moment before a category is chosen, so we don't
+    // preload the entire library.
+    if (isLoading || activeLocation === allLocations) return;
+    const urls = filteredPhotos.map((p) => p.imageUrl).filter(Boolean);
+    if (!urls.length) { setImagesReady(true); return; }
+    let cancelled = false;
+    setImagesReady(false);
+    let done = 0;
+    const tick = () => {
+      done += 1;
+      if (!cancelled && done >= urls.length) setImagesReady(true);
+    };
+    const imgs = urls.map((url) => {
+      const im = new Image();
+      im.onload = tick;
+      im.onerror = tick;
+      im.src = url;
+      return im;
+    });
+    const timer = window.setTimeout(() => { if (!cancelled) setImagesReady(true); }, 5000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      imgs.forEach((im) => { im.onload = null; im.onerror = null; });
+    };
+  }, [filteredPhotos, isLoading, activeLocation]);
+
+  useScrollReveal([isLoading, imagesReady, activeLocation, filteredPhotos.length, view, recentPhotos.length]);
 
   return (
     <main>
@@ -306,6 +353,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
               photos={recentPhotos}
             />
           ) : null}
+          <MapPromo photos={publicPhotos} onOpen={goToMap} />
           <LocationRail
             activeLocation={activeLocation}
             excludeUnsorted
@@ -315,15 +363,20 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
             onChange={setActiveLocation}
           />
           <GalleryControls onChange={setView} onViewOnMap={viewOnMap} view={view} />
-          <Gallery
-            isAdmin={isAdmin}
-            onEditPhoto={setEditingPhoto}
-            onSelectPhoto={setSelectedPhoto}
-            onSendToTop={sendToTop}
-            onUnpublish={unpublishPhoto}
-            photos={filteredPhotos}
-            view={view}
-          />
+          {imagesReady ? (
+            <Gallery
+              isAdmin={isAdmin}
+              onEditPhoto={setEditingPhoto}
+              onSelectPhoto={setSelectedPhoto}
+              onSendToTop={sendToTop}
+              onToggleMapFeature={toggleMapFeature}
+              onUnpublish={unpublishPhoto}
+              photos={filteredPhotos}
+              view={view}
+            />
+          ) : (
+            <GallerySkeleton view={view} />
+          )}
         </>
       )}
       <Footer />
@@ -485,8 +538,11 @@ function Hero({ locations }: { locations: string[] }) {
         <RotatingLocations locations={locations} />
       </div>
       <a className="scroll-cue" href="#galleries" aria-label="Scroll down to the gallery">
-        <span>Scroll</span>
-        <ArrowDown size={18} aria-hidden="true" />
+        <span className="scroll-chevrons" aria-hidden="true">
+          <i className="scroll-chev" />
+          <i className="scroll-chev" />
+          <i className="scroll-chev" />
+        </span>
       </a>
     </section>
   );
@@ -565,6 +621,110 @@ function LocationRail({
         </button>
       ))}
     </section>
+  );
+}
+
+// Slim teaser strip between Recent Work and the gallery: copy on the left, a small
+// data-driven minimap on the right that cycles a highlight through the locations.
+// Inline SVG (no MapLibre) so the home page stays light; the whole strip opens /map.
+function MapPromo({ photos, onOpen }: { photos: Photo[]; onOpen: () => void }) {
+  // One representative photo per location (prefer one with altitude), top by
+  // photo count, capped — each becomes a "drone-feed" frame: image + telemetry.
+  const frames = useMemo(() => {
+    const byLoc = new Map<string, Photo[]>();
+    for (const p of photos) {
+      if (!p.location || p.location === "Unsorted") continue;
+      if (p.latitude == null || p.longitude == null || !p.imageUrl) continue;
+      const list = byLoc.get(p.location);
+      if (list) list.push(p);
+      else byLoc.set(p.location, [p]);
+    }
+    return [...byLoc.entries()]
+      .map(([name, list]) => {
+        const flagged = list.find((p) => p.mapFeature);
+        return {
+          name,
+          count: list.length,
+          flagged: Boolean(flagged),
+          // admin pick > a shot with altitude > first
+          sample: flagged ?? list.find((p) => p.relativeAltitude != null) ?? list[0],
+        };
+      })
+      // admin-flagged places lead the feed, then the most-shot places fill it
+      .sort((a, b) => Number(b.flagged) - Number(a.flagged) || b.count - a.count)
+      .slice(0, 10)
+      .map(({ name, sample }) => ({
+        name,
+        lat: sample.latitude as number,
+        lon: sample.longitude as number,
+        alt: sample.relativeAltitude ?? null,
+        image: sample.storagePath
+          ? getTransformedPublicUrl(photoBucket, sample.storagePath, 480)
+          : sample.imageUrl,
+      }));
+  }, [photos]);
+
+  const [active, setActive] = useState(0);
+  const [typed, setTyped] = useState("");
+
+  // Advance the highlighted frame.
+  useEffect(() => {
+    if (frames.length <= 1) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = window.setInterval(() => setActive((a) => (a + 1) % frames.length), 2800);
+    return () => window.clearInterval(id);
+  }, [frames.length]);
+
+  // Typewriter the active location name (left of the card).
+  useEffect(() => {
+    const name = frames[active]?.name ?? "";
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setTyped(name); return; }
+    setTyped("");
+    let c = 0;
+    const id = window.setInterval(() => {
+      c += 1;
+      setTyped(name.slice(0, c));
+      if (c >= name.length) window.clearInterval(id);
+    }, 58);
+    return () => window.clearInterval(id);
+  }, [active, frames]);
+
+  if (frames.length < 2) return null;
+
+  const f = frames[active];
+  const altPart = f.alt != null && Math.round(f.alt) >= 1 ? `  ·  ${Math.round(f.alt)}m` : "";
+  const coords = `${Math.abs(f.lat).toFixed(2)}°${f.lat < 0 ? "S" : "N"}  ${Math.abs(f.lon).toFixed(2)}°${f.lon < 0 ? "W" : "E"}${altPart}`;
+
+  return (
+    <div className="map-promo">
+      <span className="map-promo-text">
+        <span className="eyebrow">On the map</span>
+        <strong>See where these were shot</strong>
+        <span className="map-promo-rotator">{typed}</span>
+      </span>
+      <button className="map-promo-mini" onClick={onOpen} type="button" aria-label="Open the map of photo locations">
+        {frames.map((fr, i) => (
+          <img
+            key={fr.name}
+            className={`map-promo-frame${i === active ? " is-on" : ""}`}
+            src={fr.image}
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
+        ))}
+        <span className="map-promo-bracket tl" />
+        <span className="map-promo-bracket tr" />
+        <span className="map-promo-bracket bl" />
+        <span className="map-promo-bracket br" />
+        <span className="map-promo-scan" />
+        <span className="map-promo-read" key={active}>
+          <strong>{f.name}</strong>
+          <small>{coords}</small>
+        </span>
+        <span className="map-promo-cta">View map →</span>
+      </button>
+    </div>
   );
 }
 
@@ -674,6 +834,7 @@ function Gallery({
   onEditPhoto,
   onSelectPhoto,
   onSendToTop,
+  onToggleMapFeature,
   onUnpublish,
   photos,
   view,
@@ -682,6 +843,7 @@ function Gallery({
   onEditPhoto: (photo: Photo) => void;
   onSelectPhoto: (photo: Photo) => void;
   onSendToTop: (photo: Photo) => void;
+  onToggleMapFeature: (photo: Photo) => void;
   onUnpublish: (photo: Photo) => void;
   photos: Photo[];
   view: GalleryView;
@@ -703,7 +865,7 @@ function Gallery({
           tabIndex={0}
           style={{ "--reveal-delay": `${Math.min(index, 12) * 38}ms` } as CSSProperties}
         >
-          <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
+          <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} eager />
           <div className="photo-meta">
             <span>
               <MapPin size={13} aria-hidden="true" />
@@ -736,6 +898,18 @@ function Gallery({
                 type="button"
               >
                 <Pencil size={14} aria-hidden="true" />
+              </button>
+              <button
+                aria-label={photo.mapFeature ? "Remove from map feed" : "Feature in map feed"}
+                className={photo.mapFeature ? "is-active" : ""}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onToggleMapFeature(photo);
+                }}
+                title={photo.mapFeature ? "Featured in map feed" : "Feature in map feed"}
+                type="button"
+              >
+                <Crosshair size={14} aria-hidden="true" />
               </button>
               <button
                 aria-label="Unpublish photo"
