@@ -28,11 +28,15 @@ export function getTransformedPublicUrl(
 ) {
   if (!supabase) return "";
 
+  // `contain` (with only a width) scales the image to that width and KEEPS its
+  // true aspect ratio. `cover` here was a bug: with no height it center-cropped to
+  // the original height, serving a wrong-aspect, zoomed image. Each component crops
+  // for display via CSS object-fit, so the transform should only scale.
   const { data } = supabase.storage.from(bucket).getPublicUrl(path, {
     transform: {
       width,
       quality,
-      resize: "cover",
+      resize: "contain",
     },
   });
 
