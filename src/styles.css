@@ -2364,7 +2364,8 @@ footer {
   box-shadow: 0 12px 28px rgba(32, 29, 25, 0.16);
 }
 
-/* D4 "drone feed": cross-fading frames under an aerial HUD overlay. */
+/* D4 "drone feed": cross-fading frames under an aerial HUD overlay. `cover` fills
+   the 16:10 card; the feed logic only uses landscape shots so the crop stays gentle. */
 .map-promo-frame {
   position: absolute;
   inset: 0;

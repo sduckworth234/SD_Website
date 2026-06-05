@@ -678,12 +678,12 @@ function MapPromo({
       .map(([name, list]) => ({
         name,
         count: list.length,
-        sample:
-          list.find((p) => isLandscape(p) && p.relativeAltitude != null) ??
-          list.find(isLandscape) ??
-          list.find((p) => p.relativeAltitude != null) ??
-          list[0],
+        // Only landscape/wide shots auto-feature — never fall back to a portrait
+        // (which would zoom hard under `cover`). Locations with no landscape are
+        // simply skipped from the auto feed (admins can still feature one manually).
+        sample: list.find((p) => isLandscape(p) && p.relativeAltitude != null) ?? list.find(isLandscape),
       }))
+      .filter((x): x is { name: string; count: number; sample: Photo } => Boolean(x.sample))
       .sort((a, b) => (order.get(a.name) ?? 0) - (order.get(b.name) ?? 0) || b.count - a.count)
       .slice(0, 10)
       .map(({ sample }) => toFrame(sample));
