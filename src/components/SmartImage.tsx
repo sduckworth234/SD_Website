@@ -6,18 +6,27 @@ export function SmartImage({
   alt,
   className,
   eager = false,
+  onMeasure,
   src,
 }: {
   alt: string;
   className?: string;
   eager?: boolean;
+  // Reports the loaded image's width/height aspect ratio (w / h).
+  onMeasure?: (ratio: number) => void;
   src: string;
 }) {
   const [loaded, setLoaded] = useState(false);
   const ref = useRef<HTMLImageElement | null>(null);
 
+  function handleLoaded(img: HTMLImageElement | null) {
+    setLoaded(true);
+    if (img && img.naturalHeight > 0) onMeasure?.(img.naturalWidth / img.naturalHeight);
+  }
+
   useEffect(() => {
-    if (ref.current?.complete) setLoaded(true);
+    if (ref.current?.complete) handleLoaded(ref.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src]);
 
   return (
@@ -28,7 +37,7 @@ export function SmartImage({
         className={`smart-img${loaded ? " is-loaded" : ""}${className ? ` ${className}` : ""}`}
         decoding="async"
         loading={eager ? "eager" : "lazy"}
-        onLoad={() => setLoaded(true)}
+        onLoad={(event) => handleLoaded(event.currentTarget)}
         ref={ref}
         src={src}
       />

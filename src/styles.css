@@ -1276,8 +1276,9 @@ footer {
   background: var(--sea);
 }
 
-/* Flags portrait/square photos that will be cropped by the landscape feed card. */
-.map-feed-warn {
+/* Bottom-left badges: amber = will be cropped by the 16:10 card, teal = fits it. */
+.map-feed-warn,
+.map-feed-fit {
   position: absolute;
   left: 5px;
   bottom: 5px;
@@ -1286,8 +1287,15 @@ footer {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: var(--timber);
   color: var(--foam);
+}
+
+.map-feed-warn {
+  background: var(--timber);
+}
+
+.map-feed-fit {
+  background: var(--sea);
 }
 
 .map-feed-thumb.is-misfit:not(.is-on) {

@@ -3,6 +3,7 @@ import {
   ArrowUpFromLine,
   ArrowUpToLine,
   Camera,
+  Check,
   Crosshair,
   EyeOff,
   Globe,
@@ -766,6 +767,7 @@ function MapFeedAdmin({
 }) {
   const [pickId, setPickId] = useState("");
   const [busy, setBusy] = useState(false);
+  const [ratios, setRatios] = useState<Record<string, number>>({});
 
   // Only published, geotagged photos can actually appear in the feed.
   const eligible = useMemo(
@@ -794,8 +796,34 @@ function MapFeedAdmin({
   const pickPhotos = useMemo(() => eligible.filter((p) => p.locationId === pickId), [eligible, pickId]);
   const locationsWithPhotos = locations.filter((l) => eligible.some((p) => p.locationId === l.id));
 
-  // The feed card is landscape (16:10), so portrait/square shots crop hard.
-  const fitsFeed = (p: Photo) => p.aspect === "landscape" || p.aspect === "wide";
+  // The feed card is 16:10. Measure each photo's true ratio (via SmartImage) and
+  // flag whether it fits the card (no crop) or will be cropped.
+  const CARD_RATIO = 16 / 10;
+  const measure = (id: string, ratio: number) =>
+    setRatios((prev) => (prev[id] ? prev : { ...prev, [id]: ratio }));
+  const fitOf = (p: Photo): "fit" | "crop" | null => {
+    const r = ratios[p.id];
+    if (r == null) return null; // not measured yet
+    return Math.abs(r - CARD_RATIO) <= 0.1 ? "fit" : "crop";
+  };
+  const fitBadge = (p: Photo) => {
+    const f = fitOf(p);
+    if (f === "fit") {
+      return (
+        <span className="map-feed-fit" title={`Fits the feed card — ${ratios[p.id].toFixed(2)}:1`}>
+          <Check size={11} aria-hidden="true" />
+        </span>
+      );
+    }
+    if (f === "crop") {
+      return (
+        <span className="map-feed-warn" title={`Will be cropped — ${ratios[p.id].toFixed(2)}:1 vs 1.60`}>
+          <TriangleAlert size={11} aria-hidden="true" />
+        </span>
+      );
+    }
+    return null;
+  };
 
   async function toggle(photo: Photo) {
     if (busy) return;
@@ -859,19 +887,15 @@ function MapFeedAdmin({
               <div className="map-feed-thumbs">
                 {pics.map((p) => (
                   <button
-                    className={`map-feed-thumb is-on${fitsFeed(p) ? "" : " is-misfit"}`}
+                    className={`map-feed-thumb is-on${fitOf(p) === "crop" ? " is-misfit" : ""}`}
                     key={p.id}
                     type="button"
                     onClick={() => toggle(p)}
                     title="Remove from feed"
                   >
-                    <SmartImage src={p.imageUrl} alt={p.title} />
+                    <SmartImage src={p.imageUrl} alt={p.title} onMeasure={(r) => measure(p.id, r)} />
                     <span className="map-feed-badge remove"><X size={12} aria-hidden="true" /></span>
-                    {fitsFeed(p) ? null : (
-                      <span className="map-feed-warn" title={`${p.aspect} — will be cropped to fit the feed`}>
-                        <TriangleAlert size={11} aria-hidden="true" />
-                      </span>
-                    )}
+                    {fitBadge(p)}
                   </button>
                 ))}
               </div>
@@ -896,21 +920,17 @@ function MapFeedAdmin({
           ) : (
             pickPhotos.map((p) => (
               <button
-                className={`map-feed-thumb${p.mapFeature ? " is-on" : ""}${fitsFeed(p) ? "" : " is-misfit"}`}
+                className={`map-feed-thumb${p.mapFeature ? " is-on" : ""}${fitOf(p) === "crop" ? " is-misfit" : ""}`}
                 key={p.id}
                 type="button"
                 onClick={() => toggle(p)}
                 title={p.mapFeature ? "Remove from feed" : "Add to feed"}
               >
-                <SmartImage src={p.imageUrl} alt={p.title} />
+                <SmartImage src={p.imageUrl} alt={p.title} onMeasure={(r) => measure(p.id, r)} />
                 <span className={`map-feed-badge${p.mapFeature ? " remove" : " add"}`}>
                   {p.mapFeature ? <X size={12} aria-hidden="true" /> : <Crosshair size={12} aria-hidden="true" />}
                 </span>
-                {fitsFeed(p) ? null : (
-                  <span className="map-feed-warn" title={`${p.aspect} — will be cropped to fit the feed`}>
-                    <TriangleAlert size={11} aria-hidden="true" />
-                  </span>
-                )}
+                {fitBadge(p)}
               </button>
             ))
           )}
