@@ -23,10 +23,10 @@ const FOAM = "#f8f6f0"; // --foam
 const PAPER = "#f3eee5"; // --paper
 
 // Interaction tuning.
-const DETAIL_ZOOM = 11; // at/above this, location bubbles give way to individual photo pins
-const CLUSTER_BOOST = 2; // extra zoom beyond a cluster's split point, so each click drills deeper
-const ZOOM_STEP = 3; // how far a location-dot click zooms in
-const EASE_MS = 500; // snappier than MapLibre's ~1s default
+const EASE_MS = 550; // snappier than MapLibre's ~1s default
+const LABEL_MINZOOM = 10; // basemap settlement labels only appear when zoomed in near a photo area
+const CLUSTER_RADIUS = 55; // px; photo-proximity clustering
+const CLUSTER_MAXZOOM = 14; // beyond this, every photo shows individually
 
 type LocationProps = { location: string; count: number; imageUrl: string };
 type PhotoProps = { location: string; title: string; imageUrl: string };
@@ -140,153 +140,113 @@ export default function MapPage({ onNavigate }: { onNavigate: (route: string) =>
         // you're zoomed in near a photo area. Country/region labels stay for context.
         for (const layer of map.getStyle().layers ?? []) {
           if (layer.type === "symbol" && /place/.test(layer.id) && !/country|continent|state/.test(layer.id)) {
-            try { map.setLayerZoomRange(layer.id, DETAIL_ZOOM - 1, 24); } catch { /* ignore */ }
+            try { map.setLayerZoomRange(layer.id, LABEL_MINZOOM, 24); } catch { /* ignore */ }
           }
         }
 
-        // ---- Overview: clustered location bubbles ----
+        // Faint location-name labels for context at low zoom only (no interaction).
         map.addSource("locations", {
           type: "geojson",
           data: { type: "FeatureCollection", features: locationFeatures },
-          cluster: true,
-          clusterRadius: 80, // generous so e.g. Spain holds in the Europe bubble
-          clusterMaxZoom: 9,
-          clusterProperties: { count: ["+", ["get", "count"]] }, // sum photo counts
+        });
+        map.addLayer({
+          id: "location-label",
+          type: "symbol",
+          source: "locations",
+          maxzoom: 6.5,
+          layout: {
+            "text-field": ["get", "location"],
+            "text-font": ["Noto Sans Regular"],
+            "text-size": 11,
+            "text-transform": "uppercase",
+            "text-letter-spacing": 0.08,
+          },
+          paint: { "text-color": INK, "text-halo-color": PAPER, "text-halo-width": 1.4, "text-opacity": 0.8 },
         });
 
+        // ---- Photos clustered BY PROXIMITY (not by location centroid) ----
+        // This is the key to a consistent drill everywhere: a spread country like
+        // Italy becomes several real clusters (Amalfi, Rome, Venice…), each centred
+        // on actual photos — so zooming in never lands on an empty centroid.
+        map.addSource("photos", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: photoFeatures },
+          cluster: true,
+          clusterRadius: CLUSTER_RADIUS,
+          clusterMaxZoom: CLUSTER_MAXZOOM,
+        });
         map.addLayer({
           id: "clusters",
           type: "circle",
-          source: "locations",
+          source: "photos",
           filter: ["has", "point_count"],
           paint: {
             "circle-color": PAPER,
             "circle-opacity": 0.92,
             "circle-stroke-color": TEAL,
             "circle-stroke-width": 2,
-            "circle-radius": ["interpolate", ["linear"], ["get", "count"], 1, 11, 30, 18, 120, 26],
+            "circle-radius": ["interpolate", ["linear"], ["get", "point_count"], 2, 12, 25, 18, 120, 26],
           },
         });
         map.addLayer({
           id: "cluster-count",
           type: "symbol",
-          source: "locations",
+          source: "photos",
           filter: ["has", "point_count"],
-          layout: { "text-field": ["get", "count"], "text-font": ["Noto Sans Regular"], "text-size": 12 },
+          layout: { "text-field": ["get", "point_count_abbreviated"], "text-font": ["Noto Sans Regular"], "text-size": 12 },
           paint: { "text-color": INK },
-        });
-
-        map.addLayer({
-          id: "location",
-          type: "circle",
-          source: "locations",
-          filter: ["!", ["has", "point_count"]],
-          maxzoom: DETAIL_ZOOM,
-          paint: {
-            "circle-color": TEAL,
-            "circle-opacity": 0.85,
-            "circle-stroke-color": FOAM,
-            "circle-stroke-width": 1.4,
-            "circle-radius": ["interpolate", ["linear"], ["get", "count"], 1, 5, 30, 11, 80, 15],
-          },
-        });
-        map.addLayer({
-          id: "location-label",
-          type: "symbol",
-          source: "locations",
-          filter: ["!", ["has", "point_count"]],
-          maxzoom: DETAIL_ZOOM,
-          layout: {
-            "text-field": ["get", "location"],
-            "text-font": ["Noto Sans Regular"],
-            "text-size": 12,
-            "text-offset": [0, 1.3],
-            "text-anchor": "top",
-          },
-          paint: { "text-color": INK, "text-halo-color": PAPER, "text-halo-width": 1.4 },
-        });
-
-        // ---- Close-up: individual photo pins ----
-        map.addSource("photos", {
-          type: "geojson",
-          data: { type: "FeatureCollection", features: photoFeatures },
         });
         map.addLayer({
           id: "photo",
           type: "circle",
           source: "photos",
-          minzoom: DETAIL_ZOOM,
+          filter: ["!", ["has", "point_count"]],
           paint: {
             "circle-color": TEAL,
             "circle-opacity": 0.9,
             "circle-stroke-color": FOAM,
             "circle-stroke-width": 1.2,
-            "circle-radius": ["interpolate", ["linear"], ["zoom"], DETAIL_ZOOM, 4, 16, 8],
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 4, 14, 7],
           },
         });
 
-        // Frame to the extent of the locations (or the focused one via ?focus=).
+        // Frame to the photos (or the focused location's photos via ?focus=).
         let focus: string | null = null;
         try { focus = new URLSearchParams(window.location.search).get("focus"); } catch { /* ignore */ }
-        const framed = focus ? locationFeatures.filter((f) => f.properties.location === focus) : locationFeatures;
+        const framePts = focus ? photoFeatures.filter((f) => f.properties.location === focus) : photoFeatures;
         const bounds = new maplibregl.LngLatBounds();
-        for (const f of (framed.length ? framed : locationFeatures)) {
+        for (const f of (framePts.length ? framePts : photoFeatures)) {
           bounds.extend(f.geometry.coordinates as [number, number]);
         }
         if (!bounds.isEmpty()) {
-          // Tight frame: just the captured places + a slight buffer, not the whole world.
-          map.fitBounds(bounds, { padding: { top: 66, bottom: 30, left: 26, right: 26 }, maxZoom: focus ? 12.5 : 8, duration: 0 });
+          map.fitBounds(bounds, { padding: { top: 66, bottom: 30, left: 26, right: 26 }, maxZoom: focus ? 13 : 6.5, duration: 0 });
         }
         setReady(true);
 
-        // Cluster click: dive in past its split point so each click gets meaningfully closer.
+        // Click a cluster: zoom to exactly where it splits, centred on its own
+        // photos (proximity clustering guarantees the children stay in view).
         map.on("click", "clusters", (e) => {
           const feat = e.features?.[0];
           const clusterId = feat?.properties?.cluster_id;
           if (clusterId == null) return;
-          const src = map!.getSource("locations") as maplibregl.GeoJSONSource;
+          const src = map!.getSource("photos") as maplibregl.GeoJSONSource;
           src.getClusterExpansionZoom(clusterId).then((zoom) => {
             map!.easeTo({
               center: (feat!.geometry as GeoJSON.Point).coordinates as [number, number],
-              zoom: Math.min(zoom + CLUSTER_BOOST, 16),
+              zoom: zoom + 0.5,
               duration: EASE_MS,
             });
           }).catch(() => { /* ignore */ });
         });
 
-        // Location dot click: zoom closer (towards the photo-pin level) rather than
-        // jumping straight to the gallery.
-        map.on("click", "location", (e) => {
-          const f = e.features?.[0];
-          if (!f) return;
-          map!.easeTo({
-            center: (f.geometry as GeoJSON.Point).coordinates as [number, number],
-            zoom: Math.min(map!.getZoom() + ZOOM_STEP, DETAIL_ZOOM + 1.5),
-            duration: EASE_MS,
-          });
-        });
-
-        // Photo pin click: open the image in a lightbox (with a button to the gallery).
+        // Click a photo: open it in a lightbox (with a button to its gallery).
         map.on("click", "photo", (e) => {
           const p = e.features?.[0]?.properties as PhotoProps | undefined;
           if (p) setSelected({ location: p.location, title: p.title, imageUrl: p.imageUrl });
         });
 
-        // Hover previews.
+        // Hover preview on individual photos.
         const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 14, className: "map-pop-wrap" });
-        const showLocationPopup = (e: maplibregl.MapLayerMouseEvent) => {
-          const f = e.features?.[0];
-          if (!f) return;
-          map!.getCanvas().style.cursor = "pointer";
-          const p = f.properties as LocationProps;
-          popup
-            .setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number])
-            .setHTML(
-              `<div class="map-pop"><span class="map-pop-thumb"><img src="${p.imageUrl}" alt=""/></span>` +
-              `<span class="map-pop-meta"><strong>${p.location}</strong><small>${p.count} photo${p.count === 1 ? "" : "s"}</small></span></div>`,
-            )
-            .addTo(map!);
-        };
         const showPhotoPopup = (e: maplibregl.MapLayerMouseEvent) => {
           const f = e.features?.[0];
           if (!f) return;
@@ -302,9 +262,6 @@ export default function MapPage({ onNavigate }: { onNavigate: (route: string) =>
         };
         const hidePopup = () => { map!.getCanvas().style.cursor = ""; popup.remove(); };
 
-        map.on("mouseenter", "location", showLocationPopup);
-        map.on("mousemove", "location", showLocationPopup);
-        map.on("mouseleave", "location", hidePopup);
         map.on("mouseenter", "photo", showPhotoPopup);
         map.on("mousemove", "photo", showPhotoPopup);
         map.on("mouseleave", "photo", hidePopup);
