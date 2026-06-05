@@ -796,15 +796,16 @@ function MapFeedAdmin({
   const pickPhotos = useMemo(() => eligible.filter((p) => p.locationId === pickId), [eligible, pickId]);
   const locationsWithPhotos = locations.filter((l) => eligible.some((p) => p.locationId === l.id));
 
-  // The feed card is 16:10. Measure each photo's true ratio (via SmartImage) and
-  // flag whether it fits the card (no crop) or will be cropped.
-  const CARD_RATIO = 16 / 10;
+  // The feed card is 16:9 (the library's most common ratio). Measure each photo's
+  // true ratio (via SmartImage) and flag teal only when it genuinely fills the
+  // card with no meaningful crop (<= ~4%); otherwise amber.
+  const CARD_RATIO = 16 / 9;
   const measure = (id: string, ratio: number) =>
     setRatios((prev) => (prev[id] ? prev : { ...prev, [id]: ratio }));
   const fitOf = (p: Photo): "fit" | "crop" | null => {
     const r = ratios[p.id];
     if (r == null) return null; // not measured yet
-    return Math.abs(r - CARD_RATIO) <= 0.1 ? "fit" : "crop";
+    return Math.abs(r - CARD_RATIO) / CARD_RATIO <= 0.04 ? "fit" : "crop";
   };
   const fitBadge = (p: Photo) => {
     const f = fitOf(p);
@@ -817,7 +818,7 @@ function MapFeedAdmin({
     }
     if (f === "crop") {
       return (
-        <span className="map-feed-warn" title={`Will be cropped — ${ratios[p.id].toFixed(2)}:1 vs 1.60`}>
+        <span className="map-feed-warn" title={`Will be cropped — ${ratios[p.id].toFixed(2)}:1 vs 1.78 (16:9)`}>
           <TriangleAlert size={11} aria-hidden="true" />
         </span>
       );
