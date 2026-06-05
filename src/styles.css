@@ -1276,6 +1276,25 @@ footer {
   background: var(--sea);
 }
 
+/* Flags portrait/square photos that will be cropped by the landscape feed card. */
+.map-feed-warn {
+  position: absolute;
+  left: 5px;
+  bottom: 5px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--timber);
+  color: var(--foam);
+}
+
+.map-feed-thumb.is-misfit:not(.is-on) {
+  outline: 2px solid var(--timber);
+  outline-offset: -2px;
+}
+
 .map-feed-picker-label {
   display: grid;
   gap: 6px;

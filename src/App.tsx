@@ -16,6 +16,7 @@ import {
   Pencil,
   Plus,
   Trash2,
+  TriangleAlert,
   Upload,
   X,
 } from "lucide-react";
@@ -793,6 +794,9 @@ function MapFeedAdmin({
   const pickPhotos = useMemo(() => eligible.filter((p) => p.locationId === pickId), [eligible, pickId]);
   const locationsWithPhotos = locations.filter((l) => eligible.some((p) => p.locationId === l.id));
 
+  // The feed card is landscape (16:10), so portrait/square shots crop hard.
+  const fitsFeed = (p: Photo) => p.aspect === "landscape" || p.aspect === "wide";
+
   async function toggle(photo: Photo) {
     if (busy) return;
     setBusy(true);
@@ -854,9 +858,20 @@ function MapFeedAdmin({
               </div>
               <div className="map-feed-thumbs">
                 {pics.map((p) => (
-                  <button className="map-feed-thumb is-on" key={p.id} type="button" onClick={() => toggle(p)} title="Remove from feed">
+                  <button
+                    className={`map-feed-thumb is-on${fitsFeed(p) ? "" : " is-misfit"}`}
+                    key={p.id}
+                    type="button"
+                    onClick={() => toggle(p)}
+                    title="Remove from feed"
+                  >
                     <SmartImage src={p.imageUrl} alt={p.title} />
                     <span className="map-feed-badge remove"><X size={12} aria-hidden="true" /></span>
+                    {fitsFeed(p) ? null : (
+                      <span className="map-feed-warn" title={`${p.aspect} — will be cropped to fit the feed`}>
+                        <TriangleAlert size={11} aria-hidden="true" />
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -881,7 +896,7 @@ function MapFeedAdmin({
           ) : (
             pickPhotos.map((p) => (
               <button
-                className={`map-feed-thumb${p.mapFeature ? " is-on" : ""}`}
+                className={`map-feed-thumb${p.mapFeature ? " is-on" : ""}${fitsFeed(p) ? "" : " is-misfit"}`}
                 key={p.id}
                 type="button"
                 onClick={() => toggle(p)}
@@ -891,6 +906,11 @@ function MapFeedAdmin({
                 <span className={`map-feed-badge${p.mapFeature ? " remove" : " add"}`}>
                   {p.mapFeature ? <X size={12} aria-hidden="true" /> : <Crosshair size={12} aria-hidden="true" />}
                 </span>
+                {fitsFeed(p) ? null : (
+                  <span className="map-feed-warn" title={`${p.aspect} — will be cropped to fit the feed`}>
+                    <TriangleAlert size={11} aria-hidden="true" />
+                  </span>
+                )}
               </button>
             ))
           )}
