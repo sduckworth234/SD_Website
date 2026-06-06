@@ -2730,7 +2730,7 @@ footer {
   padding: clamp(18px, 3vw, 40px) clamp(12px, 2vw, 28px) clamp(46px, 6vw, 86px);
 }
 .collection-card {
-  position: relative; aspect-ratio: 4 / 5; overflow: hidden; border: 0; padding: 0;
+  position: relative; display: block; width: 100%; aspect-ratio: 4 / 5; overflow: hidden; border: 0; padding: 0;
   border-radius: 8px; background: var(--paper-deep); cursor: var(--circle-cursor), pointer;
 }
 .cc-img {
@@ -2821,7 +2821,7 @@ footer {
 
 /* Collection card admin edit affordance (the card itself is a <button>, so the
    pencil sits in a wrapper as a sibling rather than nested inside it). */
-.cc-wrap { position: relative; }
+.cc-wrap { position: relative; display: block; min-width: 0; }
 .cc-edit {
   position: absolute; top: 10px; right: 10px; z-index: 2;
   display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px;
