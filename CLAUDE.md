@@ -121,6 +121,14 @@ Conventions the gallery relies on:
 
 ## Photo import & sync pipeline (`scripts/`, all Node ESM)
 
+**Recommended path for any new batch — the `/import-photos` skill** (see
+`.claude/skills/import-photos/`, driven by `scripts/import-shoot.mjs`). Drop JPGs
+in a folder, invoke the skill: it reads each original's GPS/altitude/date/aspect
+up front (before WebP strips EXIF/XMP), reverse-geocodes a location, compresses,
+uploads, and inserts a fully-populated published row — one pass, no manifest
+round-trip, idempotent, with a dry-run **plan** shown before anything goes live.
+The multi-step routes below predate it and remain for reference/history.
+
 Source photos live on the external drive **`/Volumes/SamD2`**. Two import
 routes plus a backfill. All write-scripts need `--env-file=.env.local` (service
 key) and, because the Bash sandbox blocks `/Volumes`, must run with the sandbox
