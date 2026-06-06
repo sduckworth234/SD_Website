@@ -6,6 +6,7 @@ import {
   Check,
   Copy,
   Crosshair,
+  Eye,
   EyeOff,
   Globe,
   Images,
@@ -23,7 +24,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import type { CSSProperties, DependencyList } from "react";
+import type { CSSProperties, DependencyList, ReactNode } from "react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   assignRecentSlot,
@@ -34,20 +35,25 @@ import {
   getAdminPhotos,
   getGalleryData,
   getRecentPhotos,
+  getSiteSettings,
   getTransformedPublicUrl,
   hasSupabaseEnv,
   photoBucket,
   isCurrentUserAdmin,
   sendPhotoToTop,
+  setCollectionPicks,
   setLocationFeedOrder,
   setMapFeature,
+  setPhotoShop,
+  setSiteFlag,
+  setSiteSetting,
   supabase,
   updatePhotoDetails,
   updatePhotoCuration,
   updatePhotoVisibility,
   uploadPhotoAsset,
 } from "./lib/supabase";
-import type { GalleryLocation, LocationBucket, Photo } from "./types";
+import type { GalleryLocation, LocationBucket, Photo, SiteSetting } from "./types";
 import { Header } from "./components/Header";
 import { OakFrame } from "./components/OakFrame";
 import { SmartImage } from "./components/SmartImage";
@@ -183,16 +189,22 @@ function useSiteData() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [recentPhotos, setRecentPhotos] = useState<Photo[]>([]);
   const [locations, setLocations] = useState<GalleryLocation[]>([]);
+  const [settings, setSettings] = useState<SiteSetting[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminChecked, setAdminChecked] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadGallery = useCallback(async () => {
-    const [data, recent] = await Promise.all([getGalleryData(), getRecentPhotos(9)]);
+    const [data, recent, siteSettings] = await Promise.all([
+      getGalleryData(),
+      getRecentPhotos(9),
+      getSiteSettings(),
+    ]);
     setPhotos(data.photos);
     setLocations(data.locations);
     setRecentPhotos(recent);
+    setSettings(siteSettings);
   }, []);
 
   useEffect(() => {
@@ -236,16 +248,50 @@ function useSiteData() {
     return [...ordered, ...extra];
   }, [publicPhotos, locations]);
 
-  return { photos, recentPhotos, locations, publicPhotos, locationNames, isAdmin, adminChecked, isScrolled, isLoading, loadGallery };
+  // Visibility flags (key→enabled) and small key/value settings (key→value),
+  // e.g. the chosen Framed Editions banner photos. A missing flag defaults to
+  // visible so the site never hides itself if a row is absent.
+  const flags = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    for (const s of settings) map[s.key] = s.enabled;
+    return map;
+  }, [settings]);
+  const settingValue = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    for (const s of settings) map[s.key] = s.value;
+    return map;
+  }, [settings]);
+
+  return { photos, recentPhotos, locations, settings, flags, settingValue, publicPhotos, locationNames, isAdmin, adminChecked, isScrolled, isLoading, loadGallery };
+}
+
+// A flag is "on" unless explicitly set to false (absent row = visible).
+function flagOn(flags: Record<string, boolean>, key: string) {
+  return flags[key] !== false;
+}
+
+// Wraps a home section governed by a visibility flag. Public visitors see
+// nothing when it's hidden; the admin still sees it (to preview/curate) with a
+// small "hidden from public" tag so it's obvious the public can't.
+function AdminHideable({ visible, isAdmin, label, children }: { visible: boolean; isAdmin: boolean; label: string; children: ReactNode }) {
+  if (visible) return <>{children}</>;
+  if (!isAdmin) return null;
+  return (
+    <div className="admin-hidden">
+      <span className="admin-hidden-tag"><EyeOff size={13} aria-hidden="true" /> {label} · hidden from public</span>
+      {children}
+    </div>
+  );
 }
 
 // The landing page: hero, recent work, the map teaser, location collection cards,
 // and (admin-only for now) the Framed Editions shop banner.
 function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
-  const { photos, recentPhotos, publicPhotos, locations, locationNames, isAdmin, isScrolled, isLoading, loadGallery } = useSiteData();
+  const { photos, recentPhotos, publicPhotos, locations, locationNames, flags, settingValue, isAdmin, isScrolled, isLoading, loadGallery } = useSiteData();
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [recentSlot, setRecentSlot] = useState<number | null>(null);
+  const [editingCollection, setEditingCollection] = useState<GalleryLocation | null>(null);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
 
   function goToMap() { window.history.pushState({}, "", "/map"); onNavigate("/map"); }
@@ -260,14 +306,20 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
     onNavigate("/galleries");
   }
 
-  const heroPortrait = useMemo(
-    () => publicPhotos.find((p) => p.aspect === "portrait") ?? publicPhotos[0],
-    [publicPhotos],
-  );
-  const heroLandscape = useMemo(
-    () => publicPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? publicPhotos[1],
-    [publicPhotos],
-  );
+  // Banner frames: admin-chosen photos (site_settings) win; otherwise auto-pick
+  // a portrait + a landscape so the banner always has something to show.
+  const heroPortrait = useMemo(() => {
+    const pick = settingValue.banner_portrait
+      ? publicPhotos.find((p) => p.id === settingValue.banner_portrait)
+      : undefined;
+    return pick ?? publicPhotos.find((p) => p.aspect === "portrait") ?? publicPhotos[0];
+  }, [publicPhotos, settingValue.banner_portrait]);
+  const heroLandscape = useMemo(() => {
+    const pick = settingValue.banner_landscape
+      ? publicPhotos.find((p) => p.id === settingValue.banner_landscape)
+      : undefined;
+    return pick ?? publicPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? publicPhotos[1];
+  }, [publicPhotos, settingValue.banner_landscape]);
 
   useScrollReveal([isLoading, recentPhotos.length, locationNames.length]);
 
@@ -292,10 +344,16 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
               photos={recentPhotos}
             />
           ) : null}
-          <MapPromo photos={publicPhotos} locations={locations} onOpen={goToMap} />
-          <CollectionCards photos={publicPhotos} locations={locations} onOpen={openLocation} />
+          <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "map_promo")} label="Map promo">
+            <MapPromo photos={publicPhotos} locations={locations} onOpen={goToMap} />
+          </AdminHideable>
+          <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "collection_cards")} label="Collections">
+            <CollectionCards photos={publicPhotos} locations={locations} onOpen={openLocation} isAdmin={isAdmin} onEdit={setEditingCollection} />
+          </AdminHideable>
           {heroPortrait ? (
-            <FramedHero portrait={heroPortrait} landscape={heroLandscape} onShop={goToShop} />
+            <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "framed_banner")} label="Framed Editions banner">
+              <FramedHero portrait={heroPortrait} landscape={heroLandscape} onShop={goToShop} />
+            </AdminHideable>
           ) : null}
         </>
       )}
@@ -312,6 +370,20 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           onClose={() => setRecentSlot(null)}
           onPick={async (photo) => { await assignRecentSlot(recentSlot, photo.id); await loadGallery(); setRecentSlot(null); }}
           photos={photos}
+        />
+      ) : null}
+      {editingCollection ? (
+        <OrderedPhotoPicker
+          title={`Featured in the ${editingCollection.name} card`}
+          hint="Pick up to 5 photos to slowly cycle on the home page — the number shows the order. Leave empty to auto-fill with the latest."
+          max={5}
+          photos={publicPhotos.filter((p) => p.location === editingCollection.name)}
+          initialIds={publicPhotos
+            .filter((p) => p.location === editingCollection.name && p.collectionOrder != null)
+            .sort((a, b) => (a.collectionOrder ?? 0) - (b.collectionOrder ?? 0))
+            .map((p) => p.id)}
+          onClose={() => setEditingCollection(null)}
+          onSave={async (ids) => { await setCollectionPicks(editingCollection.id, ids); await loadGallery(); setEditingCollection(null); }}
         />
       ) : null}
       <InstagramRail />
@@ -409,7 +481,8 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
 }
 
 // One location tile that slowly cross-fades through a handful of its photos.
-function CollectionCard({ name, photos, onOpen, delay }: { name: string; photos: Photo[]; onOpen: (name: string) => void; delay: number }) {
+// Admins get a pencil to choose which photos feature in the cycle.
+function CollectionCard({ name, photos, onOpen, delay, onEdit }: { name: string; photos: Photo[]; onOpen: (name: string) => void; delay: number; onEdit?: () => void }) {
   const [i, setI] = useState(0);
   useEffect(() => {
     if (photos.length <= 1) return;
@@ -423,17 +496,26 @@ function CollectionCard({ name, photos, onOpen, delay }: { name: string; photos:
   }, [photos.length, delay]);
 
   return (
-    <button className="collection-card" type="button" onClick={() => onOpen(name)} aria-label={`View the ${name} gallery`}>
-      {photos.map((p, idx) => (
-        <img key={p.id} className={`cc-img${idx === i ? " is-on" : ""}`} src={thumbUrl(p, 700)} alt="" loading="lazy" decoding="async" />
-      ))}
-      <span className="cc-label">{name}</span>
-    </button>
+    <div className="cc-wrap">
+      <button className="collection-card" type="button" onClick={() => onOpen(name)} aria-label={`View the ${name} gallery`}>
+        {photos.map((p, idx) => (
+          <img key={p.id} className={`cc-img${idx === i ? " is-on" : ""}`} src={thumbUrl(p, 700)} alt="" loading="lazy" decoding="async" />
+        ))}
+        <span className="cc-label">{name}</span>
+      </button>
+      {onEdit ? (
+        <button className="cc-edit" type="button" onClick={onEdit} aria-label={`Choose featured photos for ${name}`} title="Choose featured photos">
+          <Pencil size={14} aria-hidden="true" />
+        </button>
+      ) : null}
+    </div>
   );
 }
 
 // The home page's location collections — one cross-fading card per location.
-function CollectionCards({ photos, locations, onOpen }: { photos: Photo[]; locations: GalleryLocation[]; onOpen: (name: string) => void }) {
+// Each card cycles its admin-pinned photos (collectionOrder), else the first
+// few in gallery order.
+function CollectionCards({ photos, locations, onOpen, isAdmin = false, onEdit }: { photos: Photo[]; locations: GalleryLocation[]; onOpen: (name: string) => void; isAdmin?: boolean; onEdit?: (location: GalleryLocation) => void }) {
   const cards = useMemo(() => {
     const byLoc = new Map<string, Photo[]>();
     for (const p of photos) {
@@ -443,8 +525,14 @@ function CollectionCards({ photos, locations, onOpen }: { photos: Photo[]; locat
       else byLoc.set(p.location, [p]);
     }
     const order = new Map(locations.map((l, i) => [l.name, i]));
+    const locByName = new Map(locations.map((l) => [l.name, l]));
     return [...byLoc.entries()]
-      .map(([name, ps]) => ({ name, photos: ps.slice(0, 5) }))
+      .map(([name, ps]) => {
+        const pinned = ps
+          .filter((p) => p.collectionOrder != null)
+          .sort((a, b) => (a.collectionOrder ?? 0) - (b.collectionOrder ?? 0));
+        return { name, photos: (pinned.length ? pinned : ps).slice(0, 5), loc: locByName.get(name) };
+      })
       .sort((a, b) => (order.get(a.name) ?? 999) - (order.get(b.name) ?? 999) || a.name.localeCompare(b.name));
   }, [photos, locations]);
 
@@ -452,7 +540,14 @@ function CollectionCards({ photos, locations, onOpen }: { photos: Photo[]; locat
   return (
     <section className="collection-cards scroll-reveal" aria-label="Browse by location">
       {cards.map((c, i) => (
-        <CollectionCard key={c.name} name={c.name} photos={c.photos} onOpen={onOpen} delay={i * 650} />
+        <CollectionCard
+          key={c.name}
+          name={c.name}
+          photos={c.photos}
+          onOpen={onOpen}
+          delay={i * 650}
+          onEdit={isAdmin && c.loc && onEdit ? () => onEdit(c.loc as GalleryLocation) : undefined}
+        />
       ))}
     </section>
   );
@@ -523,32 +618,55 @@ function ShopProduct({ photo, onAdd }: { photo: Photo; onAdd: () => void }) {
   );
 }
 
-// The Framed Editions shop. Admin-only for now (not linked publicly); Phase 3
-// adds a visibility flag + admin curation of which photos appear.
+// The Framed Editions shop. The grid is admin-curated (in_shop); access is
+// gated by the `shop_public` flag — public sees "Opening soon" until it's on,
+// while the admin always sees the full shop and can curate it.
 function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
-  const { publicPhotos, isAdmin, adminChecked } = useSiteData();
+  const { publicPhotos, flags, isAdmin, adminChecked, loadGallery } = useSiteData();
   const [cart, setCart] = useState(0);
   const [filter, setFilter] = useState("All");
+  const [curating, setCurating] = useState(false);
 
   function goHome() { window.history.pushState({}, "", "/"); onNavigate("/"); }
   const region = (p: Photo) => (NB_LOCATIONS.has(p.location) ? "Australia" : "Europe");
-  const products = useMemo(() => publicPhotos.slice(0, 18), [publicPhotos]);
-  const filtered = filter === "All" ? products : products.filter((p) => region(p) === filter);
-  const heroP = publicPhotos.find((p) => p.aspect === "portrait") ?? publicPhotos[0];
-  const heroL = publicPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? publicPhotos[1];
+
+  const shopPhotos = useMemo(
+    () => publicPhotos.filter((p) => p.inShop).sort((a, b) => (a.shopOrder ?? 1e9) - (b.shopOrder ?? 1e9)),
+    [publicPhotos],
+  );
+  const filtered = filter === "All" ? shopPhotos : shopPhotos.filter((p) => region(p) === filter);
+  const heroP = shopPhotos.find((p) => p.aspect === "portrait") ?? shopPhotos[0]
+    ?? publicPhotos.find((p) => p.aspect === "portrait") ?? publicPhotos[0];
+  const heroL = shopPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? shopPhotos[1]
+    ?? publicPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? publicPhotos[1];
+
+  async function saveShop(orderedIds: string[]) {
+    const chosen = new Set(orderedIds);
+    for (const p of shopPhotos) {
+      if (!chosen.has(p.id)) await setPhotoShop(p.id, { inShop: false, shopOrder: null });
+    }
+    for (let i = 0; i < orderedIds.length; i += 1) {
+      await setPhotoShop(orderedIds[i], { inShop: true, shopOrder: i + 1 });
+    }
+    await loadGallery();
+    setCurating(false);
+  }
 
   const ShopNav = (
     <div className="shop-nav">
       <button className="shop-logo" onClick={goHome} type="button">FRAMED EDITIONS</button>
       <div className="shop-nav-links">
         <a href="/" onClick={(e) => { e.preventDefault(); goHome(); }}>← samduckworth.com</a>
+        {isAdmin ? (
+          <button className="shop-curate" onClick={() => setCurating(true)} type="button"><Pencil size={13} aria-hidden="true" /> Curate</button>
+        ) : null}
         <span className="shop-cart">Cart · {cart}</span>
       </div>
     </div>
   );
 
   if (!adminChecked) return <main className="shop">{ShopNav}</main>;
-  if (!isAdmin) {
+  if (!isAdmin && !flagOn(flags, "shop_public")) {
     return (
       <main className="shop">
         {ShopNav}
@@ -564,6 +682,9 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
   return (
     <main className="shop">
       {ShopNav}
+      {isAdmin && !flagOn(flags, "shop_public") ? (
+        <div className="shop-admin-note"><EyeOff size={13} aria-hidden="true" /> Shop is hidden from the public — toggle “Shop page” in Admin → Visibility to open it.</div>
+      ) : null}
       <section className="shop-hero">
         <div className="sh-copy">
           <p className="eyebrow">Sam Duckworth Photography</p>
@@ -587,11 +708,27 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
             <button key={f} className={`chip${filter === f ? " active" : ""}`} onClick={() => setFilter(f)} type="button">{f}</button>
           ))}
         </div>
-        <div className="shop-grid">
-          {filtered.map((p) => <ShopProduct key={p.id} photo={p} onAdd={() => setCart((c) => c + 1)} />)}
-        </div>
+        {filtered.length ? (
+          <div className="shop-grid">
+            {filtered.map((p) => <ShopProduct key={p.id} photo={p} onAdd={() => setCart((c) => c + 1)} />)}
+          </div>
+        ) : (
+          <p className="shop-empty">
+            {isAdmin ? "No prints curated yet — hit “Curate” to choose which photos to sell." : "New editions coming soon."}
+          </p>
+        )}
       </section>
       <Footer />
+      {curating ? (
+        <OrderedPhotoPicker
+          title="Prints for sale"
+          hint="Pick the photos to sell as Framed Editions — the number shows the order they appear in the shop."
+          photos={publicPhotos}
+          initialIds={shopPhotos.map((p) => p.id)}
+          onClose={() => setCurating(false)}
+          onSave={saveShop}
+        />
+      ) : null}
     </main>
   );
 }
@@ -711,6 +848,97 @@ function RecentPicker({
               <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
             </button>
           ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// Multi-select, ordered photo picker. Click to add (numbered in pick order),
+// click again to remove; the saved order is the displayed order. Used for the
+// home collection cards (max 5) and shop curation (no max).
+function OrderedPhotoPicker({
+  title,
+  hint,
+  photos,
+  initialIds,
+  max,
+  onClose,
+  onSave,
+}: {
+  title: string;
+  hint: string;
+  photos: Photo[];
+  initialIds: string[];
+  max?: number;
+  onClose: () => void;
+  onSave: (orderedIds: string[]) => void | Promise<void>;
+}) {
+  const [picks, setPicks] = useState<string[]>(initialIds);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  function toggle(id: string) {
+    setPicks((cur) =>
+      cur.includes(id)
+        ? cur.filter((x) => x !== id)
+        : max != null && cur.length >= max
+          ? cur
+          : [...cur, id],
+    );
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      await onSave(picks);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="lightbox" role="dialog" aria-modal="true" aria-label={title}>
+      <button className="lightbox-backdrop" onClick={onClose} type="button" aria-label="Close" />
+      <section className="picker-panel">
+        <button className="icon-button close-button" onClick={onClose} type="button" aria-label="Close">
+          <X size={18} aria-hidden="true" />
+        </button>
+        <p className="eyebrow">{title}</p>
+        <p className="picker-hint">{hint}</p>
+        <div className="picker-grid">
+          {photos.map((photo) => {
+            const idx = picks.indexOf(photo.id);
+            return (
+              <button
+                className={`picker-tile${idx >= 0 ? " is-picked" : ""}`}
+                key={photo.id}
+                onClick={() => toggle(photo.id)}
+                type="button"
+                aria-pressed={idx >= 0}
+              >
+                <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
+                {idx >= 0 ? <span className="picker-badge">{idx + 1}</span> : null}
+              </button>
+            );
+          })}
+        </div>
+        <div className="picker-actions">
+          <span className="picker-count">{picks.length}{max != null ? ` / ${max}` : ""} selected</span>
+          <span className="picker-actions-spacer" />
+          <button className="ghost-button" type="button" onClick={() => setPicks([])} disabled={!picks.length || saving}>
+            Clear
+          </button>
+          <button className="solid-button" type="button" onClick={save} disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </button>
         </div>
       </section>
     </div>
@@ -1377,6 +1605,132 @@ function Lightbox({
   );
 }
 
+// The public visibility flags the admin can toggle. Labels live here (not just
+// the DB) so the panel reads well even if a seed row is missing.
+const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
+  { key: "shop_public", label: "Shop page", hint: "Open /shop to the public (otherwise it shows “Opening soon”)." },
+  { key: "framed_banner", label: "Framed Editions banner", hint: "The print banner near the bottom of the home page." },
+  { key: "collection_cards", label: "Collection cards", hint: "The cycling location tiles on the home page." },
+  { key: "map_promo", label: "Map promo", hint: "The interactive-map teaser on the home page." },
+];
+
+// Admin panel: flip what the public can see, and choose the two photos shown in
+// the home Framed Editions banner. Reads/writes public.site_settings.
+function VisibilityAdmin({ photos }: { photos: Photo[] }) {
+  const [settings, setSettings] = useState<SiteSetting[]>([]);
+  const [bannerSlot, setBannerSlot] = useState<null | "portrait" | "landscape">(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    setSettings(await getSiteSettings());
+  }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const flags = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    for (const s of settings) map[s.key] = s.enabled;
+    return map;
+  }, [settings]);
+  const value = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    for (const s of settings) map[s.key] = s.value;
+    return map;
+  }, [settings]);
+
+  async function toggle(key: string, next: boolean) {
+    setBusy(true);
+    try {
+      await setSiteFlag(key, next);
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function pickBanner(orientation: "portrait" | "landscape", id: string | null) {
+    setBusy(true);
+    try {
+      await setSiteSetting(orientation === "portrait" ? "banner_portrait" : "banner_landscape", id);
+      await load();
+      setBannerSlot(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const chosen = {
+    portrait: photos.find((p) => p.id === value.banner_portrait),
+    landscape: photos.find((p) => p.id === value.banner_landscape),
+  };
+
+  return (
+    <section className="admin-visibility" aria-label="Visibility and banner">
+      <div className="admin-sec-head"><Eye size={16} aria-hidden="true" /><h2>Visibility</h2></div>
+      <p className="admin-sec-hint">Choose what the public sees. You always see everything while signed in.</p>
+      <div className="vis-flags">
+        {VISIBILITY_FLAGS.map((f) => {
+          const on = flags[f.key] !== false;
+          return (
+            <div className="vis-flag" key={f.key}>
+              <span className="vis-flag-text"><b>{f.label}</b><span>{f.hint}</span></span>
+              <button
+                type="button"
+                className={`vis-toggle${on ? " on" : ""}`}
+                onClick={() => toggle(f.key, !on)}
+                disabled={busy}
+                aria-pressed={on}
+                aria-label={`${f.label} ${on ? "visible" : "hidden"}`}
+              >
+                <span className="vis-knob" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <div className="admin-sec-head vis-banner-head"><Images size={16} aria-hidden="true" /><h2>Banner frames</h2></div>
+      <p className="admin-sec-hint">The two photos shown in the home Framed Editions banner. Leave on “Auto” to pick the latest.</p>
+      <div className="banner-slots">
+        {(["portrait", "landscape"] as const).map((orient) => (
+          <div className="banner-slot" key={orient}>
+            <div className="banner-slot-frame">
+              {chosen[orient] ? (
+                <OakFrame src={thumbUrl(chosen[orient] as Photo, 520)} orientation={orient} alt={(chosen[orient] as Photo).title} />
+              ) : (
+                <div className="banner-slot-empty">Auto</div>
+              )}
+            </div>
+            <div className="banner-slot-actions">
+              <span className="banner-slot-label">{orient}</span>
+              <button className="ghost-button" type="button" onClick={() => setBannerSlot(orient)} disabled={busy}>Choose</button>
+              {chosen[orient] ? (
+                <button className="text-button" type="button" onClick={() => pickBanner(orient, null)} disabled={busy}>Reset</button>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+      {bannerSlot ? (
+        <OrderedPhotoPicker
+          title={`Banner ${bannerSlot} photo`}
+          hint={`Pick one ${bannerSlot} photo for the home banner frame.`}
+          max={1}
+          photos={photos.filter(
+            (p) =>
+              p.published &&
+              (bannerSlot === "portrait"
+                ? p.aspect === "portrait" || p.aspect === "square"
+                : p.aspect === "landscape" || p.aspect === "wide"),
+          )}
+          initialIds={value[bannerSlot === "portrait" ? "banner_portrait" : "banner_landscape"] ? [value[bannerSlot === "portrait" ? "banner_portrait" : "banner_landscape"] as string] : []}
+          onClose={() => setBannerSlot(null)}
+          onSave={async (ids) => { await pickBanner(bannerSlot, ids[0] ?? null); }}
+        />
+      ) : null}
+    </section>
+  );
+}
+
 function AdminApp({ onNavigate }: { onNavigate: (route: string) => void }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -1675,6 +2029,7 @@ function AdminDashboard({ session }: { session: Session }) {
       <UploadPanel locations={locations} onUploaded={refresh} setMessage={setMessage} />
       {message ? <p className="form-note">{message}</p> : null}
       <MapFeedAdmin photos={adminPhotos} locations={locations} onChanged={refresh} />
+      <VisibilityAdmin photos={adminPhotos} />
       <LocationRail
         activeLocation={activeLocation}
         locations={locations}

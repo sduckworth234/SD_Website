@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { fallbackLocations, photos as fallbackPhotos } from "../data/photos";
-import type { GalleryLocation, Photo } from "../types";
+import type { GalleryLocation, Photo, SiteSetting } from "../types";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabasePublishableKey =
@@ -64,6 +64,9 @@ type PhotoRow = {
   is_featured: boolean;
   is_published: boolean;
   sort_order: number;
+  collection_order: number | null;
+  in_shop: boolean;
+  shop_order: number | null;
   locations: {
     id: string;
     slug: string;
@@ -126,6 +129,9 @@ function mapPhoto(row: PhotoRow): Photo {
     latitude: row.latitude,
     longitude: row.longitude,
     mapFeature: row.is_map_feature,
+    collectionOrder: row.collection_order ?? null,
+    inShop: row.in_shop ?? false,
+    shopOrder: row.shop_order ?? null,
   };
 }
 
@@ -148,7 +154,7 @@ export async function getGalleryData() {
       supabase
         .from("photos")
         .select(
-          "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)",
+          "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, collection_order, in_shop, shop_order, locations(id, slug, name, region, description, sort_order)",
         )
         .eq("is_published", true)
         .order("sort_order", { ascending: true })
@@ -180,7 +186,7 @@ export async function getAdminPhotos() {
   const { data, error } = await supabase
     .from("photos")
     .select(
-      "id, title, slug, description, location_id, kind, year_taken, captured_at, aspect, storage_bucket, storage_path, source_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)",
+      "id, title, slug, description, location_id, kind, year_taken, captured_at, aspect, storage_bucket, storage_path, source_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, collection_order, in_shop, shop_order, locations(id, slug, name, region, description, sort_order)",
     )
     .order("created_at", { ascending: false });
 
@@ -530,5 +536,79 @@ export async function setHeroSlot(photoId: string, slot: 1 | 2 | 3) {
     })
     .eq("id", photoId);
 
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3: home collection curation, shop curation, and site visibility flags.
+// ---------------------------------------------------------------------------
+
+// Pin an explicit, ordered set of photos into a location's home collection card
+// (the slowly-cycling tile). Clears the location's previous pins first, then
+// numbers the picks 1..N. With no picks the card falls back to gallery order.
+export async function setCollectionPicks(locationId: string, orderedPhotoIds: string[]) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const { error: clearError } = await supabase
+    .from("photos")
+    .update({ collection_order: null })
+    .eq("location_id", locationId)
+    .not("collection_order", "is", null);
+  if (clearError) throw clearError;
+
+  for (let i = 0; i < orderedPhotoIds.length; i += 1) {
+    const { error } = await supabase
+      .from("photos")
+      .update({ collection_order: i + 1 })
+      .eq("id", orderedPhotoIds[i]);
+    if (error) throw error;
+  }
+}
+
+// Toggle whether a photo is sold on /shop, and/or set its manual shop order.
+export async function setPhotoShop(
+  photoId: string,
+  input: { inShop?: boolean; shopOrder?: number | null },
+) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const updates: Record<string, boolean | number | null> = {};
+  if (typeof input.inShop === "boolean") updates.in_shop = input.inShop;
+  if (input.shopOrder !== undefined) updates.shop_order = input.shopOrder;
+  if (!Object.keys(updates).length) return;
+
+  const { error } = await supabase.from("photos").update(updates).eq("id", photoId);
+  if (error) throw error;
+}
+
+// Read every site_settings row (visibility flags + small key/value settings).
+// Public-safe: anon may read. Returns [] when Supabase isn't configured.
+export async function getSiteSettings(): Promise<SiteSetting[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("key, enabled, value, label");
+  if (error) {
+    console.warn("Could not read site settings", error);
+    return [];
+  }
+  return (data ?? []) as SiteSetting[];
+}
+
+// Flip a visibility flag on/off (admin only — enforced by RLS).
+export async function setSiteFlag(key: string, enabled: boolean) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const { error } = await supabase
+    .from("site_settings")
+    .upsert({ key, enabled }, { onConflict: "key" });
+  if (error) throw error;
+}
+
+// Set a key/value setting, e.g. the chosen banner photo ids (admin only).
+export async function setSiteSetting(key: string, value: string | null) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const { error } = await supabase
+    .from("site_settings")
+    .upsert({ key, value }, { onConflict: "key" });
   if (error) throw error;
 }

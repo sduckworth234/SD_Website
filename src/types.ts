@@ -41,4 +41,19 @@ export type Photo = {
   longitude?: number | null;
   // Admin-picked feature photo for its location in the home page map promo feed.
   mapFeature?: boolean;
+  // If set, pins this photo into its location's home collection card at this
+  // order (asc). Null/absent = auto-fill by gallery order.
+  collectionOrder?: number | null;
+  // Sold as a Framed Edition print on /shop, and its manual order there (asc).
+  inShop?: boolean;
+  shopOrder?: number | null;
+};
+
+// A row from public.site_settings: visibility flags + small key/value settings
+// (e.g. the chosen Framed Editions banner photos). Anon reads; admins write.
+export type SiteSetting = {
+  key: string;
+  enabled: boolean;
+  value: string | null;
+  label: string | null;
 };
