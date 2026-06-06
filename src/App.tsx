@@ -2607,6 +2607,9 @@ function Footer() {
   return (
     <footer>
       <span>SD Gallery</span>
+      <a className="footer-ig" href="https://instagram.com/sam.duckworth" target="_blank" rel="noopener noreferrer" aria-label="Instagram: sam.duckworth">
+        <Instagram size={15} aria-hidden="true" /> sam.duckworth
+      </a>
       <span>Photography by Sam Duckworth</span>
     </footer>
   );
