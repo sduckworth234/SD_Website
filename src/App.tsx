@@ -481,8 +481,9 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
 }
 
 // One location tile that slowly cross-fades through a handful of its photos.
-// Admins get a pencil to choose which photos feature in the cycle.
-function CollectionCard({ name, photos, onOpen, delay, onEdit }: { name: string; photos: Photo[]; onOpen: (name: string) => void; delay: number; onEdit?: () => void }) {
+// `featured` tiles are the big editorial-mosaic heroes. Admins get a pencil to
+// choose which photos cycle. Bigger tiles pull a higher-res image variant.
+function CollectionCard({ name, photos, onOpen, delay, onEdit, featured = false }: { name: string; photos: Photo[]; onOpen: (name: string) => void; delay: number; onEdit?: () => void; featured?: boolean }) {
   const [i, setI] = useState(0);
   useEffect(() => {
     if (photos.length <= 1) return;
@@ -496,10 +497,10 @@ function CollectionCard({ name, photos, onOpen, delay, onEdit }: { name: string;
   }, [photos.length, delay]);
 
   return (
-    <div className="cc-wrap">
+    <div className={`cc-wrap${featured ? " cc-feat" : ""}`}>
       <button className="collection-card" type="button" onClick={() => onOpen(name)} aria-label={`View the ${name} gallery`}>
         {photos.map((p, idx) => (
-          <img key={p.id} className={`cc-img${idx === i ? " is-on" : ""}`} src={thumbUrl(p, 700)} alt="" loading="lazy" decoding="async" />
+          <img key={p.id} className={`cc-img${idx === i ? " is-on" : ""}`} src={thumbUrl(p, featured ? 1100 : 700)} alt="" loading="lazy" decoding="async" />
         ))}
         <span className="cc-label">{name}</span>
       </button>
@@ -546,6 +547,7 @@ function CollectionCards({ photos, locations, onOpen, isAdmin = false, onEdit }:
           photos={c.photos}
           onOpen={onOpen}
           delay={i * 650}
+          featured={i % 6 === 0}
           onEdit={isAdmin && c.loc && onEdit ? () => onEdit(c.loc as GalleryLocation) : undefined}
         />
       ))}
@@ -556,8 +558,10 @@ function CollectionCards({ photos, locations, onOpen, isAdmin = false, onEdit }:
 function CollectionsSkeleton() {
   return (
     <section className="collection-cards" aria-hidden="true">
-      {Array.from({ length: 6 }, (_, i) => (
-        <div className="skeleton-tile" key={i} style={{ aspectRatio: "4 / 5" } as CSSProperties} />
+      {Array.from({ length: 7 }, (_, i) => (
+        <div className={`cc-wrap${i % 6 === 0 ? " cc-feat" : ""}`} key={i}>
+          <div className="skeleton-tile cc-skel" />
+        </div>
       ))}
     </section>
   );

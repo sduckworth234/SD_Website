@@ -2722,15 +2722,21 @@ footer {
 }
 
 /* ================= Home: location collection cards ================= */
+/* Editorial mosaic: 6-col grid, fixed-height rows. Most images are landscape,
+   so tiles are wide; one hero per band of six spans 4 cols × 2 rows. */
 .collection-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: clamp(12px, 1.6vw, 22px);
-  max-width: 80vw; margin: 0 auto;
+  grid-template-columns: repeat(6, 1fr);
+  grid-auto-rows: clamp(104px, 12.5vw, 168px);
+  grid-auto-flow: row dense;
+  gap: clamp(10px, 1.4vw, 20px);
+  max-width: 1120px; margin: 0 auto;
   padding: clamp(18px, 3vw, 40px) clamp(12px, 2vw, 28px) clamp(46px, 6vw, 86px);
 }
+.cc-wrap { position: relative; grid-column: span 2; grid-row: span 1; min-width: 0; }
+.cc-wrap.cc-feat { grid-column: span 4; grid-row: span 2; }
 .collection-card {
-  position: relative; display: block; width: 100%; aspect-ratio: 4 / 5; overflow: hidden; border: 0; padding: 0;
+  position: relative; display: block; width: 100%; height: 100%; overflow: hidden; border: 0; padding: 0;
   border-radius: 8px; background: var(--paper-deep); cursor: var(--circle-cursor), pointer;
 }
 .cc-img {
@@ -2738,10 +2744,27 @@ footer {
   opacity: 0; transform: scale(1.05); transition: opacity 1400ms ease, transform 6000ms ease;
 }
 .cc-img.is-on { opacity: 1; transform: scale(1.1); }
+.cc-skel { width: 100%; height: 100%; border-radius: 8px; }
 .collection-card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 52%, rgba(0,0,0,.55)); }
 .cc-label {
   position: absolute; left: 16px; bottom: 14px; z-index: 1; color: var(--foam);
   font-family: "Bebas Neue", Impact, sans-serif; font-size: 1.45rem; letter-spacing: .08em; text-transform: uppercase;
+}
+.cc-feat .cc-label { font-size: clamp(1.9rem, 3vw, 2.8rem); left: 22px; bottom: 18px; }
+
+/* Tablet: 4 cols, hero becomes a full-width banner (1 row) so there are no gaps. */
+@media (max-width: 900px) {
+  .collection-cards { grid-template-columns: repeat(4, 1fr); grid-auto-rows: clamp(128px, 22vw, 188px); }
+  .cc-wrap { grid-column: span 2; }
+  .cc-wrap.cc-feat { grid-column: span 4; grid-row: span 1; }
+}
+/* Phone: 2-up, hero is a full-width banner. */
+@media (max-width: 560px) {
+  .collection-cards { grid-template-columns: 1fr 1fr; grid-auto-rows: clamp(116px, 30vw, 168px); gap: 10px; }
+  .cc-wrap { grid-column: span 1; }
+  .cc-wrap.cc-feat { grid-column: span 2; grid-row: span 1; }
+  .cc-label { font-size: 1.2rem; left: 12px; bottom: 10px; }
+  .cc-feat .cc-label { font-size: 1.7rem; }
 }
 
 /* ================= Home: Framed Editions banner ================= */
@@ -2821,7 +2844,6 @@ footer {
 
 /* Collection card admin edit affordance (the card itself is a <button>, so the
    pencil sits in a wrapper as a sibling rather than nested inside it). */
-.cc-wrap { position: relative; display: block; min-width: 0; }
 .cc-edit {
   position: absolute; top: 10px; right: 10px; z-index: 2;
   display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px;
