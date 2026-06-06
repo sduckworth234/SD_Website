@@ -154,6 +154,15 @@ function AltitudeBadge({ photo }: { photo: Photo }) {
 function App() {
   const [route, setRoute] = useState(window.location.pathname);
 
+  // Programmatic navigation: switch page AND jump to the top, so clicking a
+  // collection card (etc.) lands at the top of the destination rather than
+  // keeping the previous page's scroll offset. The Back button (popstate)
+  // keeps its own scroll restoration — it doesn't go through here.
+  const navigate = useCallback((next: string) => {
+    setRoute(next);
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+  }, []);
+
   useEffect(() => {
     const onPopState = () => setRoute(window.location.pathname);
     window.addEventListener("popstate", onPopState);
@@ -161,26 +170,26 @@ function App() {
   }, []);
 
   if (route.startsWith("/admin")) {
-    return <AdminApp onNavigate={setRoute} />;
+    return <AdminApp onNavigate={navigate} />;
   }
 
   if (route.startsWith("/map")) {
     return (
       <Suspense fallback={<div className="map-shell map-loading" aria-label="Loading map" />}>
-        <MapPage onNavigate={setRoute} />
+        <MapPage onNavigate={navigate} />
       </Suspense>
     );
   }
 
   if (route.startsWith("/shop")) {
-    return <ShopPage onNavigate={setRoute} />;
+    return <ShopPage onNavigate={navigate} />;
   }
 
   if (route.startsWith("/galleries")) {
-    return <GalleriesPage onNavigate={setRoute} />;
+    return <GalleriesPage onNavigate={navigate} />;
   }
 
-  return <Home onNavigate={setRoute} />;
+  return <Home onNavigate={navigate} />;
 }
 
 // Shared data (photos, locations, recent), admin detection, scroll state and the
