@@ -41,6 +41,10 @@ EXIF/XMP — and derives:
   precise place** shown on the photo. Creates the `locations` row if it's new.
 - **Kind** — `Drone` if DJI markers are present, else `Landscape` (home) / `Travel`
   (overseas). Override with `KIND=`.
+- **Source file** — the original's absolute path is written to `source_path`
+  (admin-only) so the gallery photo links back to the full-res file. Editable
+  later in the `/admin` full editor; backfill old rows with
+  `scripts/source-path-backfill.mjs`.
 
 Then it compresses (sharp `rotate → fit-inside 2400px → WebP q78`), uploads to the
 `photos` bucket (`upsert`), and inserts a published row. **Idempotent**: any

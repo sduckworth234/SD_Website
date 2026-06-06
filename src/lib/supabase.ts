@@ -54,7 +54,9 @@ type PhotoRow = {
   aspect: Photo["aspect"];
   storage_bucket: string;
   storage_path: string | null;
+  source_path: string | null;
   image_url: string | null;
+  captured_at: string | null;
   relative_altitude_m: number | null;
   latitude: number | null;
   longitude: number | null;
@@ -117,6 +119,8 @@ function mapPhoto(row: PhotoRow): Photo {
     published: row.is_published,
     imageUrl: publicImageUrl(row),
     storagePath: row.storage_path ?? undefined,
+    sourcePath: row.source_path ?? null,
+    capturedAt: row.captured_at ?? null,
     sortOrder: row.sort_order,
     relativeAltitude: row.relative_altitude_m,
     latitude: row.latitude,
@@ -170,10 +174,13 @@ export async function getGalleryData() {
 export async function getAdminPhotos() {
   if (!supabase) return [];
 
+  // Admin-only fetch: includes source_path + captured_at (NOT in the public
+  // query — source_path is a private drive path). Runs as the authenticated
+  // (admin) role, which keeps full-table SELECT per the source_path migration.
   const { data, error } = await supabase
     .from("photos")
     .select(
-      "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)",
+      "id, title, slug, description, location_id, kind, year_taken, captured_at, aspect, storage_bucket, storage_path, source_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)",
     )
     .order("created_at", { ascending: false });
 
@@ -223,6 +230,7 @@ export async function createPhotoRecord(input: {
   year?: number;
   aspect: Photo["aspect"];
   storagePath: string;
+  sourcePath?: string; // original filename, so manual uploads keep the link too
   isFeatured: boolean;
   isPublished: boolean;
 }) {
@@ -243,6 +251,7 @@ export async function createPhotoRecord(input: {
     aspect: input.aspect,
     storage_bucket: photoBucket,
     storage_path: input.storagePath,
+    source_path: input.sourcePath || null,
     is_featured: input.isFeatured,
     is_published: input.isPublished,
     created_by: user?.id ?? null,
@@ -289,6 +298,9 @@ export async function setLocationFeedOrder(locationId: string, order: number) {
   if (error) throw error;
 }
 
+// Edit every field on a photo from the admin panel. Title/description/location/
+// year/aspect always write; the rest only write when the caller includes them
+// (use `undefined` to leave a field untouched, `null` to clear it).
 export async function updatePhotoDetails(
   photoId: string,
   input: {
@@ -297,23 +309,41 @@ export async function updatePhotoDetails(
     locationId?: string;
     year?: number;
     aspect: Photo["aspect"];
+    kind?: Photo["kind"];
+    capturedAt?: string | null;
+    relativeAltitude?: number | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    sourcePath?: string | null;
+    sortOrder?: number;
+    isFeatured?: boolean;
+    isPublished?: boolean;
+    isMapFeature?: boolean;
   },
 ) {
   if (!supabase) throw new Error("Supabase is not configured.");
 
   const title = input.title.trim() || "Untitled";
-  const { error } = await supabase
-    .from("photos")
-    .update({
-      title,
-      description: input.description?.trim() || null,
-      location_id: input.locationId || null,
-      year_taken: input.year || null,
-      aspect: input.aspect,
-      slug: `${slugify(title) || "untitled"}-${Date.now()}`,
-    })
-    .eq("id", photoId);
+  const updates: Record<string, unknown> = {
+    title,
+    description: input.description?.trim() || null,
+    location_id: input.locationId || null,
+    year_taken: input.year || null,
+    aspect: input.aspect,
+    slug: `${slugify(title) || "untitled"}-${Date.now()}`,
+  };
+  if (input.kind) updates.kind = input.kind;
+  if (input.capturedAt !== undefined) updates.captured_at = input.capturedAt || null;
+  if (input.relativeAltitude !== undefined) updates.relative_altitude_m = input.relativeAltitude;
+  if (input.latitude !== undefined) updates.latitude = input.latitude;
+  if (input.longitude !== undefined) updates.longitude = input.longitude;
+  if (input.sourcePath !== undefined) updates.source_path = input.sourcePath?.trim() || null;
+  if (input.sortOrder !== undefined && Number.isFinite(input.sortOrder)) updates.sort_order = input.sortOrder;
+  if (input.isFeatured !== undefined) updates.is_featured = input.isFeatured;
+  if (input.isPublished !== undefined) updates.is_published = input.isPublished;
+  if (input.isMapFeature !== undefined) updates.is_map_feature = input.isMapFeature;
 
+  const { error } = await supabase.from("photos").update(updates).eq("id", photoId);
   if (error) throw error;
 }
 

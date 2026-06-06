@@ -71,12 +71,23 @@ Routing is hand-rolled in `App()` (reads `window.location.pathname`, `popstate`,
 ## Data model & conventions (Supabase)
 
 `photos`: `title`, `slug` (unique), `location_id` → `locations`, `kind`,
-`year_taken`, `aspect` (`portrait|landscape|square|wide`), `storage_bucket`,
-`storage_path`, `is_featured`, `is_published`, `sort_order`,
-`relative_altitude_m` (drone height above takeoff, nullable),
-`latitude` / `longitude` (capture coords, nullable). The last three are
+`year_taken`, `captured_at` (date), `aspect` (`portrait|landscape|square|wide`),
+`storage_bucket`, `storage_path`, `source_path`, `is_featured`, `is_published`,
+`sort_order`, `relative_altitude_m` (drone height above takeoff, nullable),
+`latitude` / `longitude` (capture coords, nullable). The altitude/coords are
 backfilled from the original JPGs (see the altitude/coords scripts) since WebP
 compression strips EXIF/XMP.
+- **`source_path`** = absolute path to the original full-res file at import time
+  (drive folder + filename) — the link from a gallery photo back to the file to
+  sell. **Private/admin-only**: it must never reach the public API, so migration
+  `…_photo_source_path.sql` locks it at the COLUMN level (revoke anon's blanket
+  table SELECT, re-grant an explicit allow-list that omits it). The public query
+  (`getGalleryData`) selects an explicit column list without it; only the admin
+  fetch (`getAdminPhotos`, authenticated role) includes it. **Gotcha:** that
+  allow-list is fail-closed — a NEW public column must be added to the anon grant
+  in that migration or anon can't read it. Backfill with
+  `scripts/source-path-backfill.mjs` (maps `storage_path`→`sourcePath` from the
+  manifests); new imports (`import-shoot.mjs`) write it directly.
 
 `locations`: `name`, `slug` (unique), `region`, `sort_order`, `is_visible`.
 
@@ -192,7 +203,16 @@ tight while preserving precise names per photo.
 
 ## Admin capabilities (built)
 
-Edit details, publish/unpublish, delete (row + storage file), feature/Recent
-Work slots, send-to-top, bulk rename, bulk move-to-location, create location —
-from `/admin` and (edit/unpublish/send-to-top) inline on the live gallery when
-signed in.
+Publish/unpublish, delete (row + storage file), feature/Recent Work slots,
+send-to-top, bulk rename, bulk move-to-location, create location — from `/admin`
+and (edit/unpublish/send-to-top) inline on the live gallery when signed in.
+
+**Full per-photo editor (`/admin`):** every field is editable — title,
+description, location, year, capture date, kind, aspect, altitude, lat/lon,
+**source file path**, sort order, published/featured/map-feature — plus
+read-only storage path / slug / id with copy buttons. A **catalogue search box**
+filters the grid by title, location, or source filename (find the original when
+someone wants to buy a print). The full editor is gated by a `full` prop on
+`PhotoEditForm` + a hidden `_full` form marker, so the lightweight inline editor
+on the public gallery (whose photos omit `source_path`) only touches the basic
+fields and can't blank the admin-only ones.

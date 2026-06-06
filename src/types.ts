@@ -27,6 +27,11 @@ export type Photo = {
   published?: boolean;
   imageUrl: string;
   storagePath?: string;
+  // Absolute path to the original full-res source file (admin-only; never sent
+  // to the public gallery). The "find the original to sell a print" link.
+  sourcePath?: string | null;
+  // Capture date (YYYY-MM-DD) from EXIF, when known.
+  capturedAt?: string | null;
   sortOrder?: number;
   // Drone flight height in metres above the takeoff point (DJI RelativeAltitude).
   // Null/absent for non-drone photos.

@@ -4,6 +4,7 @@ import {
   ArrowUpToLine,
   Camera,
   Check,
+  Copy,
   Crosshair,
   EyeOff,
   Globe,
@@ -16,6 +17,7 @@ import {
   MapPin,
   Pencil,
   Plus,
+  Search,
   Trash2,
   TriangleAlert,
   Upload,
@@ -1346,6 +1348,7 @@ function AdminDashboard({ session }: { session: Session }) {
     useState<ActiveLocation>(allLocations);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
   const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const [bulkTitle, setBulkTitle] = useState("");
   const [bulkLocationId, setBulkLocationId] = useState("");
   const [newLocationName, setNewLocationName] = useState("");
@@ -1368,6 +1371,19 @@ function AdminDashboard({ session }: { session: Session }) {
     if (activeLocation === allLocations) return adminPhotos;
     return adminPhotos.filter((photo) => photo.location === activeLocation);
   }, [activeLocation, adminPhotos]);
+
+  // Catalogue search: match title, location, or the original source filename/path
+  // so a customer pointing at a photo can be traced back to the full-res file.
+  const visiblePhotos = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return filteredPhotos;
+    return filteredPhotos.filter(
+      (photo) =>
+        photo.title.toLowerCase().includes(q) ||
+        photo.location.toLowerCase().includes(q) ||
+        (photo.sourcePath ?? "").toLowerCase().includes(q),
+    );
+  }, [filteredPhotos, query]);
 
   useEffect(() => {
     if (
@@ -1403,7 +1419,7 @@ function AdminDashboard({ session }: { session: Session }) {
   }
 
   function selectAllFiltered() {
-    setSelectedPhotoIds(new Set(filteredPhotos.map((photo) => photo.id)));
+    setSelectedPhotoIds(new Set(visiblePhotos.map((photo) => photo.id)));
   }
 
   async function bulkRename() {
@@ -1464,13 +1480,7 @@ function AdminDashboard({ session }: { session: Session }) {
 
   async function savePhotoDetails(photoId: string, formData: FormData) {
     try {
-      await updatePhotoDetails(photoId, {
-        title: String(formData.get("title") || ""),
-        description: String(formData.get("description") || ""),
-        locationId: String(formData.get("locationId") || ""),
-        year: Number(formData.get("year")) || undefined,
-        aspect: String(formData.get("aspect") || "landscape") as Photo["aspect"],
-      });
+      await updatePhotoDetails(photoId, formToPhotoDetails(formData));
       setEditingPhotoId(null);
       setMessage("Photo details updated.");
       await refresh();
@@ -1500,6 +1510,21 @@ function AdminDashboard({ session }: { session: Session }) {
         photos={adminPhotos}
         onChange={setActiveLocation}
       />
+      <div className="admin-search">
+        <Search size={16} aria-hidden="true" />
+        <input
+          aria-label="Search photos by title, location, or source filename"
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search title, location, or source filename…"
+          type="search"
+          value={query}
+        />
+        {query ? (
+          <span className="admin-search-count">
+            {visiblePhotos.length} match{visiblePhotos.length === 1 ? "" : "es"}
+          </span>
+        ) : null}
+      </div>
       <section className="admin-toolbar" aria-label="Bulk photo actions">
         <span>{selectedPhotoIds.size} selected</span>
         <button className="text-button" onClick={selectAllFiltered} type="button">
@@ -1553,7 +1578,7 @@ function AdminDashboard({ session }: { session: Session }) {
         </div>
       </section>
       <section className="admin-curation-grid" aria-label="Photo curation grid">
-        {filteredPhotos.map((photo, index) => (
+        {visiblePhotos.map((photo, index) => (
           <article
             className={`admin-curation-card ${photo.aspect} ${
               selectedPhotoIds.has(photo.id) ? "selected" : ""
@@ -1570,6 +1595,7 @@ function AdminDashboard({ session }: { session: Session }) {
             </button>
             {editingPhotoId === photo.id ? (
               <PhotoEditForm
+                full
                 locations={locations}
                 onCancel={() => setEditingPhotoId(null)}
                 onSave={(formData) => savePhotoDetails(photo.id, formData)}
@@ -1583,7 +1609,23 @@ function AdminDashboard({ session }: { session: Session }) {
                 </span>
                 <strong>{photo.title}</strong>
                 {photo.description ? <p>{photo.description}</p> : null}
-                <small>{photo.published ? "Published" : "Draft"}</small>
+                <small className="admin-facts">
+                  {photo.kind}
+                  {photo.relativeAltitude != null ? ` · ${Math.round(photo.relativeAltitude)}m` : ""}
+                  {photo.latitude != null && photo.longitude != null
+                    ? ` · ${photo.latitude.toFixed(3)}, ${photo.longitude.toFixed(3)}`
+                    : ""}
+                  {` · ${photo.published ? "Published" : "Draft"}`}
+                </small>
+                {photo.sourcePath ? (
+                  <div className="admin-source" title={photo.sourcePath}>
+                    <span className="admin-source-name">{sourceFilename(photo.sourcePath)}</span>
+                    <CopyButton value={photo.sourcePath} label="Copy source path" />
+                    <span className="admin-source-path">{photo.sourcePath}</span>
+                  </div>
+                ) : (
+                  <small className="admin-source-missing">No source file linked</small>
+                )}
                 <div className="card-actions">
                   <button className="text-button edit-button" onClick={() => setEditingPhotoId(photo.id)} type="button">
                     <Pencil size={13} aria-hidden="true" /> Edit details
@@ -1614,16 +1656,82 @@ function AdminDashboard({ session }: { session: Session }) {
   );
 }
 
+// Just the filename from a full source path (handles / and \ separators).
+function sourceFilename(path: string) {
+  return path.split(/[\\/]/).pop() || path;
+}
+
+// Small clipboard button used for source/storage paths, slugs, ids.
+function CopyButton({ value, label }: { value: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      aria-label={label ?? "Copy"}
+      className="copy-chip"
+      onClick={() => {
+        navigator.clipboard?.writeText(value).then(() => {
+          setCopied(true);
+          window.setTimeout(() => setCopied(false), 1200);
+        });
+      }}
+      title={label ?? "Copy"}
+      type="button"
+    >
+      {copied ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}
+    </button>
+  );
+}
+
+// Parse the edit form into the updatePhotoDetails input. The basic fields always
+// write. The rest only write from the FULL (admin) form — flagged by a hidden
+// `_full` input — so the lightweight inline editor on the public gallery (whose
+// photos never carry source_path/captured_at) can't silently clear them: any
+// field it omits stays `undefined` (untouched). Blank numeric fields clear the
+// column (null); blank sort order leaves it untouched.
+function formToPhotoDetails(formData: FormData): Parameters<typeof updatePhotoDetails>[1] {
+  const num = (key: string): number | null => {
+    const raw = String(formData.get(key) ?? "").trim();
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  };
+  const details: Parameters<typeof updatePhotoDetails>[1] = {
+    title: String(formData.get("title") || ""),
+    description: String(formData.get("description") || ""),
+    locationId: String(formData.get("locationId") || ""),
+    year: Number(formData.get("year")) || undefined,
+    aspect: String(formData.get("aspect") || "landscape") as Photo["aspect"],
+  };
+  if (formData.get("_full") !== "1") return details;
+
+  const sort = num("sortOrder");
+  details.kind = String(formData.get("kind") || "Drone") as Photo["kind"];
+  details.capturedAt = String(formData.get("capturedAt") || "").trim() || null;
+  details.relativeAltitude = num("altitude");
+  details.latitude = num("latitude");
+  details.longitude = num("longitude");
+  details.sourcePath = String(formData.get("sourcePath") || "");
+  details.sortOrder = sort == null ? undefined : sort;
+  details.isPublished = formData.get("isPublished") === "on";
+  details.isFeatured = formData.get("isFeatured") === "on";
+  details.isMapFeature = formData.get("isMapFeature") === "on";
+  return details;
+}
+
 function PhotoEditForm({
   locations,
   onCancel,
   onSave,
   photo,
+  full = false,
 }: {
   locations: GalleryLocation[];
   onCancel: () => void;
   onSave: (formData: FormData) => Promise<void>;
   photo: Photo;
+  // `full` (admin) exposes every field; the lightweight public inline editor
+  // leaves it false so it only touches the basic fields it actually loads.
+  full?: boolean;
 }) {
   const [isSaving, setIsSaving] = useState(false);
 
@@ -1641,13 +1749,14 @@ function PhotoEditForm({
 
   return (
     <form className="admin-card-meta edit-photo-form" onSubmit={submit}>
+      {full ? <input name="_full" type="hidden" value="1" /> : null}
       <label>
         Title
         <input defaultValue={photo.title} name="title" placeholder={photo.location} type="text" />
       </label>
       <label>
         Description
-        <textarea defaultValue={photo.description ?? ""} name="description" rows={3} />
+        <textarea defaultValue={photo.description ?? ""} name="description" rows={2} />
       </label>
       <label>
         Location
@@ -1660,19 +1769,106 @@ function PhotoEditForm({
           ))}
         </select>
       </label>
-      <label>
-        Year
-        <input defaultValue={photo.year} inputMode="numeric" name="year" placeholder="2026" type="number" />
-      </label>
-      <label>
-        Ratio
-        <select defaultValue={photo.aspect} name="aspect">
-          <option>landscape</option>
-          <option>portrait</option>
-          <option>square</option>
-          <option>wide</option>
-        </select>
-      </label>
+      <div className="edit-grid">
+        <label>
+          Year
+          <input defaultValue={photo.year} inputMode="numeric" name="year" placeholder="2026" type="number" />
+        </label>
+        <label>
+          Ratio
+          <select defaultValue={photo.aspect} name="aspect">
+            <option>landscape</option>
+            <option>portrait</option>
+            <option>square</option>
+            <option>wide</option>
+          </select>
+        </label>
+      </div>
+      {full ? (
+        <>
+          <div className="edit-grid">
+            <label>
+              Capture date
+              <input defaultValue={photo.capturedAt ?? ""} name="capturedAt" type="date" />
+            </label>
+            <label>
+              Kind
+              <select defaultValue={photo.kind} name="kind">
+                <option>Drone</option>
+                <option>Landscape</option>
+                <option>Travel</option>
+              </select>
+            </label>
+            <label>
+              Altitude (m)
+              <input
+                defaultValue={photo.relativeAltitude ?? ""}
+                name="altitude"
+                placeholder="—"
+                step="0.1"
+                type="number"
+              />
+            </label>
+            <label>
+              Sort order
+              <input defaultValue={photo.sortOrder ?? ""} name="sortOrder" placeholder="—" type="number" />
+            </label>
+            <label>
+              Latitude
+              <input defaultValue={photo.latitude ?? ""} name="latitude" placeholder="—" step="any" type="number" />
+            </label>
+            <label>
+              Longitude
+              <input defaultValue={photo.longitude ?? ""} name="longitude" placeholder="—" step="any" type="number" />
+            </label>
+          </div>
+          <label>
+            Source file (original full-res)
+            <input
+              defaultValue={photo.sourcePath ?? ""}
+              name="sourcePath"
+              placeholder="/Volumes/SamD2/…/DJI_0001.JPG"
+              type="text"
+            />
+          </label>
+          <div className="check-row edit-flags">
+            <label>
+              <input defaultChecked={Boolean(photo.published)} name="isPublished" type="checkbox" /> Published
+            </label>
+            <label>
+              <input defaultChecked={Boolean(photo.featured)} name="isFeatured" type="checkbox" /> Featured
+            </label>
+            <label>
+              <input defaultChecked={Boolean(photo.mapFeature)} name="isMapFeature" type="checkbox" /> Map feature
+            </label>
+          </div>
+          <dl className="edit-readonly">
+            {photo.storagePath ? (
+              <div>
+                <dt>Storage</dt>
+                <dd>
+                  <code>{photo.storagePath}</code>
+                  <CopyButton value={photo.storagePath} label="Copy storage path" />
+                </dd>
+              </div>
+            ) : null}
+            <div>
+              <dt>Slug</dt>
+              <dd>
+                <code>{photo.slug}</code>
+                <CopyButton value={photo.slug} label="Copy slug" />
+              </dd>
+            </div>
+            <div>
+              <dt>ID</dt>
+              <dd>
+                <code>{photo.id}</code>
+                <CopyButton value={photo.id} label="Copy id" />
+              </dd>
+            </div>
+          </dl>
+        </>
+      ) : null}
       <div className="edit-actions">
         <button className="solid-button" disabled={isSaving} type="submit">
           {isSaving ? "Saving" : "Save changes"}
@@ -1708,13 +1904,7 @@ function PhotoEditOverlay({
 
   async function save(formData: FormData) {
     try {
-      await updatePhotoDetails(photo.id, {
-        title: String(formData.get("title") || ""),
-        description: String(formData.get("description") || ""),
-        locationId: String(formData.get("locationId") || ""),
-        year: Number(formData.get("year")) || undefined,
-        aspect: String(formData.get("aspect") || "landscape") as Photo["aspect"],
-      });
+      await updatePhotoDetails(photo.id, formToPhotoDetails(formData));
       await onSaved();
       onClose();
     } catch (error) {
@@ -1775,6 +1965,7 @@ function UploadPanel({
         year: Number(formData.get("year")) || undefined,
         aspect: String(formData.get("aspect") || "landscape") as Photo["aspect"],
         storagePath,
+        sourcePath: file.name, // record the original filename for the source link
         isFeatured: formData.get("isFeatured") === "on",
         isPublished: formData.get("isPublished") === "on",
       });

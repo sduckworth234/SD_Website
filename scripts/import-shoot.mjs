@@ -332,6 +332,7 @@ for (const src of files) {
     aspect,
     storage_bucket: bucket,
     storage_path: storagePath,
+    source_path: src, // link back to the original full-res file
     relative_altitude_m: meta.altitude,
     latitude: meta.lat,
     longitude: meta.lon,

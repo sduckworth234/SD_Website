@@ -1736,6 +1736,153 @@ footer {
   gap: 10px;
 }
 
+/* Expanded edit form: compact 2-col grid for the short/numeric fields. */
+.edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 10px;
+}
+
+.edit-flags {
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+/* Read-only system facts (storage path / slug / id) at the foot of the form. */
+.edit-readonly {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-top: 9px;
+  border-top: 1px dashed var(--line);
+}
+
+.edit-readonly div {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-readonly dt {
+  color: var(--muted);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.edit-readonly dd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  min-width: 0;
+}
+
+.edit-readonly code {
+  font-size: 0.66rem;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Clipboard chip (source/storage paths, slugs, ids). */
+.copy-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--foam);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.copy-chip:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+/* Source-file link shown on each curation card. */
+.admin-card-meta .admin-facts {
+  text-transform: none;
+  color: var(--muted);
+}
+
+.admin-source {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--foam);
+}
+
+.admin-source .admin-source-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  text-transform: none;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-source .admin-source-path {
+  grid-column: 1 / -1;
+  font-size: 0.6rem;
+  text-transform: none;
+  color: var(--muted);
+  word-break: break-all;
+  line-height: 1.35;
+}
+
+.admin-card-meta .admin-source-missing {
+  text-transform: none;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Catalogue search box. */
+.admin-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--foam);
+  color: var(--muted);
+}
+
+.admin-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.9rem;
+  padding: 2px 0;
+}
+
+.admin-search input:focus {
+  outline: none;
+}
+
+.admin-search-count {
+  flex: none;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .slot-actions {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
