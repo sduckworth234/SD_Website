@@ -2778,8 +2778,8 @@ footer {
 .fh-main { width: min(300px, 62%); z-index: 2; }
 .fh-back { position: absolute; right: 0; bottom: 6%; width: min(260px, 52%); z-index: 1; opacity: .97; }
 .fh-flag {
-  display: inline-flex; align-items: center; gap: 9px; margin: 18px 0 0;
-  padding: 7px 15px 7px 12px; border: 1px solid var(--line); border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 9px; margin: clamp(26px, 4.5vh, 38px) 0 0;
+  padding: 8px 16px 8px 13px; border: 1px solid var(--line); border-radius: 999px;
   background: rgba(248, 246, 240, .45);
   font-size: .62rem; letter-spacing: .22em; text-transform: uppercase; color: var(--muted);
 }
@@ -2796,8 +2796,14 @@ footer {
 
 /* ================= Galleries page ================= */
 .gallery-page { min-height: 100dvh; }
-.gallery-page-head { padding: calc(env(safe-area-inset-top) + clamp(84px, 11vh, 116px)) clamp(18px, 4vw, 56px) 2px; }
+.gallery-page-head { padding: calc(env(safe-area-inset-top) + clamp(84px, 11vh, 116px)) clamp(18px, 4vw, 56px) clamp(10px, 1.5vw, 18px); }
 .gallery-page-head .eyebrow { font-size: .7rem; }
+.gallery-page-title {
+  margin: 5px 0 0;
+  font-family: "Bebas Neue", Impact, sans-serif;
+  font-size: clamp(2.6rem, 7vw, 5rem);
+  letter-spacing: .03em; line-height: .94; color: var(--ink);
+}
 
 /* ================= Shop page ================= */
 .shop { min-height: 100dvh; background: var(--paper); }
