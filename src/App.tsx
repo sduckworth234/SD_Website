@@ -1478,16 +1478,11 @@ function AdminDashboard({ session }: { session: Session }) {
     }
   }
 
-  async function savePhotoDetails(photoId: string, formData: FormData) {
-    try {
-      await updatePhotoDetails(photoId, formToPhotoDetails(formData));
-      setEditingPhotoId(null);
-      setMessage("Photo details updated.");
-      await refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not update photo.");
-    }
-  }
+  // The photo being edited (from the full admin records, so it carries
+  // source_path even when search has filtered it out of the grid).
+  const editingPhoto = editingPhotoId
+    ? adminPhotos.find((photo) => photo.id === editingPhotoId) ?? null
+    : null;
 
   return (
     <section className="admin-dashboard">
@@ -1593,16 +1588,7 @@ function AdminDashboard({ session }: { session: Session }) {
               <SmartImage src={photo.imageUrl} alt={photo.title} />
               <span className="selection-dot">{selectedPhotoIds.has(photo.id) ? "Selected" : "Select"}</span>
             </button>
-            {editingPhotoId === photo.id ? (
-              <PhotoEditForm
-                full
-                locations={locations}
-                onCancel={() => setEditingPhotoId(null)}
-                onSave={(formData) => savePhotoDetails(photo.id, formData)}
-                photo={photo}
-              />
-            ) : (
-              <div className="admin-card-meta">
+            <div className="admin-card-meta">
                 <span>
                   {photo.location}
                   {photo.year ? ` / ${photo.year}` : ""}
@@ -1647,11 +1633,22 @@ function AdminDashboard({ session }: { session: Session }) {
                   />
                   Published
                 </label>
-              </div>
-            )}
+            </div>
           </article>
         ))}
       </section>
+      {editingPhoto ? (
+        <PhotoEditOverlay
+          full
+          locations={locations}
+          onClose={() => setEditingPhotoId(null)}
+          onSaved={async () => {
+            setMessage("Photo details updated.");
+            await refresh();
+          }}
+          photo={editingPhoto}
+        />
+      ) : null}
     </section>
   );
 }
@@ -1886,11 +1883,13 @@ function PhotoEditOverlay({
   onClose,
   onSaved,
   photo,
+  full = false,
 }: {
   locations: GalleryLocation[];
   onClose: () => void;
   onSaved: () => Promise<void> | void;
   photo: Photo;
+  full?: boolean;
 }) {
   const [message, setMessage] = useState("");
 
@@ -1924,7 +1923,7 @@ function PhotoEditOverlay({
         </div>
         <div className="edit-overlay-body">
           <p className="eyebrow">Edit photo</p>
-          <PhotoEditForm locations={locations} onCancel={onClose} onSave={save} photo={photo} />
+          <PhotoEditForm full={full} locations={locations} onCancel={onClose} onSave={save} photo={photo} />
           {message ? <p className="form-note">{message}</p> : null}
         </div>
       </section>
