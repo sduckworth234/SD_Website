@@ -49,6 +49,7 @@ import {
 } from "./lib/supabase";
 import type { GalleryLocation, LocationBucket, Photo } from "./types";
 import { Header } from "./components/Header";
+import { OakFrame } from "./components/OakFrame";
 import { SmartImage } from "./components/SmartImage";
 
 // Lazy-loaded so MapLibre + the basemap stay out of the main gallery bundle.
@@ -75,6 +76,12 @@ function pickLandingLocation(names: string[]): string {
 // category. Falls back to the random landing when absent or invalid.
 function readLocationParam(): string | null {
   try { return new URLSearchParams(window.location.search).get("location"); } catch { return null; }
+}
+
+// A right-sized image variant (the gallery imageUrl is 1800px — too big for small
+// collection/shop thumbnails).
+function thumbUrl(photo: Photo, width: number): string {
+  return photo.storagePath ? getTransformedPublicUrl(photoBucket, photo.storagePath, width) : photo.imageUrl;
 }
 
 function useScrollReveal(dependencies: DependencyList) {
@@ -159,28 +166,30 @@ function App() {
     );
   }
 
-  return <PublicGallery onNavigate={setRoute} />;
+  if (route.startsWith("/shop")) {
+    return <ShopPage onNavigate={setRoute} />;
+  }
+
+  if (route.startsWith("/galleries")) {
+    return <GalleriesPage onNavigate={setRoute} />;
+  }
+
+  return <Home onNavigate={setRoute} />;
 }
 
-function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) {
-  const [activeLocation, setActiveLocation] =
-    useState<ActiveLocation>(() => readLocationParam() ?? allLocations);
+// Shared data (photos, locations, recent), admin detection, scroll state and the
+// derived public/location lists — used by both the Home page and Galleries page.
+function useSiteData() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [recentPhotos, setRecentPhotos] = useState<Photo[]>([]);
   const [locations, setLocations] = useState<GalleryLocation[]>([]);
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
-  const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
-  const [recentSlot, setRecentSlot] = useState<number | null>(null);
-  const [view, setView] = useState<GalleryView>("flow");
-  const [isAboutOpen, setIsAboutOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminChecked, setAdminChecked] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [imagesReady, setImagesReady] = useState(false);
 
   const loadGallery = useCallback(async () => {
-    const [data, recent] = await Promise.all([getGalleryData(), getRecentPhotos(5)]);
+    const [data, recent] = await Promise.all([getGalleryData(), getRecentPhotos(9)]);
     setPhotos(data.photos);
     setLocations(data.locations);
     setRecentPhotos(recent);
@@ -197,87 +206,25 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     loadGallery().finally(() => setIsLoading(false));
   }, [loadGallery]);
 
-  // Detect an admin session so the live gallery becomes editable in place.
   useEffect(() => {
     const sb = supabase;
-    if (!sb) {
-      setAdminChecked(true);
-      return;
-    }
+    if (!sb) { setAdminChecked(true); return; }
     let active = true;
     const check = async () => {
       const { data } = await sb.auth.getSession();
-      if (!data.session) {
-        if (active) {
-          setIsAdmin(false);
-          setAdminChecked(true);
-        }
-        return;
-      }
+      if (!data.session) { if (active) { setIsAdmin(false); setAdminChecked(true); } return; }
       const ok = await isCurrentUserAdmin();
-      if (active) {
-        setIsAdmin(ok);
-        setAdminChecked(true);
-      }
+      if (active) { setIsAdmin(ok); setAdminChecked(true); }
     };
     check();
     const { data } = sb.auth.onAuthStateChange(() => check());
-    return () => {
-      active = false;
-      data.subscription.unsubscribe();
-    };
+    return () => { active = false; data.subscription.unsubscribe(); };
   }, []);
 
-  async function unpublishPhoto(photo: Photo) {
-    await updatePhotoVisibility(photo.id, {
-      featured: Boolean(photo.featured),
-      published: false,
-    });
-    await loadGallery();
-  }
-
-  // Admin "send to top": promote a favourite to the front of its category.
-  async function sendToTop(photo: Photo) {
-    await sendPhotoToTop(photo.id);
-    await loadGallery();
-  }
-
-  // Admin: pick/unpick this photo as its location's drone-feed feature.
-  async function toggleMapFeature(photo: Photo) {
-    await setMapFeature(photo.id, !photo.mapFeature);
-    await loadGallery();
-  }
-
-  // Open the map, framed on the current category when one is selected.
-  function viewOnMap() {
-    const query =
-      activeLocation !== allLocations ? `?focus=${encodeURIComponent(activeLocation)}` : "";
-    window.history.pushState({}, "", `/map${query}`);
-    onNavigate("/map");
-  }
-
-  // Open the full map (no category focus) — used by the promo strip.
-  function goToMap() {
-    window.history.pushState({}, "", "/map");
-    onNavigate("/map");
-  }
-
-  // Open the map zoomed straight to a specific photo's GPS coordinates.
-  function viewPhotoOnMap(photo: Photo) {
-    if (photo.latitude == null || photo.longitude == null) return;
-    window.history.pushState({}, "", `/map?lat=${photo.latitude}&lng=${photo.longitude}`);
-    onNavigate("/map");
-  }
-
-  // Unsorted photos are kept out of the public gallery entirely (admin still
-  // sees them in the dashboard to sort/fix).
   const publicPhotos = useMemo(
     () => photos.filter((photo) => photo.location !== "Unsorted"),
     [photos],
   );
-
-  // Real shoot locations (in curated order) that actually have public photos.
-  // Used both for the hero ticker and as the set of selectable categories.
   const locationNames = useMemo(() => {
     const present = new Set(publicPhotos.map((photo) => photo.location));
     const ordered = locations
@@ -289,70 +236,50 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     return [...ordered, ...extra];
   }, [publicPhotos, locations]);
 
-  // There's no "All work" view — the gallery always shows one category. On load
-  // (or if the active category vanished) land on a pseudo-random one.
-  useEffect(() => {
-    const valid =
-      activeLocation !== allLocations &&
-      publicPhotos.some((photo) => photo.location === activeLocation);
-    if (!valid && locationNames.length) {
-      setActiveLocation(pickLandingLocation(locationNames));
-    }
-  }, [activeLocation, publicPhotos, locationNames]);
+  return { photos, recentPhotos, locations, publicPhotos, locationNames, isAdmin, adminChecked, isScrolled, isLoading, loadGallery };
+}
 
-  const filteredPhotos = useMemo(() => {
-    if (activeLocation === allLocations) return publicPhotos;
-    return publicPhotos.filter((photo) => photo.location === activeLocation);
-  }, [activeLocation, publicPhotos]);
+// The landing page: hero, recent work, the map teaser, location collection cards,
+// and (admin-only for now) the Framed Editions shop banner.
+function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
+  const { photos, recentPhotos, publicPhotos, locations, locationNames, isAdmin, isScrolled, isLoading, loadGallery } = useSiteData();
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
+  const [recentSlot, setRecentSlot] = useState<number | null>(null);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
 
-  // Preload the active category's images and hold the skeleton until they're
-  // decoded, so the masonry lays out with known heights — no reflow/"shove" as
-  // images pop in. A timeout reveals anyway so a slow image can't stall the grid.
-  useEffect(() => {
-    // Skip the brief "all work" moment before a category is chosen, so we don't
-    // preload the entire library.
-    if (isLoading || activeLocation === allLocations) return;
-    const urls = filteredPhotos.map((p) => p.imageUrl).filter(Boolean);
-    if (!urls.length) { setImagesReady(true); return; }
-    let cancelled = false;
-    setImagesReady(false);
-    let done = 0;
-    const tick = () => {
-      done += 1;
-      if (!cancelled && done >= urls.length) setImagesReady(true);
-    };
-    const imgs = urls.map((url) => {
-      const im = new Image();
-      im.onload = tick;
-      im.onerror = tick;
-      im.src = url;
-      return im;
-    });
-    const timer = window.setTimeout(() => { if (!cancelled) setImagesReady(true); }, 5000);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-      imgs.forEach((im) => { im.onload = null; im.onerror = null; });
-    };
-  }, [filteredPhotos, isLoading, activeLocation]);
+  function goToMap() { window.history.pushState({}, "", "/map"); onNavigate("/map"); }
+  function goToShop() { window.history.pushState({}, "", "/shop"); onNavigate("/shop"); }
+  function viewPhotoOnMap(photo: Photo) {
+    if (photo.latitude == null || photo.longitude == null) return;
+    window.history.pushState({}, "", `/map?lat=${photo.latitude}&lng=${photo.longitude}`);
+    onNavigate("/map");
+  }
+  function openLocation(name: string) {
+    window.history.pushState({}, "", `/galleries?location=${encodeURIComponent(name)}`);
+    onNavigate("/galleries");
+  }
 
-  useScrollReveal([isLoading, imagesReady, activeLocation, filteredPhotos.length, view, recentPhotos.length]);
+  const heroPortrait = useMemo(
+    () => publicPhotos.find((p) => p.aspect === "portrait") ?? publicPhotos[0],
+    [publicPhotos],
+  );
+  const heroLandscape = useMemo(
+    () => publicPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? publicPhotos[1],
+    [publicPhotos],
+  );
+
+  useScrollReveal([isLoading, recentPhotos.length, locationNames.length]);
 
   return (
     <main>
-      <Header
-        isScrolled={isScrolled}
-        onNavigate={onNavigate}
-        onOpenAbout={() => setIsAboutOpen(true)}
-      />
+      <Header isAdmin={isAdmin} isScrolled={isScrolled} onNavigate={onNavigate} onOpenAbout={() => setIsAboutOpen(true)} />
       <Hero locations={locationNames} />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
       {isLoading ? (
         <>
           <RecentWorkSkeleton />
-          <LocationRailSkeleton />
-          <GalleryControls onChange={setView} view={view} />
-          <GallerySkeleton view={view} />
+          <CollectionsSkeleton />
         </>
       ) : (
         <>
@@ -366,29 +293,10 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
             />
           ) : null}
           <MapPromo photos={publicPhotos} locations={locations} onOpen={goToMap} />
-          <LocationRail
-            activeLocation={activeLocation}
-            excludeUnsorted
-            includeAllWork={false}
-            locations={locations}
-            photos={publicPhotos}
-            onChange={setActiveLocation}
-          />
-          <GalleryControls onChange={setView} onViewOnMap={viewOnMap} view={view} />
-          {imagesReady ? (
-            <Gallery
-              isAdmin={isAdmin}
-              onEditPhoto={setEditingPhoto}
-              onSelectPhoto={setSelectedPhoto}
-              onSendToTop={sendToTop}
-              onToggleMapFeature={toggleMapFeature}
-              onUnpublish={unpublishPhoto}
-              photos={filteredPhotos}
-              view={view}
-            />
-          ) : (
-            <GallerySkeleton view={view} />
-          )}
+          <CollectionCards photos={publicPhotos} locations={locations} onOpen={openLocation} />
+          {isAdmin && heroPortrait ? (
+            <FramedHero portrait={heroPortrait} landscape={heroLandscape} onShop={goToShop} />
+          ) : null}
         </>
       )}
       <Footer />
@@ -396,26 +304,293 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
         <Lightbox photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} onViewOnMap={viewPhotoOnMap} />
       ) : null}
       {editingPhoto ? (
-        <PhotoEditOverlay
-          locations={locations}
-          onClose={() => setEditingPhoto(null)}
-          onSaved={loadGallery}
-          photo={editingPhoto}
-        />
+        <PhotoEditOverlay locations={locations} onClose={() => setEditingPhoto(null)} onSaved={loadGallery} photo={editingPhoto} />
       ) : null}
       {isAboutOpen ? <AboutOverlay onClose={() => setIsAboutOpen(false)} /> : null}
       {recentSlot !== null ? (
         <RecentPicker
           onClose={() => setRecentSlot(null)}
-          onPick={async (photo) => {
-            await assignRecentSlot(recentSlot, photo.id);
-            await loadGallery();
-            setRecentSlot(null);
-          }}
+          onPick={async (photo) => { await assignRecentSlot(recentSlot, photo.id); await loadGallery(); setRecentSlot(null); }}
           photos={photos}
         />
       ) : null}
       <InstagramRail />
+    </main>
+  );
+}
+
+// The full photo gallery (moved off the home page): filter rail + masonry/box
+// grid + lightbox, with inline admin tools and ?location= deep-linking.
+function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) {
+  const { publicPhotos, locations, locationNames, isAdmin, isLoading, loadGallery } = useSiteData();
+  const [activeLocation, setActiveLocation] = useState<ActiveLocation>(() => readLocationParam() ?? allLocations);
+  const [view, setView] = useState<GalleryView>("flow");
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
+  const [imagesReady, setImagesReady] = useState(false);
+
+  async function unpublishPhoto(photo: Photo) {
+    await updatePhotoVisibility(photo.id, { featured: Boolean(photo.featured), published: false });
+    await loadGallery();
+  }
+  async function sendToTop(photo: Photo) { await sendPhotoToTop(photo.id); await loadGallery(); }
+  async function toggleMapFeature(photo: Photo) { await setMapFeature(photo.id, !photo.mapFeature); await loadGallery(); }
+  function viewOnMap() {
+    const query = activeLocation !== allLocations ? `?focus=${encodeURIComponent(activeLocation)}` : "";
+    window.history.pushState({}, "", `/map${query}`);
+    onNavigate("/map");
+  }
+  function viewPhotoOnMap(photo: Photo) {
+    if (photo.latitude == null || photo.longitude == null) return;
+    window.history.pushState({}, "", `/map?lat=${photo.latitude}&lng=${photo.longitude}`);
+    onNavigate("/map");
+  }
+
+  useEffect(() => {
+    const valid = activeLocation !== allLocations && publicPhotos.some((p) => p.location === activeLocation);
+    if (!valid && locationNames.length) setActiveLocation(pickLandingLocation(locationNames));
+  }, [activeLocation, publicPhotos, locationNames]);
+
+  const filteredPhotos = useMemo(() => {
+    if (activeLocation === allLocations) return publicPhotos;
+    return publicPhotos.filter((p) => p.location === activeLocation);
+  }, [activeLocation, publicPhotos]);
+
+  useEffect(() => {
+    if (isLoading || activeLocation === allLocations) return;
+    const urls = filteredPhotos.map((p) => p.imageUrl).filter(Boolean);
+    if (!urls.length) { setImagesReady(true); return; }
+    let cancelled = false; setImagesReady(false); let done = 0;
+    const tick = () => { done += 1; if (!cancelled && done >= urls.length) setImagesReady(true); };
+    const imgs = urls.map((url) => { const im = new Image(); im.onload = tick; im.onerror = tick; im.src = url; return im; });
+    const timer = window.setTimeout(() => { if (!cancelled) setImagesReady(true); }, 5000);
+    return () => { cancelled = true; window.clearTimeout(timer); imgs.forEach((im) => { im.onload = null; im.onerror = null; }); };
+  }, [filteredPhotos, isLoading, activeLocation]);
+
+  useScrollReveal([isLoading, imagesReady, activeLocation, filteredPhotos.length, view]);
+
+  return (
+    <main className="gallery-page">
+      <Header isAdmin={isAdmin} isScrolled onNavigate={onNavigate} />
+      <section className="gallery-page-head"><p className="eyebrow">Gallery</p></section>
+      <LocationRail
+        activeLocation={activeLocation}
+        excludeUnsorted
+        includeAllWork={false}
+        locations={locations}
+        photos={publicPhotos}
+        onChange={setActiveLocation}
+      />
+      <GalleryControls onChange={setView} onViewOnMap={viewOnMap} view={view} />
+      {isLoading || !imagesReady ? (
+        <GallerySkeleton view={view} />
+      ) : (
+        <Gallery
+          isAdmin={isAdmin}
+          onEditPhoto={setEditingPhoto}
+          onSelectPhoto={setSelectedPhoto}
+          onSendToTop={sendToTop}
+          onToggleMapFeature={toggleMapFeature}
+          onUnpublish={unpublishPhoto}
+          photos={filteredPhotos}
+          view={view}
+        />
+      )}
+      <Footer />
+      {selectedPhoto ? (
+        <Lightbox photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} onViewOnMap={viewPhotoOnMap} />
+      ) : null}
+      {editingPhoto ? (
+        <PhotoEditOverlay locations={locations} onClose={() => setEditingPhoto(null)} onSaved={loadGallery} photo={editingPhoto} />
+      ) : null}
+      <InstagramRail />
+    </main>
+  );
+}
+
+// One location tile that slowly cross-fades through a handful of its photos.
+function CollectionCard({ name, photos, onOpen, delay }: { name: string; photos: Photo[]; onOpen: (name: string) => void; delay: number }) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (photos.length <= 1) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer: { id?: number } = {};
+    const start = window.setTimeout(() => {
+      setI((v) => (v + 1) % photos.length);
+      timer.id = window.setInterval(() => setI((v) => (v + 1) % photos.length), 4600);
+    }, delay);
+    return () => { window.clearTimeout(start); if (timer.id) window.clearInterval(timer.id); };
+  }, [photos.length, delay]);
+
+  return (
+    <button className="collection-card" type="button" onClick={() => onOpen(name)} aria-label={`View the ${name} gallery`}>
+      {photos.map((p, idx) => (
+        <img key={p.id} className={`cc-img${idx === i ? " is-on" : ""}`} src={thumbUrl(p, 700)} alt="" loading="lazy" decoding="async" />
+      ))}
+      <span className="cc-label">{name}</span>
+    </button>
+  );
+}
+
+// The home page's location collections — one cross-fading card per location.
+function CollectionCards({ photos, locations, onOpen }: { photos: Photo[]; locations: GalleryLocation[]; onOpen: (name: string) => void }) {
+  const cards = useMemo(() => {
+    const byLoc = new Map<string, Photo[]>();
+    for (const p of photos) {
+      if (!p.location || p.location === "Unsorted") continue;
+      const list = byLoc.get(p.location);
+      if (list) list.push(p);
+      else byLoc.set(p.location, [p]);
+    }
+    const order = new Map(locations.map((l, i) => [l.name, i]));
+    return [...byLoc.entries()]
+      .map(([name, ps]) => ({ name, photos: ps.slice(0, 5) }))
+      .sort((a, b) => (order.get(a.name) ?? 999) - (order.get(b.name) ?? 999) || a.name.localeCompare(b.name));
+  }, [photos, locations]);
+
+  if (!cards.length) return null;
+  return (
+    <section className="collection-cards scroll-reveal" aria-label="Browse by location">
+      {cards.map((c, i) => (
+        <CollectionCard key={c.name} name={c.name} photos={c.photos} onOpen={onOpen} delay={i * 650} />
+      ))}
+    </section>
+  );
+}
+
+function CollectionsSkeleton() {
+  return (
+    <section className="collection-cards" aria-hidden="true">
+      {Array.from({ length: 6 }, (_, i) => (
+        <div className="skeleton-tile" key={i} style={{ aspectRatio: "4 / 5" } as CSSProperties} />
+      ))}
+    </section>
+  );
+}
+
+// Framed Editions shop banner — two oak-framed prints + a call to the shop.
+function FramedHero({ portrait, landscape, onShop }: { portrait?: Photo; landscape?: Photo; onShop: () => void }) {
+  return (
+    <section className="framed-hero scroll-reveal" aria-label="Framed prints">
+      <div className="fh-copy">
+        <p className="eyebrow">Framed Editions</p>
+        <h2>Take the view home.</h2>
+        <p className="fh-lead">Fine-art prints, hand-framed in solid oak with a museum-grade mat — ready to hang.</p>
+        <button className="solid-button" type="button" onClick={onShop}>Shop the collection</button>
+      </div>
+      <div className="fh-stage">
+        {landscape ? <OakFrame className="fh-back" src={thumbUrl(landscape, 1000)} orientation="landscape" alt={landscape.title} /> : null}
+        {portrait ? <OakFrame className="fh-main" src={thumbUrl(portrait, 900)} orientation="portrait" alt={portrait.title} /> : null}
+      </div>
+    </section>
+  );
+}
+
+const SHOP_SIZES = [
+  { id: "A3", cm: "30×42 cm", price: 160 },
+  { id: "A2", cm: "42×59 cm", price: 260 },
+  { id: "A1", cm: "59×84 cm", price: 390 },
+];
+const NB_LOCATIONS = new Set([
+  "Manly", "Forty Baskets", "Narrabeen", "Warriewood", "Bayview", "Mona Vale",
+  "North Curl Curl", "Freshwater", "Freemans Waterhole", "Pie in the Sky",
+  "Hunter Valley", "Jindabyne", "Denhams Beach", "Malua Bay", "North Head", "Travels",
+]);
+
+function ShopProduct({ photo, onAdd }: { photo: Photo; onAdd: () => void }) {
+  const [size, setSize] = useState(1);
+  const orient = photo.aspect === "portrait" || photo.aspect === "square" ? "portrait" : "landscape";
+  return (
+    <article className={`shop-card ${orient}`}>
+      <div className="shop-card-frame">
+        <OakFrame src={thumbUrl(photo, 820)} orientation={orient} alt={`${photo.title}, ${photo.location}`} />
+      </div>
+      <div className="shop-card-info">
+        <div className="sc-ttl">{photo.title}</div>
+        <div className="sc-loc">{photo.location}</div>
+        <div className="sc-sizes">
+          {SHOP_SIZES.map((s, i) => (
+            <button key={s.id} className={`sc-size${i === size ? " on" : ""}`} onClick={() => setSize(i)} type="button" title={s.cm}>{s.id}</button>
+          ))}
+        </div>
+        <div className="sc-buy">
+          <span className="sc-price">${SHOP_SIZES[size].price}</span>
+          <button className="add-btn" onClick={onAdd} type="button">Add to cart</button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+// The Framed Editions shop. Admin-only for now (not linked publicly); Phase 3
+// adds a visibility flag + admin curation of which photos appear.
+function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
+  const { publicPhotos, isAdmin, adminChecked } = useSiteData();
+  const [cart, setCart] = useState(0);
+  const [filter, setFilter] = useState("All");
+
+  function goHome() { window.history.pushState({}, "", "/"); onNavigate("/"); }
+  const region = (p: Photo) => (NB_LOCATIONS.has(p.location) ? "Australia" : "Europe");
+  const products = useMemo(() => publicPhotos.slice(0, 18), [publicPhotos]);
+  const filtered = filter === "All" ? products : products.filter((p) => region(p) === filter);
+  const heroP = publicPhotos.find((p) => p.aspect === "portrait") ?? publicPhotos[0];
+  const heroL = publicPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? publicPhotos[1];
+
+  const ShopNav = (
+    <div className="shop-nav">
+      <button className="shop-logo" onClick={goHome} type="button">FRAMED EDITIONS</button>
+      <div className="shop-nav-links">
+        <a href="/" onClick={(e) => { e.preventDefault(); goHome(); }}>← samduckworth.com</a>
+        <span className="shop-cart">Cart · {cart}</span>
+      </div>
+    </div>
+  );
+
+  if (!adminChecked) return <main className="shop">{ShopNav}</main>;
+  if (!isAdmin) {
+    return (
+      <main className="shop">
+        {ShopNav}
+        <div className="shop-soon">
+          <p className="eyebrow">Framed Editions</p>
+          <h1>Opening soon.</h1>
+          <button className="solid-button" onClick={goHome} type="button">Back to gallery</button>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="shop">
+      {ShopNav}
+      <section className="shop-hero">
+        <div className="sh-copy">
+          <p className="eyebrow">Sam Duckworth Photography</p>
+          <h1>Framed<br />Editions</h1>
+          <p className="sh-lead">Fine-art aerial & coastal prints — hand-framed in solid oak with a museum-grade mat. From the Northern Beaches to the Mediterranean.</p>
+          <a className="solid-button" href="#shop-grid">Shop the collection</a>
+        </div>
+        <div className="fh-stage">
+          {heroL ? <OakFrame className="fh-back" src={thumbUrl(heroL, 1000)} orientation="landscape" alt={heroL.title} /> : null}
+          {heroP ? <OakFrame className="fh-main" src={thumbUrl(heroP, 900)} orientation="portrait" alt={heroP.title} /> : null}
+        </div>
+      </section>
+      <div className="shop-strip">
+        <span><b>Solid oak</b> frame</span><span><b>Archival</b> matte</span>
+        <span><b>Hand-cut</b> mat</span><span><b>Ready</b> to hang</span><span><b>Ships</b> worldwide</span>
+      </div>
+      <section className="shop-section" id="shop-grid">
+        <div className="shop-sec-head"><p className="eyebrow">Every edition</p><h2>Shop all prints</h2></div>
+        <div className="shop-filters">
+          {["All", "Europe", "Australia"].map((f) => (
+            <button key={f} className={`chip${filter === f ? " active" : ""}`} onClick={() => setFilter(f)} type="button">{f}</button>
+          ))}
+        </div>
+        <div className="shop-grid">
+          {filtered.map((p) => <ShopProduct key={p.id} photo={p} onAdd={() => setCart((c) => c + 1)} />)}
+        </div>
+      </section>
+      <Footer />
     </main>
   );
 }
@@ -448,7 +623,7 @@ function RecentWork({
   onSelect: (photo: Photo) => void;
   photos: Photo[];
 }) {
-  const tiles = photos.slice(0, 5);
+  const tiles = photos.slice(0, 9);
 
   return (
     <section className="recent-work scroll-reveal" aria-label="Recent work">
@@ -1029,7 +1204,7 @@ function RecentWorkSkeleton() {
     <section className="recent-work" aria-label="Loading recent work">
       <h2 className="recent-heading">Recent Work</h2>
       <div className="recent-mosaic" aria-hidden="true">
-        {Array.from({ length: 5 }, (_, index) => (
+        {Array.from({ length: 9 }, (_, index) => (
           <div className={`recent-tile recent-tile-${index + 1} skeleton-tile`} key={index} />
         ))}
       </div>
