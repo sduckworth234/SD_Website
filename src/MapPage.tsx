@@ -210,16 +210,29 @@ export default function MapPage({ onNavigate }: { onNavigate: (route: string) =>
           },
         });
 
-        // Frame to the photos (or the focused location's photos via ?focus=).
+        // Initial view. Priority: a specific photo's coords (?lat&lng, from the
+        // gallery "View on map") -> a focused location (?focus) -> the whole extent.
         let focus: string | null = null;
-        try { focus = new URLSearchParams(window.location.search).get("focus"); } catch { /* ignore */ }
-        const framePts = focus ? photoFeatures.filter((f) => f.properties.location === focus) : photoFeatures;
-        const bounds = new maplibregl.LngLatBounds();
-        for (const f of (framePts.length ? framePts : photoFeatures)) {
-          bounds.extend(f.geometry.coordinates as [number, number]);
-        }
-        if (!bounds.isEmpty()) {
-          map.fitBounds(bounds, { padding: { top: 66, bottom: 30, left: 26, right: 26 }, maxZoom: focus ? 13 : 6.5, duration: 0 });
+        let lat = NaN;
+        let lng = NaN;
+        try {
+          const sp = new URLSearchParams(window.location.search);
+          focus = sp.get("focus");
+          lat = Number.parseFloat(sp.get("lat") ?? "");
+          lng = Number.parseFloat(sp.get("lng") ?? "");
+        } catch { /* ignore */ }
+
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          map.jumpTo({ center: [lng, lat], zoom: 15 });
+        } else {
+          const framePts = focus ? photoFeatures.filter((f) => f.properties.location === focus) : photoFeatures;
+          const bounds = new maplibregl.LngLatBounds();
+          for (const f of (framePts.length ? framePts : photoFeatures)) {
+            bounds.extend(f.geometry.coordinates as [number, number]);
+          }
+          if (!bounds.isEmpty()) {
+            map.fitBounds(bounds, { padding: { top: 66, bottom: 30, left: 26, right: 26 }, maxZoom: focus ? 13 : 6.5, duration: 0 });
+          }
         }
         setReady(true);
 

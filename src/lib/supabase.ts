@@ -434,11 +434,17 @@ export async function getRecentPhotos(limit = 5): Promise<Photo[]> {
   const pinned = ((pinnedResult.data ?? []) as unknown as PhotoRow[]).map(mapPhoto);
   const recent = ((recentResult.data ?? []) as unknown as PhotoRow[]).map(mapPhoto);
 
+  // Place each pin at its EXACT slot. sort_order encodes the slot (1..limit) — but
+  // it's also the global gallery-order field, so a featured photo that was later
+  // "sent to top" carries an out-of-range value (e.g. -14). Such photos must NOT
+  // grab/cascade slots (that shifted every tile down by one), so we ignore any
+  // sort_order outside 1..limit here and let those slots fall to the recent fill.
   const slots: (Photo | null)[] = new Array(limit).fill(null);
   for (const photo of pinned) {
-    let idx = Math.min(Math.max((photo.sortOrder ?? 1) - 1, 0), limit - 1);
-    while (idx < limit && slots[idx]) idx += 1;
-    if (idx < limit) slots[idx] = photo;
+    const slot = photo.sortOrder ?? 0;
+    if (Number.isInteger(slot) && slot >= 1 && slot <= limit && !slots[slot - 1]) {
+      slots[slot - 1] = photo;
+    }
   }
 
   const placed = new Set(slots.filter(Boolean).map((p) => (p as Photo).id));

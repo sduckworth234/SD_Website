@@ -260,6 +260,13 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
     onNavigate("/map");
   }
 
+  // Open the map zoomed straight to a specific photo's GPS coordinates.
+  function viewPhotoOnMap(photo: Photo) {
+    if (photo.latitude == null || photo.longitude == null) return;
+    window.history.pushState({}, "", `/map?lat=${photo.latitude}&lng=${photo.longitude}`);
+    onNavigate("/map");
+  }
+
   // Unsorted photos are kept out of the public gallery entirely (admin still
   // sees them in the dashboard to sort/fix).
   const publicPhotos = useMemo(
@@ -384,7 +391,7 @@ function PublicGallery({ onNavigate }: { onNavigate: (route: string) => void }) 
       )}
       <Footer />
       {selectedPhoto ? (
-        <Lightbox photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
+        <Lightbox photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} onViewOnMap={viewPhotoOnMap} />
       ) : null}
       {editingPhoto ? (
         <PhotoEditOverlay
@@ -1143,7 +1150,15 @@ function Gallery({
   );
 }
 
-function Lightbox({ photo, onClose }: { photo: Photo; onClose: () => void }) {
+function Lightbox({
+  photo,
+  onClose,
+  onViewOnMap,
+}: {
+  photo: Photo;
+  onClose: () => void;
+  onViewOnMap: (photo: Photo) => void;
+}) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -1151,6 +1166,8 @@ function Lightbox({ photo, onClose }: { photo: Photo; onClose: () => void }) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
+
+  const hasCoords = photo.latitude != null && photo.longitude != null;
 
   return (
     <div className="lightbox" role="dialog" aria-modal="true" aria-label={photo.title}>
@@ -1170,6 +1187,12 @@ function Lightbox({ photo, onClose }: { photo: Photo; onClose: () => void }) {
           </span>
           <h2>{photo.title}</h2>
           {photo.year ? <small>{photo.year}</small> : null}
+          {hasCoords ? (
+            <button className="map-link-button" onClick={() => onViewOnMap(photo)} type="button">
+              <Globe size={14} aria-hidden="true" />
+              View on map
+            </button>
+          ) : null}
         </aside>
       </section>
     </div>
