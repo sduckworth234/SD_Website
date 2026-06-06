@@ -273,7 +273,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
 
   return (
     <main>
-      <Header isAdmin={isAdmin} isScrolled={isScrolled} onNavigate={onNavigate} onOpenAbout={() => setIsAboutOpen(true)} />
+      <Header isScrolled={isScrolled} onNavigate={onNavigate} onOpenAbout={() => setIsAboutOpen(true)} />
       <Hero locations={locationNames} />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
       {isLoading ? (
@@ -294,7 +294,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           ) : null}
           <MapPromo photos={publicPhotos} locations={locations} onOpen={goToMap} />
           <CollectionCards photos={publicPhotos} locations={locations} onOpen={openLocation} />
-          {isAdmin && heroPortrait ? (
+          {heroPortrait ? (
             <FramedHero portrait={heroPortrait} landscape={heroLandscape} onShop={goToShop} />
           ) : null}
         </>
@@ -371,7 +371,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
 
   return (
     <main className="gallery-page">
-      <Header isAdmin={isAdmin} isScrolled onNavigate={onNavigate} />
+      <Header isScrolled onNavigate={onNavigate} />
       <section className="gallery-page-head"><p className="eyebrow">Gallery</p></section>
       <LocationRail
         activeLocation={activeLocation}
@@ -477,6 +477,7 @@ function FramedHero({ portrait, landscape, onShop }: { portrait?: Photo; landsca
         <h2>Take the view home.</h2>
         <p className="fh-lead">Fine-art prints, hand-framed in solid oak with a museum-grade mat — ready to hang.</p>
         <button className="solid-button" type="button" onClick={onShop}>Shop the collection</button>
+        <p className="fh-flag"><span className="fh-flag-dot" aria-hidden="true" />Coming soon</p>
       </div>
       <div className="fh-stage">
         {landscape ? <OakFrame className="fh-back" src={thumbUrl(landscape, 1000)} orientation="landscape" alt={landscape.title} /> : null}
