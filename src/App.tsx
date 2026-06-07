@@ -24,7 +24,7 @@ import {
   X,
 } from "lucide-react";
 import type { CSSProperties, DependencyList, ReactNode } from "react";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   assignRecentSlot,
   bulkEditPhotos,
@@ -222,8 +222,39 @@ function useSiteData() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Initial load. The safety timeout guarantees the skeleton clears even if a
+  // fetch never settles (e.g. a request left in-flight when the tab was
+  // suspended for hours) — so the page can't get stuck on the loader.
+  const lastLoadRef = useRef(Date.now());
   useEffect(() => {
-    loadGallery().finally(() => setIsLoading(false));
+    let done = false;
+    loadGallery().finally(() => { done = true; lastLoadRef.current = Date.now(); setIsLoading(false); });
+    const timer = window.setTimeout(() => { if (!done) setIsLoading(false); }, 15000);
+    return () => window.clearTimeout(timer);
+  }, [loadGallery]);
+
+  // Reopened-tab freshness: when the page returns to the foreground after being
+  // away for a while (or is restored from the back/forward cache), silently
+  // re-fetch so stale or half-loaded content lands — no visible page reload.
+  useEffect(() => {
+    const STALE_MS = 60_000;
+    const refresh = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastLoadRef.current < STALE_MS) return;
+      lastLoadRef.current = Date.now();
+      loadGallery().finally(() => setIsLoading(false));
+    };
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) { lastLoadRef.current = 0; refresh(); }
+    };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("pageshow", onPageShow);
+    };
   }, [loadGallery]);
 
   useEffect(() => {
@@ -446,6 +477,13 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
     const timer = window.setTimeout(() => { if (!cancelled) setImagesReady(true); }, 5000);
     return () => { cancelled = true; window.clearTimeout(timer); imgs.forEach((im) => { im.onload = null; im.onerror = null; }); };
   }, [filteredPhotos, isLoading, activeLocation]);
+
+  // Switching location should land you back at the top of the gallery, even if
+  // you'd scrolled down (changing the filter isn't a route change, so the
+  // navigate() scroll-reset doesn't fire here).
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [activeLocation]);
 
   useScrollReveal([isLoading, imagesReady, activeLocation, filteredPhotos.length, view]);
 
