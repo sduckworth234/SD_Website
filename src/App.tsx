@@ -453,7 +453,6 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
     <main className="gallery-page">
       <Header isScrolled onNavigate={onNavigate} />
       <section className="gallery-page-head">
-        <p className="eyebrow">Gallery</p>
         <h1 className="gallery-page-title">{activeLocation === allLocations ? "All work" : activeLocation}</h1>
       </section>
       <LocationRail
