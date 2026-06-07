@@ -1595,6 +1595,12 @@ function Lightbox({
   onClose: () => void;
   onViewOnMap: (photo: Photo) => void;
 }) {
+  // Measured width/height ratio of the loaded image. We start from the stored
+  // aspect (no layout flash) and correct to the true ratio once it loads — so
+  // even a mis-tagged image lands in the right layout.
+  const [ratio, setRatio] = useState<number | null>(null);
+  useEffect(() => { setRatio(null); }, [photo.id]);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -1604,16 +1610,20 @@ function Lightbox({
   }, [onClose]);
 
   const hasCoords = photo.latitude != null && photo.longitude != null;
+  const guessPortrait = photo.aspect === "portrait" || photo.aspect === "square";
+  // Taller-than-wide → portrait card (image beside the caption); otherwise the
+  // classic landscape card (image above the caption).
+  const isPortrait = ratio != null ? ratio < 1 : guessPortrait;
 
   return (
     <div className="lightbox" role="dialog" aria-modal="true" aria-label={photo.title}>
       <button className="lightbox-backdrop" onClick={onClose} type="button" aria-label="Close" />
-      <section className="lightbox-panel">
+      <section className={`lightbox-panel${isPortrait ? " is-portrait" : ""}`}>
         <button className="icon-button close-button" onClick={onClose} type="button" aria-label="Close">
           <X size={18} aria-hidden="true" />
         </button>
         <div className="lightbox-image">
-          <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
+          <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} onMeasure={setRatio} />
           <AltitudeBadge photo={photo} />
         </div>
         <aside className="lightbox-copy">

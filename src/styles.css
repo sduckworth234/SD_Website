@@ -792,6 +792,29 @@ footer {
   text-transform: uppercase;
 }
 
+/* Portrait / square images: a side-by-side card (image left, caption right) so
+   the panel hugs the image instead of stranding it in big side gutters. The
+   default (above) handles landscape/wide, with the caption beneath. */
+.lightbox-panel.is-portrait {
+  grid-template-columns: auto minmax(190px, 264px);
+  grid-template-rows: minmax(0, 1fr);
+  width: auto;
+  max-width: min(940px, 94vw);
+}
+.lightbox-panel.is-portrait .lightbox-image {
+  min-width: min(44vw, 340px);
+  max-height: calc(100dvh - 96px);
+}
+.lightbox-panel.is-portrait .lightbox-image img {
+  max-width: min(52vw, 500px);
+  max-height: calc(100dvh - 120px);
+}
+.lightbox-panel.is-portrait .lightbox-copy {
+  border-top: 0;
+  border-left: 1px solid var(--line);
+  align-content: center;
+}
+
 .icon-button {
   display: grid;
   width: 42px;
@@ -2046,6 +2069,27 @@ footer {
   .lightbox-copy {
     grid-template-columns: 1fr;
     border-top: 1px solid var(--line);
+  }
+
+  /* Not enough width for side-by-side: portrait card stacks like the rest. */
+  .lightbox-panel.is-portrait {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+    width: min(94vw, 760px);
+    max-width: none;
+  }
+  .lightbox-panel.is-portrait .lightbox-image {
+    min-width: 0;
+    max-height: calc(100dvh - 230px);
+  }
+  .lightbox-panel.is-portrait .lightbox-image img {
+    max-width: 100%;
+    max-height: calc(100dvh - 254px);
+  }
+  .lightbox-panel.is-portrait .lightbox-copy {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    align-content: start;
   }
 
   .upload-panel {
