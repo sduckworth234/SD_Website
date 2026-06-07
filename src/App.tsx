@@ -2,7 +2,6 @@ import type { Session } from "@supabase/supabase-js";
 import {
   ArrowUpFromLine,
   ArrowUpToLine,
-  Camera,
   Check,
   Copy,
   Crosshair,
@@ -2609,9 +2608,8 @@ function AboutOverlay({ onClose }: { onClose: () => void }) {
         <button className="icon-button close-button" onClick={onClose} type="button" aria-label="Close">
           <X size={18} aria-hidden="true" />
         </button>
-        <div className="about-portrait" aria-hidden="true">
-          <Camera size={28} />
-          <span>Photo coming soon</span>
+        <div className="about-portrait">
+          <img src="/about-sam.webp" alt="Sam Duckworth" loading="lazy" decoding="async" />
         </div>
         <div className="about-copy">
           <p className="eyebrow">About Me</p>

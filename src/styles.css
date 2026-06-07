@@ -845,17 +845,16 @@ footer {
 }
 
 .about-portrait {
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 10px;
   aspect-ratio: 4 / 5;
   border: 1px solid var(--line);
   background: var(--paper-deep);
-  color: var(--muted);
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+}
+
+.about-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .about-copy {
