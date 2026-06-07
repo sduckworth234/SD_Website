@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /admin
 
-Sitemap: https://samduckworth.com/sitemap.xml
+Sitemap: https://www.samduckworth.com/sitemap.xml

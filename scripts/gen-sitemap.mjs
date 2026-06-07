@@ -7,7 +7,7 @@ import { writeFile } from "node:fs/promises";
 
 const url = process.env.VITE_SUPABASE_URL;
 const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? process.env.VITE_SUPABASE_ANON_KEY;
-const SITE = (process.env.VITE_SITE_URL || "https://samduckworth.com").replace(/\/$/, "");
+const SITE = (process.env.VITE_SITE_URL || "https://www.samduckworth.com").replace(/\/$/, "");
 if (!url || !key) throw new Error("Missing VITE_SUPABASE_URL / key in env (use --env-file=.env.local).");
 
 const sb = createClient(url, key);

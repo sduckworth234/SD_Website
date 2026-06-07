@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-export const SITE_URL = "https://samduckworth.com";
+export const SITE_URL = "https://www.samduckworth.com";
 export const DEFAULT_DESCRIPTION =
   "Aerial drone and landscape photography by Sam Duckworth, based on Sydney's Northern Beaches — fine-art prints and commissions.";
 
