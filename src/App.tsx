@@ -400,13 +400,15 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
       ) : (
         <>
           {recentPhotos.length >= 5 ? (
-            <RecentWork
-              isAdmin={isAdmin}
-              onChangePhoto={setRecentSlot}
-              onEditPhoto={setEditingPhoto}
-              onSelect={setSelectedPhoto}
-              photos={recentPhotos}
-            />
+            <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "recent_work")} label="Recent Work">
+              <RecentWork
+                isAdmin={isAdmin}
+                onChangePhoto={setRecentSlot}
+                onEditPhoto={setEditingPhoto}
+                onSelect={setSelectedPhoto}
+                photos={recentPhotos}
+              />
+            </AdminHideable>
           ) : null}
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "map_promo")} label="Map promo">
             <MapPromo photos={publicPhotos} locations={locations} onOpen={goToMap} />
@@ -419,7 +421,9 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
               <FramedHero portrait={heroPortrait} landscape={heroLandscape} onShop={goToShop} />
             </AdminHideable>
           ) : null}
-          <ContactPrompt onOpen={() => setIsContactOpen(true)} />
+          <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "contact_prompt")} label="Contact">
+            <ContactPrompt onOpen={() => setIsContactOpen(true)} />
+          </AdminHideable>
         </>
       )}
       <Footer />
@@ -1727,10 +1731,12 @@ function Lightbox({
 // The public visibility flags the admin can toggle. Labels live here (not just
 // the DB) so the panel reads well even if a seed row is missing.
 const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
-  { key: "shop_public", label: "Shop page", hint: "Open /shop to the public (otherwise it shows “Opening soon”)." },
-  { key: "framed_banner", label: "Framed Editions banner", hint: "The print banner near the bottom of the home page." },
-  { key: "collection_cards", label: "Collection cards", hint: "The cycling location tiles on the home page." },
-  { key: "map_promo", label: "Map promo", hint: "The interactive-map teaser on the home page." },
+  { key: "recent_work", label: "Home — Recent Work mosaic", hint: "The editorial photo mosaic near the top of the home page." },
+  { key: "map_promo", label: "Home — Map promo", hint: "The interactive-map teaser on the home page." },
+  { key: "collection_cards", label: "Home — Collection cards", hint: "The cycling location tiles on the home page." },
+  { key: "framed_banner", label: "Home — Framed Editions banner", hint: "The print-shop banner near the bottom of the home page." },
+  { key: "contact_prompt", label: "Home — Contact / Work with me", hint: "The “Let’s work together” prompt + contact popup." },
+  { key: "shop_public", label: "Shop page — public", hint: "Open /shop to the public (otherwise it shows “Opening soon”)." },
 ];
 
 // Admin panel: flip what the public can see, and choose the two photos shown in
@@ -2717,9 +2723,8 @@ function AboutOverlay({ onClose }: { onClose: () => void }) {
   );
 }
 
-// Where enquiry emails go. TODO(Sam): confirm this is a real inbox on the
-// domain (Google Workspace) before relying on it — change here if different.
-const CONTACT_EMAIL = "hello@samduckworth.com";
+// Where enquiry emails go (the contact popup composes a message to this inbox).
+const CONTACT_EMAIL = "samduckworthphoto@gmail.com";
 
 // Small "let's work together" prompt beneath the home print-shop banner.
 function ContactPrompt({ onOpen }: { onOpen: () => void }) {
