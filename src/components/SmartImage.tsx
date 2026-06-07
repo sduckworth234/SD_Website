@@ -7,14 +7,19 @@ export function SmartImage({
   className,
   eager = false,
   onMeasure,
+  sizes,
   src,
+  srcSet,
 }: {
   alt: string;
   className?: string;
   eager?: boolean;
   // Reports the loaded image's width/height aspect ratio (w / h).
   onMeasure?: (ratio: number) => void;
+  // Responsive image hints: srcSet lists width variants, sizes the rendered width.
+  sizes?: string;
   src: string;
+  srcSet?: string;
 }) {
   const [loaded, setLoaded] = useState(false);
   const ref = useRef<HTMLImageElement | null>(null);
@@ -36,10 +41,13 @@ export function SmartImage({
         alt={alt}
         className={`smart-img${loaded ? " is-loaded" : ""}${className ? ` ${className}` : ""}`}
         decoding="async"
+        draggable={false}
         loading={eager ? "eager" : "lazy"}
         onLoad={(event) => handleLoaded(event.currentTarget)}
         ref={ref}
+        sizes={sizes}
         src={src}
+        srcSet={srcSet}
       />
     </>
   );

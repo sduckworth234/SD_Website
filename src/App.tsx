@@ -90,6 +90,14 @@ function thumbUrl(photo: Photo, width: number): string {
   return photo.storagePath ? getTransformedPublicUrl(photoBucket, photo.storagePath, width) : photo.imageUrl;
 }
 
+// Responsive srcset across a range of widths so phones don't download the full
+// 1800px image. Falls back to the single imageUrl when there's no storage path.
+const SRCSET_WIDTHS = [400, 700, 1000, 1400, 1800];
+function srcSetFor(photo: Photo): string | undefined {
+  if (!photo.storagePath) return undefined;
+  return SRCSET_WIDTHS.map((w) => `${getTransformedPublicUrl(photoBucket, photo.storagePath as string, w)} ${w}w`).join(", ");
+}
+
 function useScrollReveal(dependencies: DependencyList) {
   useEffect(() => {
     const elements = Array.from(
@@ -167,6 +175,16 @@ function App() {
     const onPopState = () => setRoute(window.location.pathname);
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  // Light deterrent: block right-click "Save image" on photos. The full-res file
+  // is never served (only ≤2400px WebP), so this just discourages casual saving.
+  useEffect(() => {
+    const block = (event: MouseEvent) => {
+      if (event.target instanceof HTMLImageElement) event.preventDefault();
+    };
+    document.addEventListener("contextmenu", block);
+    return () => document.removeEventListener("contextmenu", block);
   }, []);
 
   if (route.startsWith("/admin")) {
@@ -856,7 +874,12 @@ function RecentWork({
             tabIndex={0}
             style={{ "--reveal-delay": `${index * 80}ms` } as CSSProperties}
           >
-            <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
+            <SmartImage
+              src={photo.imageUrl}
+              srcSet={srcSetFor(photo)}
+              sizes="(max-width: 900px) 50vw, 33vw"
+              alt={`${photo.title}, ${photo.location}`}
+            />
             <AltitudeBadge photo={photo} />
             {isAdmin ? (
               <div className="tile-admin-actions">
@@ -1565,7 +1588,13 @@ function Gallery({
           tabIndex={0}
           style={{ "--reveal-delay": `${Math.min(index, 12) * 38}ms` } as CSSProperties}
         >
-          <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} eager />
+          <SmartImage
+            src={photo.imageUrl}
+            srcSet={srcSetFor(photo)}
+            sizes="(max-width: 620px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            alt={`${photo.title}, ${photo.location}`}
+            eager
+          />
           <div className="photo-meta">
             <span>
               <MapPin size={13} aria-hidden="true" />
@@ -1667,7 +1696,13 @@ function Lightbox({
           <X size={18} aria-hidden="true" />
         </button>
         <div className="lightbox-image">
-          <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} onMeasure={setRatio} />
+          <SmartImage
+            src={photo.imageUrl}
+            srcSet={srcSetFor(photo)}
+            sizes="(max-width: 920px) 92vw, 60vw"
+            alt={`${photo.title}, ${photo.location}`}
+            onMeasure={setRatio}
+          />
           <AltitudeBadge photo={photo} />
         </div>
         <aside className="lightbox-copy">
