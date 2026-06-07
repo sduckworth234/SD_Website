@@ -332,6 +332,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
   const [recentSlot, setRecentSlot] = useState<number | null>(null);
   const [editingCollection, setEditingCollection] = useState<GalleryLocation | null>(null);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isContactOpen, setIsContactOpen] = useState(false);
 
   function goToMap() { window.history.pushState({}, "", "/map"); onNavigate("/map"); }
   function goToShop() { window.history.pushState({}, "", "/shop"); onNavigate("/shop"); }
@@ -394,6 +395,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
               <FramedHero portrait={heroPortrait} landscape={heroLandscape} onShop={goToShop} />
             </AdminHideable>
           ) : null}
+          <ContactPrompt onOpen={() => setIsContactOpen(true)} />
         </>
       )}
       <Footer />
@@ -404,6 +406,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
         <PhotoEditOverlay locations={locations} onClose={() => setEditingPhoto(null)} onSaved={loadGallery} photo={editingPhoto} />
       ) : null}
       {isAboutOpen ? <AboutOverlay onClose={() => setIsAboutOpen(false)} /> : null}
+      {isContactOpen ? <ContactOverlay onClose={() => setIsContactOpen(false)} /> : null}
       {recentSlot !== null ? (
         <RecentPicker
           onClose={() => setRecentSlot(null)}
@@ -2655,6 +2658,76 @@ function AboutOverlay({ onClose }: { onClose: () => void }) {
             landscape photography.
           </p>
         </div>
+      </section>
+    </div>
+  );
+}
+
+// Where enquiry emails go. TODO(Sam): confirm this is a real inbox on the
+// domain (Google Workspace) before relying on it — change here if different.
+const CONTACT_EMAIL = "hello@samduckworth.com";
+
+// Small "let's work together" prompt beneath the home print-shop banner.
+function ContactPrompt({ onOpen }: { onOpen: () => void }) {
+  return (
+    <section className="contact-prompt scroll-reveal" aria-label="Contact">
+      <p className="eyebrow">Get in touch</p>
+      <h2>Let&rsquo;s work together.</h2>
+      <p className="contact-lead">Commissions, prints &amp; licensing enquiries — say hello.</p>
+      <button className="solid-button" type="button" onClick={onOpen}>Contact me</button>
+    </section>
+  );
+}
+
+// Simple contact popup. The form composes an email via the visitor's mail app
+// (no backend); a real in-page send (Formspree/Resend) can come later.
+function ContactOverlay({ onClose }: { onClose: () => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const subject = encodeURIComponent(`Website enquiry${name ? ` from ${name}` : ""}`);
+    const body = encodeURIComponent(`${message}\n\n— ${name || ""}${email ? `\n${email}` : ""}`);
+    window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
+  }
+
+  return (
+    <div className="contact-overlay" role="dialog" aria-modal="true" aria-label="Contact Sam Duckworth">
+      <button className="lightbox-backdrop" onClick={onClose} type="button" aria-label="Close" />
+      <section className="contact-panel">
+        <button className="icon-button close-button" onClick={onClose} type="button" aria-label="Close">
+          <X size={18} aria-hidden="true" />
+        </button>
+        <p className="eyebrow">Get in touch</p>
+        <h2>Let&rsquo;s work together.</h2>
+        <p className="contact-lead">Commissions, prints &amp; licensing — drop a note and I&rsquo;ll get back to you.</p>
+        <form className="contact-form" onSubmit={submit}>
+          <label>Name
+            <input value={name} onChange={(e) => setName(e.target.value)} type="text" autoComplete="name" placeholder="Your name" />
+          </label>
+          <label>Email
+            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" placeholder="you@example.com" />
+          </label>
+          <label>Message
+            <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={4} placeholder="What can I help with?" required />
+          </label>
+          <button className="solid-button" type="submit">Send message</button>
+        </form>
+        <p className="contact-alt">
+          or email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+          {" · "}
+          <a href="https://instagram.com/sam.duckworth" target="_blank" rel="noopener noreferrer">@sam.duckworth</a>
+        </p>
       </section>
     </div>
   );
