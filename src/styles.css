@@ -3099,3 +3099,14 @@ footer {
 .contact-alt { margin-top: 18px; color: var(--muted); font-size: .82rem; }
 .contact-alt a { color: var(--sea); }
 @media (max-width: 560px) { .contact-panel { max-height: calc(100dvh - 24px); } }
+
+/* ================= 404 / error screens ================= */
+.error-screen { min-height: 100dvh; }
+.error-body {
+  display: grid; place-content: center; justify-items: center; gap: 14px; text-align: center;
+  min-height: 78dvh; padding: 0 clamp(18px, 5vw, 40px);
+}
+.error-body .eyebrow { color: var(--muted); }
+.error-body h1 { font-family: "Bebas Neue", Impact, sans-serif; font-size: clamp(2.6rem, 8vw, 5rem); letter-spacing: .04em; margin: 0; color: var(--ink); }
+.error-body p { color: var(--muted); max-width: 42ch; margin: 0; }
+.error-body .solid-button { margin-top: 8px; }

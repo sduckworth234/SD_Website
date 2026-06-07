@@ -53,6 +53,7 @@ import {
   uploadPhotoAsset,
 } from "./lib/supabase";
 import type { GalleryLocation, LocationBucket, Photo, SiteSetting } from "./types";
+import { useSeo } from "./lib/seo";
 import { Header } from "./components/Header";
 import { OakFrame } from "./components/OakFrame";
 import { SmartImage } from "./components/SmartImage";
@@ -188,7 +189,11 @@ function App() {
     return <GalleriesPage onNavigate={navigate} />;
   }
 
-  return <Home onNavigate={navigate} />;
+  if (route === "/" || route === "") {
+    return <Home onNavigate={navigate} />;
+  }
+
+  return <NotFound onNavigate={navigate} />;
 }
 
 // Shared data (photos, locations, recent), admin detection, scroll state and the
@@ -361,6 +366,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
     return pick ?? publicPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? publicPhotos[1];
   }, [publicPhotos, settingValue.banner_landscape]);
 
+  useSeo("Sam Duckworth Photography — Aerial & Landscape, Northern Beaches", { path: "/" });
   useScrollReveal([isLoading, recentPhotos.length, locationNames.length]);
 
   return (
@@ -487,6 +493,14 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [activeLocation]);
+
+  const seoLoc = activeLocation === allLocations ? null : activeLocation;
+  useSeo(
+    seoLoc ? `${seoLoc} — Sam Duckworth Photography` : "Gallery — Sam Duckworth Photography",
+    seoLoc
+      ? { description: `Aerial and landscape photography from ${seoLoc}, by Sam Duckworth.`, path: `/galleries?location=${encodeURIComponent(seoLoc)}` }
+      : { path: "/galleries" },
+  );
 
   useScrollReveal([isLoading, imagesReady, activeLocation, filteredPhotos.length, view]);
 
@@ -681,6 +695,11 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
   const [cart, setCart] = useState(0);
   const [filter, setFilter] = useState("All");
   const [curating, setCurating] = useState(false);
+
+  useSeo("Framed Editions — Sam Duckworth Photography", {
+    description: "Fine-art aerial and coastal prints, hand-framed in solid oak — by Sam Duckworth.",
+    path: "/shop",
+  });
 
   function goHome() { window.history.pushState({}, "", "/"); onNavigate("/"); }
   const region = (p: Photo) => (NB_LOCATIONS.has(p.location) ? "Australia" : "Europe");
@@ -2730,6 +2749,23 @@ function ContactOverlay({ onClose }: { onClose: () => void }) {
         </p>
       </section>
     </div>
+  );
+}
+
+// Shown for any unknown path (the router falls through to here).
+function NotFound({ onNavigate }: { onNavigate: (route: string) => void }) {
+  useSeo("Page not found — Sam Duckworth Photography", { path: "/404" });
+  function goHome() { window.history.pushState({}, "", "/"); onNavigate("/"); }
+  return (
+    <main className="error-screen">
+      <Header isScrolled onNavigate={onNavigate} />
+      <div className="error-body">
+        <p className="eyebrow">404</p>
+        <h1>Page not found.</h1>
+        <p>That page doesn&rsquo;t exist or has moved.</p>
+        <button className="solid-button" type="button" onClick={goHome}>Back to gallery</button>
+      </div>
+    </main>
   );
 }
 

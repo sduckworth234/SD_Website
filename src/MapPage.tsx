@@ -3,6 +3,7 @@ import { MapPin, X } from "lucide-react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { getGalleryData } from "./lib/supabase";
+import { useSeo } from "./lib/seo";
 import { Header } from "./components/Header";
 import { SmartImage } from "./components/SmartImage";
 import type { Photo } from "./types";
@@ -86,6 +87,11 @@ export default function MapPage({ onNavigate }: { onNavigate: (route: string) =>
   const [ready, setReady] = useState(false);
   const [stats, setStats] = useState({ places: 0, photos: 0 });
   const [selected, setSelected] = useState<SelectedPhoto | null>(null);
+
+  useSeo("Photo Map — Sam Duckworth Photography", {
+    description: "Explore where Sam Duckworth's aerial and landscape photographs were captured across Australia and beyond.",
+    path: "/map",
+  });
 
   function openLocation(name: string) {
     window.history.pushState({}, "", `/?location=${encodeURIComponent(name)}`);
