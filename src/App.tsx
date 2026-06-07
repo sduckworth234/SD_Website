@@ -24,7 +24,7 @@ import {
   X,
 } from "lucide-react";
 import type { CSSProperties, DependencyList, ReactNode } from "react";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   assignRecentSlot,
   bulkEditPhotos,
@@ -459,7 +459,6 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
         activeLocation={activeLocation}
         excludeUnsorted
         includeAllWork={false}
-        pinActive
         locations={locations}
         photos={publicPhotos}
         onChange={setActiveLocation}
@@ -1017,7 +1016,6 @@ function LocationRail({
   activeLocation,
   excludeUnsorted = false,
   includeAllWork = true,
-  pinActive = false,
   locations,
   photos,
   onChange,
@@ -1025,14 +1023,10 @@ function LocationRail({
   activeLocation: ActiveLocation;
   excludeUnsorted?: boolean;
   includeAllWork?: boolean;
-  // Move the active location to the front of the rail (and scroll it into view)
-  // so you can see which gallery you're in — used on the gallery page.
-  pinActive?: boolean;
   locations: GalleryLocation[];
   photos: Photo[];
   onChange: (location: ActiveLocation) => void;
 }) {
-  const railRef = useRef<HTMLElement | null>(null);
   const photoLocationNames = new Set(photos.map((photo) => photo.location));
   const visibleLocations: ActiveLocation[] = [
     ...(includeAllWork ? [allLocations] : []),
@@ -1044,18 +1038,9 @@ function LocationRail({
     ),
   ].filter((locationName) => !excludeUnsorted || locationName !== "Unsorted");
 
-  const ordered =
-    pinActive && activeLocation !== allLocations && visibleLocations.includes(activeLocation)
-      ? [activeLocation, ...visibleLocations.filter((name) => name !== activeLocation)]
-      : visibleLocations;
-
-  useEffect(() => {
-    if (pinActive && railRef.current) railRef.current.scrollTo({ left: 0, behavior: "smooth" });
-  }, [activeLocation, pinActive]);
-
   return (
-    <section className="location-rail" aria-label="Filter gallery by location" ref={railRef}>
-      {ordered.map((location) => (
+    <section className="location-rail" aria-label="Filter gallery by location">
+      {visibleLocations.map((location) => (
         <button
           className={activeLocation === location ? "active" : ""}
           key={location}
