@@ -715,10 +715,12 @@ function ShopProduct({ photo, onAdd }: { photo: Photo; onAdd: () => void }) {
 const orientOf = (p: Photo) => (p.aspect === "portrait" || p.aspect === "square" ? "portrait" : "landscape");
 
 function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
-  const { publicPhotos, flags, isAdmin, loadGallery } = useSiteData();
+  const { publicPhotos, flags, isAdmin, settingValue, loadGallery } = useSiteData();
   const [cart, setCart] = useState(0);
   const [filter, setFilter] = useState("All");
-  const [curating, setCurating] = useState(false);
+  // Two independent curations: "shop" = the products for sale (in_shop), "wall" =
+  // the coming-soon collection glimpse (its own ordered list in shop_preview).
+  const [curating, setCurating] = useState<null | "shop" | "wall">(null);
 
   useSeo("Framed Editions — Sam Duckworth Photography", {
     description: "Fine-art aerial and coastal prints, framed in solid oak — by Sam Duckworth. Launching soon.",
@@ -742,17 +744,30 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
   const heroL = shopPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? shopPhotos[1]
     ?? publicPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? publicPhotos[1];
 
-  // The preview "wall": curated prints if any, else a pleasing landscape/portrait
-  // mix from the gallery, interleaved so the arrangement isn't all one shape.
+  // The "collection glimpse" wall is curated SEPARATELY from the shop products —
+  // its ordered photo ids live in the shop_preview site setting. If unset, fall
+  // back to a pleasing landscape/portrait mix from the gallery.
+  const previewIds = useMemo(() => {
+    try {
+      const v = settingValue.shop_preview;
+      return v ? (JSON.parse(v) as string[]) : [];
+    } catch {
+      return [];
+    }
+  }, [settingValue.shop_preview]);
   const wall = useMemo(() => {
-    const src = shopPhotos.length ? shopPhotos : publicPhotos;
-    const land = src.filter((p) => p.aspect === "landscape" || p.aspect === "wide");
-    const port = src.filter((p) => p.aspect === "portrait" || p.aspect === "square");
+    if (previewIds.length) {
+      const byId = new Map(publicPhotos.map((p) => [p.id, p]));
+      const chosen = previewIds.map((id) => byId.get(id)).filter((p): p is Photo => Boolean(p));
+      if (chosen.length) return chosen.slice(0, 5);
+    }
+    const land = publicPhotos.filter((p) => p.aspect === "landscape" || p.aspect === "wide");
+    const port = publicPhotos.filter((p) => p.aspect === "portrait" || p.aspect === "square");
     const mixed = [land[0], port[0], land[1], port[1], land[2]];
-    const base = mixed.filter(Boolean).length >= 3 ? mixed : src.slice(0, 5);
+    const base = mixed.filter(Boolean).length >= 3 ? mixed : publicPhotos.slice(0, 5);
     const seen = new Set<string>();
     return base.filter((p): p is Photo => Boolean(p) && !seen.has(p.id) && Boolean(seen.add(p.id))).slice(0, 5);
-  }, [shopPhotos, publicPhotos]);
+  }, [previewIds, publicPhotos]);
 
   async function saveShop(orderedIds: string[]) {
     const chosen = new Set(orderedIds);
@@ -763,7 +778,13 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
       await setPhotoShop(orderedIds[i], { inShop: true, shopOrder: i + 1 });
     }
     await loadGallery();
-    setCurating(false);
+    setCurating(null);
+  }
+
+  async function saveWall(orderedIds: string[]) {
+    await setSiteSetting("shop_preview", JSON.stringify(orderedIds));
+    await loadGallery();
+    setCurating(null);
   }
 
   const ShopNav = (
@@ -771,9 +792,6 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
       <button className="shop-logo" onClick={goHome} type="button">FRAMED EDITIONS</button>
       <div className="shop-nav-links">
         <a href="/" onClick={(e) => { e.preventDefault(); goHome(); }}>← samduckworth.com</a>
-        {isAdmin ? (
-          <button className="shop-curate" onClick={() => setCurating(true)} type="button"><Pencil size={13} aria-hidden="true" /> Curate</button>
-        ) : null}
         {shopLive ? <span className="shop-cart">Cart · {cart}</span> : null}
       </div>
     </div>
@@ -807,7 +825,7 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
           <div className="shop-sec-head">
             <div><p className="eyebrow">Every edition</p><h2>Shop all prints</h2></div>
             {isAdmin ? (
-              <button className="sec-edit" type="button" onClick={() => setCurating(true)} aria-label="Choose the prints shown" title="Choose the prints shown">
+              <button className="sec-edit" type="button" onClick={() => setCurating("shop")} aria-label="Choose the prints for sale" title="Choose the prints for sale">
                 <Pencil size={15} aria-hidden="true" />
               </button>
             ) : null}
@@ -823,7 +841,7 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
             </div>
           ) : (
             <p className="shop-empty">
-              {isAdmin ? "No prints curated yet — hit “Curate” to choose which photos to sell." : "New editions coming soon."}
+              {isAdmin ? "No prints for sale yet — use the pencil above to choose which photos to sell." : "New editions coming soon."}
             </p>
           )}
         </section>
@@ -833,7 +851,7 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
             <div className="shop-sec-head">
               <div><p className="eyebrow">A first look</p><h2>The collection</h2></div>
               {isAdmin ? (
-                <button className="sec-edit" type="button" onClick={() => setCurating(true)} aria-label="Choose the prints shown" title="Choose the prints shown">
+                <button className="sec-edit" type="button" onClick={() => setCurating("wall")} aria-label="Choose the glimpse photos" title="Choose the glimpse photos">
                   <Pencil size={15} aria-hidden="true" />
                 </button>
               ) : null}
@@ -856,14 +874,25 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
       )}
 
       <Footer />
-      {curating ? (
+      {curating === "shop" ? (
         <OrderedPhotoPicker
-          title="Prints in the shop"
-          hint="Pick the photos to feature — they appear in this order, both in the preview wall now and the full shop later."
+          title="Prints for sale"
+          hint="Pick the photos sold in the shop — they appear in this order. (Separate from the coming-soon glimpse.)"
           photos={publicPhotos}
           initialIds={shopPhotos.map((p) => p.id)}
-          onClose={() => setCurating(false)}
+          onClose={() => setCurating(null)}
           onSave={saveShop}
+        />
+      ) : null}
+      {curating === "wall" ? (
+        <OrderedPhotoPicker
+          title="Collection glimpse"
+          hint="Pick up to 5 photos for the coming-soon preview wall. This is separate from the shop's products."
+          max={5}
+          photos={publicPhotos}
+          initialIds={previewIds.filter((id) => publicPhotos.some((p) => p.id === id))}
+          onClose={() => setCurating(null)}
+          onSave={saveWall}
         />
       ) : null}
     </main>
