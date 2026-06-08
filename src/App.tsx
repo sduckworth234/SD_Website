@@ -399,6 +399,9 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
       publicPhotos[0]
     );
   }, [publicPhotos, settingValue.hero_photo]);
+  // Whether the chosen hero crops cleanly to portrait — if so it fills the phone
+  // screen on mobile; otherwise it's letterboxed on the dark stage.
+  const heroPortraitOk = settingValue.hero_portrait_ok === "1";
 
   useSeo("Sam Duckworth Photography — Aerial & Landscape, Northern Beaches", { path: "/" });
   useScrollReveal([isLoading, recentPhotos.length, locationNames.length]);
@@ -406,7 +409,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
   return (
     <main>
       <Header isScrolled={isScrolled} onNavigate={onNavigate} onOpenAbout={() => setIsAboutOpen(true)} />
-      <Hero photo={heroPhoto} locations={locationNames} isAdmin={isAdmin} onPickHero={() => setHeroPicking(true)} />
+      <Hero photo={heroPhoto} locations={locationNames} isAdmin={isAdmin} portraitOk={heroPortraitOk} onPickHero={() => setHeroPicking(true)} />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
       {isLoading ? (
         <>
@@ -459,11 +462,17 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
         />
       ) : null}
       {heroPicking ? (
-        <RecentPicker
-          label="Choose the landing hero photo"
-          onClose={() => setHeroPicking(false)}
-          onPick={async (photo) => { await setSiteSetting("hero_photo", photo.id); await loadGallery(); setHeroPicking(false); }}
+        <HeroPicker
           photos={publicPhotos}
+          currentId={heroPhoto?.id}
+          currentPortrait={heroPortraitOk}
+          onClose={() => setHeroPicking(false)}
+          onSave={async (photoId, portrait) => {
+            await setSiteSetting("hero_photo", photoId);
+            await setSiteSetting("hero_portrait_ok", portrait ? "1" : null);
+            await loadGallery();
+            setHeroPicking(false);
+          }}
         />
       ) : null}
       {editingCollection ? (
@@ -999,6 +1008,14 @@ function RecentWork({
               sizes="(max-width: 900px) 50vw, 33vw"
               alt={`${photo.title}, ${photo.location}`}
             />
+            <div className="photo-meta">
+              <span>
+                <MapPin size={13} aria-hidden="true" />
+                {photo.location}
+              </span>
+              <strong>{photo.title}</strong>
+              {photo.year ? <small>{photo.year}</small> : null}
+            </div>
             <AltitudeBadge photo={photo} />
             {isAdmin ? (
               <div className="tile-admin-actions">
@@ -1168,12 +1185,98 @@ function OrderedPhotoPicker({
   );
 }
 
+// Hero picker: choose the landing photo AND confirm it crops cleanly to portrait
+// for mobile. Live desktop + phone crop previews let you check before saving; the
+// portrait toggle, when on, fills the phone screen (off = letterboxed on the dark
+// stage), so birds-eye shots can safely go full-bleed on mobile.
+function HeroPicker({
+  photos,
+  currentId,
+  currentPortrait,
+  onClose,
+  onSave,
+}: {
+  photos: Photo[];
+  currentId?: string;
+  currentPortrait: boolean;
+  onClose: () => void;
+  onSave: (photoId: string, portrait: boolean) => void | Promise<void>;
+}) {
+  const [selectedId, setSelectedId] = useState<string | undefined>(currentId ?? photos[0]?.id);
+  const [portrait, setPortrait] = useState(currentPortrait);
+  const [saving, setSaving] = useState(false);
+  const selected = photos.find((p) => p.id === selectedId) ?? photos[0];
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  async function save() {
+    if (!selected) return;
+    setSaving(true);
+    try { await onSave(selected.id, portrait); } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="lightbox" role="dialog" aria-modal="true" aria-label="Choose the landing hero photo">
+      <button className="lightbox-backdrop" onClick={onClose} type="button" aria-label="Close" />
+      <section className="picker-panel">
+        <button className="icon-button close-button" onClick={onClose} type="button" aria-label="Close">
+          <X size={18} aria-hidden="true" />
+        </button>
+        <p className="eyebrow">Choose the landing hero photo</p>
+        <p className="picker-hint">Pick a frame, then check it still reads when cropped to portrait for mobile — birds-eye shots usually do. The phone preview updates live.</p>
+        {selected ? (
+          <div className="hero-pick-previews">
+            <div className="hpv desktop">
+              <span className="lbl">Desktop</span>
+              <div className="hpv-frame"><img src={selected.imageUrl} alt="" /></div>
+            </div>
+            <div className={`hpv mobile${portrait ? "" : " contain"}`}>
+              <span className="lbl">Mobile {portrait ? "· fills screen" : "· letterboxed"}</span>
+              <div className="hpv-frame"><img src={selected.imageUrl} alt="" /></div>
+            </div>
+            <label className="hero-portrait-check">
+              <input type="checkbox" checked={portrait} onChange={(event) => setPortrait(event.target.checked)} />
+              <span>Portrait-worthy — fill the phone screen with this image on mobile (leave off to keep the whole landscape, letterboxed)</span>
+            </label>
+          </div>
+        ) : null}
+        <div className="picker-grid">
+          {photos.map((photo) => (
+            <button
+              className={`picker-tile${photo.id === selectedId ? " is-picked" : ""}`}
+              key={photo.id}
+              onClick={() => setSelectedId(photo.id)}
+              type="button"
+              aria-pressed={photo.id === selectedId}
+            >
+              <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
+            </button>
+          ))}
+        </div>
+        <div className="picker-actions">
+          <span className="picker-count">{selected ? `${selected.location} · ${selected.title}` : "Pick a photo"}</span>
+          <span className="picker-actions-spacer" />
+          <button className="ghost-button" type="button" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="solid-button" type="button" onClick={save} disabled={saving || !selected}>
+            {saving ? "Saving…" : "Set as hero"}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 // Cinematic landing: a full-bleed hero photo (admin-chosen, else auto) revealed
 // by the existing fade-from-black, with the wordmark over it and the photo's
-// place · title set small in the bottom-left corner.
-function Hero({ photo, locations, isAdmin, onPickHero }: { photo?: Photo; locations: string[]; isAdmin: boolean; onPickHero: () => void }) {
+// place · title set small in the bottom-left corner. On mobile the photo fills
+// the screen (portrait) when flagged portrait-worthy, else letterboxes.
+function Hero({ photo, locations, isAdmin, portraitOk, onPickHero }: { photo?: Photo; locations: string[]; isAdmin: boolean; portraitOk: boolean; onPickHero: () => void }) {
   return (
-    <section className="hero landing-stage cinematic" id="top" aria-label="Sam Duckworth Photography">
+    <section className={`hero landing-stage cinematic${portraitOk ? " portrait-ok" : ""}`} id="top" aria-label="Sam Duckworth Photography">
       {photo ? (
         <div className="landing-photo" aria-hidden="true">
           <SmartImage src={photo.imageUrl} alt="" eager />
