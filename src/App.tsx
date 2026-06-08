@@ -399,9 +399,10 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
       publicPhotos[0]
     );
   }, [publicPhotos, settingValue.hero_photo]);
-  // Whether the chosen hero crops cleanly to portrait — if so it fills the phone
-  // screen on mobile; otherwise it's letterboxed on the dark stage.
-  const heroPortraitOk = settingValue.hero_portrait_ok === "1";
+  // Optional mobile rotation for the hero: "90" or "270" rotates a landscape
+  // birds-eye upright to fill the portrait phone area with the whole image (no
+  // crop). "0" = no rotation (covers/centre-crops as usual).
+  const heroRotate = settingValue.hero_mobile_rotate ?? "0";
 
   useSeo("Sam Duckworth Photography — Aerial & Landscape, Northern Beaches", { path: "/" });
   useScrollReveal([isLoading, recentPhotos.length, locationNames.length]);
@@ -409,7 +410,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
   return (
     <main>
       <Header isScrolled={isScrolled} onNavigate={onNavigate} onOpenAbout={() => setIsAboutOpen(true)} />
-      <Hero photo={heroPhoto} locations={locationNames} isAdmin={isAdmin} portraitOk={heroPortraitOk} onPickHero={() => setHeroPicking(true)} />
+      <Hero photo={heroPhoto} locations={locationNames} isAdmin={isAdmin} rotate={heroRotate} onPickHero={() => setHeroPicking(true)} />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
       {isLoading ? (
         <>
@@ -465,11 +466,11 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
         <HeroPicker
           photos={publicPhotos}
           currentId={heroPhoto?.id}
-          currentPortrait={heroPortraitOk}
+          currentRotate={heroRotate}
           onClose={() => setHeroPicking(false)}
-          onSave={async (photoId, portrait) => {
+          onSave={async (photoId, rotate) => {
             await setSiteSetting("hero_photo", photoId);
-            await setSiteSetting("hero_portrait_ok", portrait ? "1" : null);
+            await setSiteSetting("hero_mobile_rotate", rotate === "0" ? null : rotate);
             await loadGallery();
             setHeroPicking(false);
           }}
@@ -1192,18 +1193,18 @@ function OrderedPhotoPicker({
 function HeroPicker({
   photos,
   currentId,
-  currentPortrait,
+  currentRotate,
   onClose,
   onSave,
 }: {
   photos: Photo[];
   currentId?: string;
-  currentPortrait: boolean;
+  currentRotate: string;
   onClose: () => void;
-  onSave: (photoId: string, portrait: boolean) => void | Promise<void>;
+  onSave: (photoId: string, rotate: string) => void | Promise<void>;
 }) {
   const [selectedId, setSelectedId] = useState<string | undefined>(currentId ?? photos[0]?.id);
-  const [portrait, setPortrait] = useState(currentPortrait);
+  const [rotate, setRotate] = useState(currentRotate);
   const [saving, setSaving] = useState(false);
   const selected = photos.find((p) => p.id === selectedId) ?? photos[0];
 
@@ -1216,7 +1217,7 @@ function HeroPicker({
   async function save() {
     if (!selected) return;
     setSaving(true);
-    try { await onSave(selected.id, portrait); } finally { setSaving(false); }
+    try { await onSave(selected.id, rotate); } finally { setSaving(false); }
   }
 
   return (
@@ -1227,21 +1228,26 @@ function HeroPicker({
           <X size={18} aria-hidden="true" />
         </button>
         <p className="eyebrow">Choose the landing hero photo</p>
-        <p className="picker-hint">Pick a frame, then check it still reads when cropped to portrait for mobile — birds-eye shots usually do. The phone preview updates live.</p>
+        <p className="picker-hint">Pick a frame, then choose how it sits on a portrait phone — rotate a landscape birds-eye 90° or 270° to stand it up and fill the screen with the whole image. The phone preview updates live.</p>
         {selected ? (
           <div className="hero-pick-previews">
             <div className="hpv desktop">
               <span className="lbl">Desktop</span>
               <div className="hpv-frame"><img src={selected.imageUrl} alt="" /></div>
             </div>
-            <div className={`hpv mobile${portrait ? "" : " contain"}`}>
-              <span className="lbl">Mobile {portrait ? "· fills screen" : "· letterboxed"}</span>
+            <div className={`hpv mobile rot${rotate}`}>
+              <span className="lbl">Mobile {rotate === "0" ? "· cropped" : `· rotated ${rotate}°`}</span>
               <div className="hpv-frame"><img src={selected.imageUrl} alt="" /></div>
             </div>
-            <label className="hero-portrait-check">
-              <input type="checkbox" checked={portrait} onChange={(event) => setPortrait(event.target.checked)} />
-              <span>Portrait-worthy — fill the phone screen with this image on mobile (leave off to keep the whole landscape, letterboxed)</span>
-            </label>
+            <div className="hero-rotate">
+              <span className="lbl">Mobile fit</span>
+              <div className="hero-rotate-opts">
+                <button className={rotate === "0" ? "on" : ""} onClick={() => setRotate("0")} type="button">No rotate</button>
+                <button className={rotate === "90" ? "on" : ""} onClick={() => setRotate("90")} type="button">Rotate 90°</button>
+                <button className={rotate === "270" ? "on" : ""} onClick={() => setRotate("270")} type="button">Rotate 270°</button>
+              </div>
+              <span className="hero-rotate-note">Rotate a landscape birds-eye to fill the portrait phone screen with the whole image — no cropping.</span>
+            </div>
           </div>
         ) : null}
         <div className="picker-grid">
@@ -1274,9 +1280,10 @@ function HeroPicker({
 // by the existing fade-from-black, with the wordmark over it and the photo's
 // place · title set small in the bottom-left corner. On mobile the photo fills
 // the screen (portrait) when flagged portrait-worthy, else letterboxes.
-function Hero({ photo, locations, isAdmin, portraitOk, onPickHero }: { photo?: Photo; locations: string[]; isAdmin: boolean; portraitOk: boolean; onPickHero: () => void }) {
+function Hero({ photo, locations, isAdmin, rotate, onPickHero }: { photo?: Photo; locations: string[]; isAdmin: boolean; rotate: string; onPickHero: () => void }) {
+  const rotClass = rotate === "90" ? " rotate-90" : rotate === "270" ? " rotate-270" : "";
   return (
-    <section className={`hero landing-stage cinematic${portraitOk ? " portrait-ok" : ""}`} id="top" aria-label="Sam Duckworth Photography">
+    <section className={`hero landing-stage cinematic${rotClass}`} id="top" aria-label="Sam Duckworth Photography">
       {photo ? (
         <div className="landing-photo" aria-hidden="true">
           <SmartImage src={photo.imageUrl} alt="" eager />

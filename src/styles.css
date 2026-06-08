@@ -283,6 +283,17 @@ nav a:hover,
 .landing-stage.cinematic .hero-locations {
   color: rgba(248, 246, 240, 0.9);
   text-shadow: 0 1px 18px rgba(0, 0, 0, 0.4);
+  /* Anchor the wordmark: lift the ticker out of the centred flow and hang it just
+     below the wordmark, so long location lines wrap + spill DOWNWARD instead of
+     growing the centred block and pushing "Sam Duckworth" upwards. */
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 92vw;
+  max-width: 92vw;
+  margin-top: clamp(10px, 1.8vw, 18px);
+  white-space: normal;
 }
 
 .landing-stage.cinematic .loc-dot {
@@ -355,14 +366,27 @@ nav a:hover,
   border-color: var(--foam);
 }
 
-/* Mobile: a portrait-worthy hero fills the phone screen (cover); otherwise the
-   whole landscape is kept, letterboxed on the dark stage (contain). */
+/* Mobile: optionally rotate a landscape hero 90°/270° so the whole image stands
+   up and fills the portrait phone screen (great for orientation-agnostic birds-
+   eye shots). With no rotation it just covers (centre-crop). The image box is
+   sized to the viewport with width/height swapped, so after rotating it fills
+   the screen exactly. */
 @media (max-width: 640px) {
-  .landing-stage.cinematic .landing-photo .smart-img {
-    object-fit: contain;
-  }
-  .landing-stage.cinematic.portrait-ok .landing-photo .smart-img {
+  .landing-stage.cinematic.rotate-90 .landing-photo .smart-img,
+  .landing-stage.cinematic.rotate-270 .landing-photo .smart-img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100svh;
+    height: 100vw;
+    max-width: none;
     object-fit: cover;
+  }
+  .landing-stage.cinematic.rotate-90 .landing-photo .smart-img {
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+  .landing-stage.cinematic.rotate-270 .landing-photo .smart-img {
+    transform: translate(-50%, -50%) rotate(270deg);
   }
 }
 
@@ -406,34 +430,78 @@ nav a:hover,
 }
 
 .hpv.mobile .hpv-frame {
-  width: clamp(96px, 14vw, 124px);
-  aspect-ratio: 9 / 19;
+  position: relative;
+  width: 120px;
+  height: 250px;
 }
 
-/* Live mirror of the choice: unticked shows the letterboxed (contain) crop. */
-.hpv.mobile.contain .hpv-frame img {
-  object-fit: contain;
+/* Live mirror of the rotation choice in the phone preview (same swap-and-rotate
+   trick as the real hero, at a fixed preview size). */
+.hpv.mobile.rot90 .hpv-frame img,
+.hpv.mobile.rot270 .hpv-frame img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 250px;
+  height: 120px;
+  max-width: none;
+  object-fit: cover;
 }
 
-.hero-portrait-check {
-  flex: 1 1 240px;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
+.hpv.mobile.rot90 .hpv-frame img {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.hpv.mobile.rot270 .hpv-frame img {
+  transform: translate(-50%, -50%) rotate(270deg);
+}
+
+.hero-rotate {
+  flex: 1 1 220px;
+  display: grid;
+  gap: 8px;
   align-self: center;
   max-width: 340px;
-  color: var(--muted);
-  font-size: 0.8rem;
-  line-height: 1.5;
-  cursor: pointer;
 }
 
-.hero-portrait-check input {
-  margin-top: 2px;
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-  accent-color: var(--sea);
+.hero-rotate .lbl {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hero-rotate-opts {
+  display: inline-flex;
+  width: max-content;
+  border: 1px solid var(--line);
+}
+
+.hero-rotate-opts button {
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 9px 13px;
+  font: inherit;
+  font-size: 0.74rem;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.hero-rotate-opts button + button {
+  border-left: 1px solid var(--line);
+}
+
+.hero-rotate-opts button.on {
+  background: var(--ink);
+  color: var(--foam);
+}
+
+.hero-rotate-note {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
 }
 
 .landing-copy {
