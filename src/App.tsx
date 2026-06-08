@@ -714,6 +714,26 @@ function ShopProduct({ photo, onAdd }: { photo: Photo; onAdd: () => void }) {
 // while the admin always sees the full shop and can curate it.
 const orientOf = (p: Photo) => (p.aspect === "portrait" || p.aspect === "square" ? "portrait" : "landscape");
 
+// Live mini-mockup of the glimpse wall: each picked photo in its actual frame,
+// numbered to match the picker — so there's no guessing which goes where.
+function WallPreview({ ids, photos }: { ids: string[]; photos: Photo[] }) {
+  const byId = new Map(photos.map((p) => [p.id, p]));
+  const chosen = ids.map((id) => byId.get(id)).filter((p): p is Photo => Boolean(p));
+  if (!chosen.length) {
+    return <p className="picker-preview-empty">Pick photos below — they’ll appear here in their frames, in order (1–5).</p>;
+  }
+  return (
+    <div className="shop-wall picker-wall">
+      {chosen.map((p, i) => (
+        <div className={`sw-frame ${orientOf(p)}`} key={p.id}>
+          <OakFrame src={thumbUrl(p, 500)} orientation={orientOf(p)} alt={p.title} />
+          <span className="picker-badge">{i + 1}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
   const { publicPhotos, flags, isAdmin, settingValue, loadGallery } = useSiteData();
   const [cart, setCart] = useState(0);
@@ -887,10 +907,11 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
       {curating === "wall" ? (
         <OrderedPhotoPicker
           title="Collection glimpse"
-          hint="Pick up to 5 photos for the coming-soon preview wall. This is separate from the shop's products."
+          hint="Pick up to 5 photos for the coming-soon wall — the mockup above shows exactly which frame each one lands in. Click again to remove; pick order = frame order."
           max={5}
           photos={publicPhotos}
           initialIds={previewIds.filter((id) => publicPhotos.some((p) => p.id === id))}
+          preview={(ids) => <WallPreview ids={ids} photos={publicPhotos} />}
           onClose={() => setCurating(null)}
           onSave={saveWall}
         />
@@ -1034,6 +1055,7 @@ function OrderedPhotoPicker({
   photos,
   initialIds,
   max,
+  preview,
   onClose,
   onSave,
 }: {
@@ -1042,6 +1064,9 @@ function OrderedPhotoPicker({
   photos: Photo[];
   initialIds: string[];
   max?: number;
+  // Optional live preview shown above the grid, given the current ordered picks
+  // (e.g. a mini mockup so you see which photo lands in which frame).
+  preview?: (orderedIds: string[]) => ReactNode;
   onClose: () => void;
   onSave: (orderedIds: string[]) => void | Promise<void>;
 }) {
@@ -1084,6 +1109,7 @@ function OrderedPhotoPicker({
         </button>
         <p className="eyebrow">{title}</p>
         <p className="picker-hint">{hint}</p>
+        {preview ? <div className="picker-preview">{preview(picks)}</div> : null}
         <div className="picker-grid">
           {photos.map((photo) => {
             const idx = picks.indexOf(photo.id);

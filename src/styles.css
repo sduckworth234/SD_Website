@@ -2924,6 +2924,14 @@ footer {
 
 /* Ordered photo picker (collections + shop curation) — extends .picker-*. */
 .picker-hint { color: var(--muted); font-size: .8rem; line-height: 1.45; margin: 4px 0 16px; max-width: 60ch; }
+/* Live preview block inside the picker (e.g. the glimpse-wall mockup) */
+.picker-preview { margin: 2px 0 18px; padding: clamp(14px, 2vw, 22px); background: rgba(227, 210, 188, .22); border: 1px solid var(--line); }
+.picker-preview-empty { color: var(--muted); font-size: .82rem; margin: 0; }
+.picker-wall { padding: 4px 0; gap: clamp(10px, 2vw, 24px); }
+.picker-wall .sw-frame { position: relative; }
+.picker-wall .sw-frame.landscape { width: clamp(110px, 22vw, 170px); }
+.picker-wall .sw-frame.portrait { width: clamp(78px, 15vw, 116px); }
+.picker-wall .picker-badge { top: -7px; left: -7px; z-index: 3; }
 .picker-tile.is-picked { outline: 2px solid var(--sea); outline-offset: 2px; }
 .picker-badge {
   position: absolute; top: 7px; left: 7px; z-index: 1;
