@@ -406,7 +406,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
   return (
     <main>
       <Header isScrolled={isScrolled} onNavigate={onNavigate} onOpenAbout={() => setIsAboutOpen(true)} />
-      <Hero photo={heroPhoto} isAdmin={isAdmin} onPickHero={() => setHeroPicking(true)} />
+      <Hero photo={heroPhoto} locations={locationNames} isAdmin={isAdmin} onPickHero={() => setHeroPicking(true)} />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
       {isLoading ? (
         <>
@@ -1171,7 +1171,7 @@ function OrderedPhotoPicker({
 // Cinematic landing: a full-bleed hero photo (admin-chosen, else auto) revealed
 // by the existing fade-from-black, with the wordmark over it and the photo's
 // place · title set small in the bottom-left corner.
-function Hero({ photo, isAdmin, onPickHero }: { photo?: Photo; isAdmin: boolean; onPickHero: () => void }) {
+function Hero({ photo, locations, isAdmin, onPickHero }: { photo?: Photo; locations: string[]; isAdmin: boolean; onPickHero: () => void }) {
   return (
     <section className="hero landing-stage cinematic" id="top" aria-label="Sam Duckworth Photography">
       {photo ? (
@@ -1182,6 +1182,7 @@ function Hero({ photo, isAdmin, onPickHero }: { photo?: Photo; isAdmin: boolean;
       <div className="landing-copy scroll-reveal is-visible">
         <p className="eyebrow">Aerial &amp; Landscape · Northern Beaches</p>
         <h1>Sam Duckworth</h1>
+        <RotatingLocations locations={locations} />
       </div>
       {photo ? (
         <figcaption className="hero-caption">
@@ -1202,6 +1203,41 @@ function Hero({ photo, isAdmin, onPickHero }: { photo?: Photo; isAdmin: boolean;
         </span>
       </a>
     </section>
+  );
+}
+
+// A slowly rotating, gently pulsing line of the locations the photos come from,
+// sat beneath the wordmark on the cinematic landing.
+function RotatingLocations({ locations }: { locations: string[] }) {
+  const [index, setIndex] = useState(0);
+  const count = Math.min(3, locations.length);
+
+  useEffect(() => {
+    if (locations.length <= count) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = window.setInterval(() => setIndex((i) => i + 1), 2600);
+    return () => window.clearInterval(id);
+  }, [locations.length, count]);
+
+  if (!locations.length) return null;
+
+  const start = (index * count) % locations.length;
+  const shown = Array.from(
+    { length: count },
+    (_, k) => locations[(start + k) % locations.length],
+  );
+
+  return (
+    <p className="hero-locations" aria-label="Locations in the gallery">
+      <span className="hero-locations-set" key={index}>
+        {shown.map((name, i) => (
+          <span key={`${index}-${name}-${i}`}>
+            {i > 0 ? <span className="loc-dot" aria-hidden="true"> · </span> : null}
+            {name}
+          </span>
+        ))}
+      </span>
+    </p>
   );
 }
 

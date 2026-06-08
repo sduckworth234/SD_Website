@@ -261,8 +261,8 @@ nav a:hover,
   pointer-events: none;
   content: "";
   background:
-    linear-gradient(180deg, rgba(15, 19, 18, 0.46), rgba(15, 19, 18, 0.06) 28%, rgba(15, 19, 18, 0.12) 56%, rgba(15, 19, 18, 0.66)),
-    radial-gradient(circle at 50% 40%, rgba(15, 19, 18, 0.02), rgba(15, 19, 18, 0.32) 92%);
+    linear-gradient(180deg, rgba(15, 19, 18, 0.34), rgba(15, 19, 18, 0.03) 30%, rgba(15, 19, 18, 0.07) 58%, rgba(15, 19, 18, 0.5)),
+    radial-gradient(circle at 50% 42%, rgba(15, 19, 18, 0), rgba(15, 19, 18, 0.15) 98%);
 }
 
 .landing-stage.cinematic .landing-copy {
@@ -278,6 +278,15 @@ nav a:hover,
   white-space: nowrap;
   font-size: clamp(2.6rem, 11vw, 7.4rem);
   text-shadow: 0 2px 44px rgba(0, 0, 0, 0.36);
+}
+
+.landing-stage.cinematic .hero-locations {
+  color: rgba(248, 246, 240, 0.9);
+  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.4);
+}
+
+.landing-stage.cinematic .loc-dot {
+  color: #9fc6c2;
 }
 
 .landing-stage.cinematic .scroll-cue {
