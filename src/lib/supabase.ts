@@ -464,6 +464,7 @@ export async function getRecentPhotos(limit = 5): Promise<Photo[]> {
       .eq("is_published", true)
       .not("location_id", "is", null)
       .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
       .limit(limit * 3),
   ]);
 
@@ -484,14 +485,25 @@ export async function getRecentPhotos(limit = 5): Promise<Photo[]> {
   }
 
   const placed = new Set(slots.filter(Boolean).map((p) => (p as Photo).id));
-  let ri = 0;
+
+  // The 9-tile mosaic has wide 2-col banners at tiles 1, 5, 9 (slots 0, 4, 8) —
+  // those want landscape photos; the rest take the others. Fill deterministically
+  // (recent is ordered by date then id) so the layout never reshuffles on refresh.
+  const wideSlots = limit === 9 ? new Set([0, 4, 8]) : new Set<number>();
+  const isWide = (p: Photo) => p.aspect === "landscape" || p.aspect === "wide";
+  const avail = recent.filter((p) => !placed.has(p.id));
+  const wideQueue = avail.filter(isWide);
+  const narrowQueue = avail.filter((p) => !isWide(p));
+  let wi = 0;
+  let ni = 0;
+  const nextWide = () => (wi < wideQueue.length ? wideQueue[wi++] : null);
+  const nextNarrow = () => (ni < narrowQueue.length ? narrowQueue[ni++] : null);
   for (let i = 0; i < limit; i += 1) {
     if (slots[i]) continue;
-    while (ri < recent.length && placed.has(recent[ri].id)) ri += 1;
-    if (ri < recent.length) {
-      slots[i] = recent[ri];
-      placed.add(recent[ri].id);
-      ri += 1;
+    const pick = wideSlots.has(i) ? (nextWide() ?? nextNarrow()) : (nextNarrow() ?? nextWide());
+    if (pick) {
+      slots[i] = pick;
+      placed.add(pick.id);
     }
   }
 

@@ -661,7 +661,7 @@ function FramedHero({ portrait, landscape, onShop }: { portrait?: Photo; landsca
       <div className="fh-copy">
         <p className="eyebrow">Framed Editions</p>
         <h2>Take the view home.</h2>
-        <p className="fh-lead">Fine-art prints, hand-framed in solid oak with a museum-grade mat — ready to hang.</p>
+        <p className="fh-lead">Fine-art prints, framed in solid oak — ready to hang.</p>
         <button className="solid-button" type="button" onClick={onShop}>Shop the collection</button>
         <p className="fh-flag"><span className="fh-flag-dot" aria-hidden="true" />Coming soon</p>
       </div>
@@ -721,7 +721,7 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
   const [curating, setCurating] = useState(false);
 
   useSeo("Framed Editions — Sam Duckworth Photography", {
-    description: "Fine-art aerial and coastal prints, hand-framed in solid oak — by Sam Duckworth. Launching soon.",
+    description: "Fine-art aerial and coastal prints, framed in solid oak — by Sam Duckworth. Launching soon.",
     path: "/shop",
   });
 
@@ -789,7 +789,7 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
         <div className="sh-copy">
           <p className="eyebrow">Sam Duckworth Photography</p>
           <h1>Framed<br />Editions</h1>
-          <p className="sh-lead">Fine-art aerial &amp; coastal prints — hand-framed in solid oak with a museum-grade mat. From the Northern Beaches to the Mediterranean.</p>
+          <p className="sh-lead">Fine-art aerial &amp; coastal prints, framed in solid oak. From the Northern Beaches to the Mediterranean.</p>
           <a className="solid-button" href={shopLive ? "#shop-grid" : "#shop-wall"}>{shopLive ? "Shop the collection" : "See the collection"}</a>
         </div>
         <div className="fh-stage">
@@ -799,12 +799,19 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
       </section>
       <div className="shop-strip">
         <span><b>Solid oak</b> frame</span><span><b>Archival</b> matte</span>
-        <span><b>Hand-cut</b> mat</span><span><b>Ready</b> to hang</span><span><b>Ships</b> worldwide</span>
+        <span><b>Ready</b> to hang</span><span><b>Ships</b> worldwide</span>
       </div>
 
       {shopLive ? (
         <section className="shop-section" id="shop-grid">
-          <div className="shop-sec-head"><p className="eyebrow">Every edition</p><h2>Shop all prints</h2></div>
+          <div className="shop-sec-head">
+            <div><p className="eyebrow">Every edition</p><h2>Shop all prints</h2></div>
+            {isAdmin ? (
+              <button className="sec-edit" type="button" onClick={() => setCurating(true)} aria-label="Choose the prints shown" title="Choose the prints shown">
+                <Pencil size={15} aria-hidden="true" />
+              </button>
+            ) : null}
+          </div>
           <div className="shop-filters">
             {["All", "Europe", "Australia"].map((f) => (
               <button key={f} className={`chip${filter === f ? " active" : ""}`} onClick={() => setFilter(f)} type="button">{f}</button>
@@ -823,7 +830,14 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
       ) : (
         <>
           <section className="shop-section" id="shop-wall">
-            <div className="shop-sec-head"><p className="eyebrow">A first look</p><h2>The collection</h2></div>
+            <div className="shop-sec-head">
+              <div><p className="eyebrow">A first look</p><h2>The collection</h2></div>
+              {isAdmin ? (
+                <button className="sec-edit" type="button" onClick={() => setCurating(true)} aria-label="Choose the prints shown" title="Choose the prints shown">
+                  <Pencil size={15} aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
             <p className="shop-wall-lead">A glimpse of the prints. The full shop opens soon.</p>
             <div className="shop-wall">
               {wall.map((p) => (

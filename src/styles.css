@@ -2823,7 +2823,7 @@ footer {
 .fh-main { width: min(300px, 62%); z-index: 2; }
 .fh-back { position: absolute; right: 0; bottom: 6%; width: min(260px, 52%); z-index: 1; opacity: .97; }
 .fh-flag {
-  display: inline-flex; align-items: center; gap: 9px; margin: clamp(26px, 4.5vh, 38px) 0 0;
+  display: inline-flex; align-items: center; gap: 9px; margin: clamp(16px, 2.4vh, 22px) 0 0;
   padding: 8px 16px 8px 13px; border: 1px solid var(--line); border-radius: 999px;
   background: rgba(248, 246, 240, .45);
   font-size: .62rem; letter-spacing: .22em; text-transform: uppercase; color: var(--muted);
@@ -2868,7 +2868,14 @@ footer {
 .shop-strip { display: flex; flex-wrap: wrap; gap: 8px 28px; justify-content: center; padding: 16px clamp(18px,4vw,56px); border-block: 1px solid var(--line); background: var(--paper-deep); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .shop-strip b { color: var(--ink); font-weight: 600; }
 .shop-section { max-width: 1180px; margin: 0 auto; padding: clamp(40px, 6vw, 80px) clamp(18px, 4vw, 56px); }
+.shop-sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
 .shop-sec-head h2 { font-family: "Bebas Neue", Impact, sans-serif; font-size: clamp(1.8rem, 4vw, 2.8rem); letter-spacing: .08em; color: rgba(34,29,23,.7); margin: 2px 0 0; }
+.sec-edit {
+  flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 999px;
+  border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.sec-edit:hover { border-color: var(--ink); background: rgba(32, 29, 25, .05); }
 .shop-filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 22px 0 28px; }
 .chip { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 8px 15px; font: inherit; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); cursor: pointer; }
 .chip.active { background: var(--ink); color: var(--foam); border-color: var(--ink); }
