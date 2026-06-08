@@ -712,19 +712,25 @@ function ShopProduct({ photo, onAdd }: { photo: Photo; onAdd: () => void }) {
 // The Framed Editions shop. The grid is admin-curated (in_shop); access is
 // gated by the `shop_public` flag — public sees "Opening soon" until it's on,
 // while the admin always sees the full shop and can curate it.
+const orientOf = (p: Photo) => (p.aspect === "portrait" || p.aspect === "square" ? "portrait" : "landscape");
+
 function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
-  const { publicPhotos, flags, isAdmin, adminChecked, loadGallery } = useSiteData();
+  const { publicPhotos, flags, isAdmin, loadGallery } = useSiteData();
   const [cart, setCart] = useState(0);
   const [filter, setFilter] = useState("All");
   const [curating, setCurating] = useState(false);
 
   useSeo("Framed Editions — Sam Duckworth Photography", {
-    description: "Fine-art aerial and coastal prints, hand-framed in solid oak — by Sam Duckworth.",
+    description: "Fine-art aerial and coastal prints, hand-framed in solid oak — by Sam Duckworth. Launching soon.",
     path: "/shop",
   });
 
   function goHome() { window.history.pushState({}, "", "/"); onNavigate("/"); }
   const region = (p: Photo) => (NB_LOCATIONS.has(p.location) ? "Australia" : "Europe");
+
+  // Explicit true — so before settings load (flags empty) we default to the
+  // safe "not live" preview, never a flash of the transactional shop.
+  const shopLive = flags.shop_public === true;
 
   const shopPhotos = useMemo(
     () => publicPhotos.filter((p) => p.inShop).sort((a, b) => (a.shopOrder ?? 1e9) - (b.shopOrder ?? 1e9)),
@@ -735,6 +741,18 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
     ?? publicPhotos.find((p) => p.aspect === "portrait") ?? publicPhotos[0];
   const heroL = shopPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? shopPhotos[1]
     ?? publicPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? publicPhotos[1];
+
+  // The preview "wall": curated prints if any, else a pleasing landscape/portrait
+  // mix from the gallery, interleaved so the arrangement isn't all one shape.
+  const wall = useMemo(() => {
+    const src = shopPhotos.length ? shopPhotos : publicPhotos;
+    const land = src.filter((p) => p.aspect === "landscape" || p.aspect === "wide");
+    const port = src.filter((p) => p.aspect === "portrait" || p.aspect === "square");
+    const mixed = [land[0], port[0], land[1], port[1], land[2]];
+    const base = mixed.filter(Boolean).length >= 3 ? mixed : src.slice(0, 5);
+    const seen = new Set<string>();
+    return base.filter((p): p is Photo => Boolean(p) && !seen.has(p.id) && Boolean(seen.add(p.id))).slice(0, 5);
+  }, [shopPhotos, publicPhotos]);
 
   async function saveShop(orderedIds: string[]) {
     const chosen = new Set(orderedIds);
@@ -756,37 +774,23 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
         {isAdmin ? (
           <button className="shop-curate" onClick={() => setCurating(true)} type="button"><Pencil size={13} aria-hidden="true" /> Curate</button>
         ) : null}
-        <span className="shop-cart">Cart · {cart}</span>
+        {shopLive ? <span className="shop-cart">Cart · {cart}</span> : null}
       </div>
     </div>
   );
 
-  if (!adminChecked) return <main className="shop">{ShopNav}</main>;
-  if (!isAdmin && !flagOn(flags, "shop_public")) {
-    return (
-      <main className="shop">
-        {ShopNav}
-        <div className="shop-soon">
-          <p className="eyebrow">Framed Editions</p>
-          <h1>Opening soon.</h1>
-          <button className="solid-button" onClick={goHome} type="button">Back to gallery</button>
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main className="shop">
       {ShopNav}
-      {isAdmin && !flagOn(flags, "shop_public") ? (
-        <div className="shop-admin-note"><EyeOff size={13} aria-hidden="true" /> Shop is hidden from the public — toggle “Shop page” in Admin → Visibility to open it.</div>
+      {isAdmin && !shopLive ? (
+        <div className="shop-admin-note"><EyeOff size={13} aria-hidden="true" /> Preview mode — this is what the public sees. Toggle “Shop page” in Admin → Visibility to open the real shop (prices + cart).</div>
       ) : null}
       <section className="shop-hero">
         <div className="sh-copy">
           <p className="eyebrow">Sam Duckworth Photography</p>
           <h1>Framed<br />Editions</h1>
-          <p className="sh-lead">Fine-art aerial & coastal prints — hand-framed in solid oak with a museum-grade mat. From the Northern Beaches to the Mediterranean.</p>
-          <a className="solid-button" href="#shop-grid">Shop the collection</a>
+          <p className="sh-lead">Fine-art aerial &amp; coastal prints — hand-framed in solid oak with a museum-grade mat. From the Northern Beaches to the Mediterranean.</p>
+          <a className="solid-button" href={shopLive ? "#shop-grid" : "#shop-wall"}>{shopLive ? "Shop the collection" : "See the collection"}</a>
         </div>
         <div className="fh-stage">
           {heroL ? <OakFrame className="fh-back" src={thumbUrl(heroL, 1000)} orientation="landscape" alt={heroL.title} /> : null}
@@ -797,28 +801,52 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
         <span><b>Solid oak</b> frame</span><span><b>Archival</b> matte</span>
         <span><b>Hand-cut</b> mat</span><span><b>Ready</b> to hang</span><span><b>Ships</b> worldwide</span>
       </div>
-      <section className="shop-section" id="shop-grid">
-        <div className="shop-sec-head"><p className="eyebrow">Every edition</p><h2>Shop all prints</h2></div>
-        <div className="shop-filters">
-          {["All", "Europe", "Australia"].map((f) => (
-            <button key={f} className={`chip${filter === f ? " active" : ""}`} onClick={() => setFilter(f)} type="button">{f}</button>
-          ))}
-        </div>
-        {filtered.length ? (
-          <div className="shop-grid">
-            {filtered.map((p) => <ShopProduct key={p.id} photo={p} onAdd={() => setCart((c) => c + 1)} />)}
+
+      {shopLive ? (
+        <section className="shop-section" id="shop-grid">
+          <div className="shop-sec-head"><p className="eyebrow">Every edition</p><h2>Shop all prints</h2></div>
+          <div className="shop-filters">
+            {["All", "Europe", "Australia"].map((f) => (
+              <button key={f} className={`chip${filter === f ? " active" : ""}`} onClick={() => setFilter(f)} type="button">{f}</button>
+            ))}
           </div>
-        ) : (
-          <p className="shop-empty">
-            {isAdmin ? "No prints curated yet — hit “Curate” to choose which photos to sell." : "New editions coming soon."}
-          </p>
-        )}
-      </section>
+          {filtered.length ? (
+            <div className="shop-grid">
+              {filtered.map((p) => <ShopProduct key={p.id} photo={p} onAdd={() => setCart((c) => c + 1)} />)}
+            </div>
+          ) : (
+            <p className="shop-empty">
+              {isAdmin ? "No prints curated yet — hit “Curate” to choose which photos to sell." : "New editions coming soon."}
+            </p>
+          )}
+        </section>
+      ) : (
+        <>
+          <section className="shop-section" id="shop-wall">
+            <div className="shop-sec-head"><p className="eyebrow">A first look</p><h2>The collection</h2></div>
+            <p className="shop-wall-lead">A glimpse of the prints — each one hand-framed in solid oak. The full shop opens soon.</p>
+            <div className="shop-wall">
+              {wall.map((p) => (
+                <div className={`sw-frame ${orientOf(p)}`} key={p.id}>
+                  <OakFrame src={thumbUrl(p, 820)} orientation={orientOf(p)} alt={`${p.title}, ${p.location}`} />
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="shop-coming">
+            <p className="eyebrow">Framed Editions</p>
+            <h2>Coming soon.</h2>
+            <p className="sh-lead">Prints, sizes and pricing are on the way. Follow along for first access.</p>
+            <a className="solid-button" href="https://instagram.com/sam.duckworth" target="_blank" rel="noopener noreferrer">Follow on Instagram</a>
+          </section>
+        </>
+      )}
+
       <Footer />
       {curating ? (
         <OrderedPhotoPicker
-          title="Prints for sale"
-          hint="Pick the photos to sell as Framed Editions — the number shows the order they appear in the shop."
+          title="Prints in the shop"
+          hint="Pick the photos to feature — they appear in this order, both in the preview wall now and the full shop later."
           photos={publicPhotos}
           initialIds={shopPhotos.map((p) => p.id)}
           onClose={() => setCurating(false)}
