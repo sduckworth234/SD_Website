@@ -824,7 +824,7 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
         <>
           <section className="shop-section" id="shop-wall">
             <div className="shop-sec-head"><p className="eyebrow">A first look</p><h2>The collection</h2></div>
-            <p className="shop-wall-lead">A glimpse of the prints — each one hand-framed in solid oak. The full shop opens soon.</p>
+            <p className="shop-wall-lead">A glimpse of the prints. The full shop opens soon.</p>
             <div className="shop-wall">
               {wall.map((p) => (
                 <div className={`sw-frame ${orientOf(p)}`} key={p.id}>
@@ -836,8 +836,7 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
           <section className="shop-coming">
             <p className="eyebrow">Framed Editions</p>
             <h2>Coming soon.</h2>
-            <p className="sh-lead">Prints, sizes and pricing are on the way. Follow along for first access.</p>
-            <a className="solid-button" href="https://instagram.com/sam.duckworth" target="_blank" rel="noopener noreferrer">Follow on Instagram</a>
+            <p className="sh-lead">Prints, sizes and pricing are on the way.</p>
           </section>
         </>
       )}
