@@ -356,6 +356,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
   const [editingCollection, setEditingCollection] = useState<GalleryLocation | null>(null);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isContactOpen, setIsContactOpen] = useState(false);
+  const [heroPicking, setHeroPicking] = useState(false);
 
   function goToMap() { window.history.pushState({}, "", "/map"); onNavigate("/map"); }
   function goToShop() { window.history.pushState({}, "", "/shop"); onNavigate("/shop"); }
@@ -384,13 +385,28 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
     return pick ?? publicPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? publicPhotos[1];
   }, [publicPhotos, settingValue.banner_landscape]);
 
+  // The cinematic landing photo: an admin-chosen one (site_settings) wins, else
+  // fall back to a featured wide/landscape so the hero is always filled.
+  const heroPhoto = useMemo(() => {
+    const chosen = settingValue.hero_photo
+      ? publicPhotos.find((p) => p.id === settingValue.hero_photo)
+      : undefined;
+    return (
+      chosen ??
+      publicPhotos.find((p) => p.featured && (p.aspect === "landscape" || p.aspect === "wide")) ??
+      publicPhotos.find((p) => p.aspect === "wide") ??
+      publicPhotos.find((p) => p.aspect === "landscape") ??
+      publicPhotos[0]
+    );
+  }, [publicPhotos, settingValue.hero_photo]);
+
   useSeo("Sam Duckworth Photography — Aerial & Landscape, Northern Beaches", { path: "/" });
   useScrollReveal([isLoading, recentPhotos.length, locationNames.length]);
 
   return (
     <main>
       <Header isScrolled={isScrolled} onNavigate={onNavigate} onOpenAbout={() => setIsAboutOpen(true)} />
-      <Hero locations={locationNames} />
+      <Hero photo={heroPhoto} isAdmin={isAdmin} onPickHero={() => setHeroPicking(true)} />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
       {isLoading ? (
         <>
@@ -440,6 +456,14 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           onClose={() => setRecentSlot(null)}
           onPick={async (photo) => { await assignRecentSlot(recentSlot, photo.id); await loadGallery(); setRecentSlot(null); }}
           photos={photos}
+        />
+      ) : null}
+      {heroPicking ? (
+        <RecentPicker
+          label="Choose the landing hero photo"
+          onClose={() => setHeroPicking(false)}
+          onPick={async (photo) => { await setSiteSetting("hero_photo", photo.id); await loadGallery(); setHeroPicking(false); }}
+          photos={publicPhotos}
         />
       ) : null}
       {editingCollection ? (
@@ -1013,10 +1037,12 @@ function RecentPicker({
   onClose,
   onPick,
   photos,
+  label = "Choose a photo for Recent Work",
 }: {
   onClose: () => void;
   onPick: (photo: Photo) => void;
   photos: Photo[];
+  label?: string;
 }) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1027,13 +1053,13 @@ function RecentPicker({
   }, [onClose]);
 
   return (
-    <div className="lightbox" role="dialog" aria-modal="true" aria-label="Choose a photo for Recent Work">
+    <div className="lightbox" role="dialog" aria-modal="true" aria-label={label}>
       <button className="lightbox-backdrop" onClick={onClose} type="button" aria-label="Close" />
       <section className="picker-panel">
         <button className="icon-button close-button" onClick={onClose} type="button" aria-label="Close">
           <X size={18} aria-hidden="true" />
         </button>
-        <p className="eyebrow">Choose a photo for Recent Work</p>
+        <p className="eyebrow">{label}</p>
         <div className="picker-grid">
           {photos.map((photo) => (
             <button className="picker-tile" key={photo.id} onClick={() => onPick(photo)} type="button">
@@ -1142,14 +1168,32 @@ function OrderedPhotoPicker({
   );
 }
 
-function Hero({ locations }: { locations: string[] }) {
+// Cinematic landing: a full-bleed hero photo (admin-chosen, else auto) revealed
+// by the existing fade-from-black, with the wordmark over it and the photo's
+// place · title set small in the bottom-left corner.
+function Hero({ photo, isAdmin, onPickHero }: { photo?: Photo; isAdmin: boolean; onPickHero: () => void }) {
   return (
-    <section className="hero landing-stage" id="top" aria-label="Sam Duckworth Photography">
+    <section className="hero landing-stage cinematic" id="top" aria-label="Sam Duckworth Photography">
+      {photo ? (
+        <div className="landing-photo" aria-hidden="true">
+          <SmartImage src={photo.imageUrl} alt="" eager />
+        </div>
+      ) : null}
       <div className="landing-copy scroll-reveal is-visible">
-        <p className="eyebrow">My Photography Gallery</p>
-        <h1>Sam Duckworth Photography.</h1>
-        <RotatingLocations locations={locations} />
+        <p className="eyebrow">Aerial &amp; Landscape · Northern Beaches</p>
+        <h1>Sam Duckworth</h1>
       </div>
+      {photo ? (
+        <figcaption className="hero-caption">
+          <span className="loc">{photo.location}</span>
+          <span className="ttl">{photo.title}</span>
+        </figcaption>
+      ) : null}
+      {isAdmin ? (
+        <button className="hero-edit" type="button" onClick={onPickHero} aria-label="Choose the hero photo">
+          <Pencil size={13} aria-hidden="true" /> Hero
+        </button>
+      ) : null}
       <a className="scroll-cue" href="#galleries" aria-label="Scroll down to the gallery">
         <span className="scroll-chevrons" aria-hidden="true">
           <i className="scroll-chev" />
@@ -1158,40 +1202,6 @@ function Hero({ locations }: { locations: string[] }) {
         </span>
       </a>
     </section>
-  );
-}
-
-// A slowly rotating, gently pulsing line of the locations the photos come from.
-function RotatingLocations({ locations }: { locations: string[] }) {
-  const [index, setIndex] = useState(0);
-  const count = Math.min(3, locations.length);
-
-  useEffect(() => {
-    if (locations.length <= count) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const id = window.setInterval(() => setIndex((i) => i + 1), 2600);
-    return () => window.clearInterval(id);
-  }, [locations.length, count]);
-
-  if (!locations.length) return null;
-
-  const start = (index * count) % locations.length;
-  const shown = Array.from(
-    { length: count },
-    (_, k) => locations[(start + k) % locations.length],
-  );
-
-  return (
-    <p className="hero-locations" aria-label="Locations in the gallery">
-      <span className="hero-locations-set" key={index}>
-        {shown.map((name, i) => (
-          <span key={`${index}-${name}-${i}`}>
-            {i > 0 ? <span className="loc-dot" aria-hidden="true"> · </span> : null}
-            {name}
-          </span>
-        ))}
-      </span>
-    </p>
   );
 }
 
