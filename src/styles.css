@@ -2444,8 +2444,16 @@ footer {
     column-gap: clamp(12px, 4vw, 22px);
   }
 
+  /* Let each photo define its own height — drop the reserved min-height floor
+     and the tile background so a shorter image never shows the paper-deep tile
+     as a box/border beneath it. Images render at their natural proportions. */
   .gallery.view-flow .photo-tile {
     margin-bottom: clamp(12px, 4vw, 22px);
+    min-height: 0;
+  }
+
+  .gallery .photo-tile {
+    background: transparent;
   }
 
   footer {
