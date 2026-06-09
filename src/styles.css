@@ -2729,12 +2729,18 @@ footer {
 
 .lightbox-panel.is-map .lightbox-image {
   flex: 1 1 auto;
+  /* Cap by the viewport, not the parent. The panel has only a max-height (no
+     definite height), so a percentage max-height on the img can't resolve and a
+     tall portrait would size by width alone and spill out the bottom. The extra
+     offset over the base lightbox accounts for the taller copy (it has the
+     "View gallery" button). */
   min-height: 0;
-  max-height: none;
+  max-height: calc(100dvh - 268px);
 }
 
 .lightbox-panel.is-map .lightbox-image img {
-  max-height: 100%;
+  max-width: 100%;
+  max-height: calc(100dvh - 296px);
 }
 
 .lightbox-panel.is-map .lightbox-copy {
