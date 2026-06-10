@@ -92,7 +92,12 @@ for (const [index, photo] of photos.entries()) {
 
   const image = sharp(photo.sourcePath, { failOn: "none" }).rotate();
   const metadata = await image.metadata();
-  const aspect = inferAspect(metadata.width, metadata.height);
+  // metadata reports pre-rotation dims — orientations 5-8 swap width/height.
+  const sideways = (metadata.orientation ?? 1) >= 5;
+  const outW = sideways ? metadata.height : metadata.width;
+  const outH = sideways ? metadata.width : metadata.height;
+  const aspect = inferAspect(outW, outH);
+  const ratio = outW && outH ? Number((outW / outH).toFixed(4)) : null;
   await image
     .resize({ width: 2400, height: 2400, fit: "inside", withoutEnlargement: true })
     .webp({ quality: 78, effort: 5 })
@@ -120,6 +125,7 @@ for (const [index, photo] of photos.entries()) {
       kind: "Drone",
       year_taken: year ?? null,
       aspect,
+      ratio,
       storage_bucket: bucket,
       storage_path: storagePath,
       is_featured: false,

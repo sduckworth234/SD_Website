@@ -72,11 +72,20 @@ Routing is hand-rolled in `App()` (reads `window.location.pathname`, `popstate`,
 
 `photos`: `title`, `slug` (unique), `location_id` → `locations`, `kind`,
 `year_taken`, `captured_at` (date), `aspect` (`portrait|landscape|square|wide`),
+`ratio` (exact width/height, 4dp — reserves each gallery tile's true shape so
+the masonry never reflows; backfill via `scripts/ratio-backfill.mjs`),
 `storage_bucket`, `storage_path`, `source_path`, `is_featured`, `is_published`,
 `sort_order`, `relative_altitude_m` (drone height above takeoff, nullable),
 `latitude` / `longitude` (capture coords, nullable). The altitude/coords are
 backfilled from the original JPGs (see the altitude/coords scripts) since WebP
 compression strips EXIF/XMP.
+
+**Every ingestion path extracts full metadata.** `import-shoot.mjs` (script
+imports) and the `/admin` upload panel (browser: `src/lib/ingest.ts` — exifr +
+canvas WebP, never the full-res original) both write GPS, DJI altitude, capture
+date/year, aspect, exact ratio, and source_path, then warm the transform CDN
+for the new photo's srcset variants. Safety nets: `scripts/ratio-backfill.mjs`
+(idempotent) and `scripts/warm-transforms.mjs` (re-warm all variants).
 - **`source_path`** = absolute path to the original full-res file at import time
   (drive folder + filename) — the link from a gallery photo back to the file to
   sell. **Private/admin-only**: it must never reach the public API, so migration

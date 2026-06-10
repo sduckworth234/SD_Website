@@ -53,6 +53,7 @@ import {
   uploadPhotoAsset,
 } from "./lib/supabase";
 import type { GalleryLocation, LocationBucket, Photo, SiteSetting } from "./types";
+import { compressToWebp, extractPhotoMetadata } from "./lib/ingest";
 import { useSeo } from "./lib/seo";
 import { Header } from "./components/Header";
 import { OakFrame } from "./components/OakFrame";
@@ -2994,21 +2995,46 @@ function UploadPanel({
 
     setIsUploading(true);
     try {
-      const storagePath = await uploadPhotoAsset(file);
+      // Mirror the import script: read GPS / drone altitude / capture date
+      // from the ORIGINAL before compression strips them, then upload the
+      // site-standard WebP (never the full-res original) with the exact
+      // ratio + aspect measured from the output.
+      const [meta, compressed] = await Promise.all([
+        extractPhotoMetadata(file),
+        compressToWebp(file),
+      ]);
+      const storagePath = await uploadPhotoAsset(compressed.blob, file.name);
+      const manualAspect = String(formData.get("aspect") || "");
       await createPhotoRecord({
         title: String(formData.get("title") || file.name.replace(/\.[^/.]+$/, "")),
         description: String(formData.get("description") || ""),
         locationId: String(formData.get("locationId") || ""),
-        kind: "Drone",
-        year: Number(formData.get("year")) || undefined,
-        aspect: String(formData.get("aspect") || "landscape") as Photo["aspect"],
+        kind: meta.relativeAltitude != null ? "Drone" : "Landscape",
+        year: Number(formData.get("year")) || meta.year || undefined,
+        aspect: (manualAspect || compressed.aspect) as Photo["aspect"],
+        ratio: compressed.ratio,
+        capturedAt: meta.capturedAt,
+        latitude: meta.latitude,
+        longitude: meta.longitude,
+        relativeAltitude: meta.relativeAltitude,
         storagePath,
         sourcePath: file.name, // record the original filename for the source link
         isFeatured: formData.get("isFeatured") === "on",
         isPublished: formData.get("isPublished") === "on",
       });
+      // Pre-generate the grid's transform variants so the photo's first
+      // viewers hit the warm CDN (fire-and-forget).
+      for (const width of SRCSET_WIDTHS) {
+        const url = getTransformedPublicUrl(photoBucket, storagePath, width, width >= 1800 ? 76 : 72);
+        if (url) fetch(url).catch(() => { /* warming only */ });
+      }
       form.reset();
-      setMessage("Photo uploaded and saved.");
+      const extras = [
+        meta.latitude != null ? "GPS" : null,
+        meta.relativeAltitude != null ? `${Math.round(meta.relativeAltitude)}m altitude` : null,
+        meta.capturedAt ?? null,
+      ].filter(Boolean);
+      setMessage(`Photo uploaded and saved${extras.length ? ` (${extras.join(", ")})` : ""}.`);
       await onUploaded();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Upload failed.");
@@ -3048,7 +3074,8 @@ function UploadPanel({
       </label>
       <label>
         Aspect
-        <select name="aspect" defaultValue="landscape">
+        <select name="aspect" defaultValue="">
+          <option value="">Auto (from photo)</option>
           <option>landscape</option>
           <option>portrait</option>
           <option>square</option>

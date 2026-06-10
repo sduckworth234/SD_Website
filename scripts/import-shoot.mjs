@@ -215,7 +215,12 @@ async function compress(buf) {
     .resize({ width: 2400, height: 2400, fit: "inside", withoutEnlargement: true })
     .webp({ quality: 78, effort: 5 })
     .toBuffer({ resolveWithObject: true });
-  return { webp: data, aspect: inferAspect(info.width, info.height) };
+  return {
+    webp: data,
+    aspect: inferAspect(info.width, info.height),
+    // Exact proportion — reserves the gallery tile's true shape pre-load.
+    ratio: info.width && info.height ? Number((info.width / info.height).toFixed(4)) : null,
+  };
 }
 
 function slugify(value) {
@@ -294,9 +299,14 @@ for (const src of files) {
   const hash = createHash("sha1").update(src).digest("hex").slice(0, 12);
   const locSlug = slugify(location) || "unsorted";
   const baseSlug = slugify(basename(src).replace(/\.[^.]+$/, "")) || `photo-${idx}`;
-  const storagePath = `approved/${meta.year ?? "unknown"}/${locSlug}/${baseSlug}-${hash}.webp`;
+  // Destination folder: MMYYYY_Location (capture month+year, then the place,
+  // spaces/punctuation stripped, original case kept), e.g. 062021_Warriewood.
+  const mm = meta.capturedAt ? meta.capturedAt.slice(5, 7) : "00";
+  const yyyy = meta.capturedAt ? meta.capturedAt.slice(0, 4) : String(meta.year ?? "0000");
+  const locTag = (location ?? "Unsorted").replace(/[^A-Za-z0-9]+/g, "") || "Unsorted";
+  const storagePath = `${mm}${yyyy}_${locTag}/${baseSlug}-${hash}.webp`;
 
-  const { webp, aspect } = await compress(buf);
+  const { webp, aspect, ratio } = await compress(buf);
   await writeFile(`${compressedDir}/${String(idx).padStart(4, "0")}-${hash}.webp`, webp);
 
   const entry = {
@@ -330,6 +340,7 @@ for (const src of files) {
     year_taken: meta.year ?? null,
     captured_at: meta.capturedAt ?? null,
     aspect,
+    ratio,
     storage_bucket: bucket,
     storage_path: storagePath,
     source_path: src, // link back to the original full-res file
@@ -361,6 +372,26 @@ if (supabase && rows.length) {
     if (error) throw error;
     console.log(`inserted ${Math.min(i + 25, rows.length)}/${rows.length}`);
   }
+
+  // Warm the transform CDN for the new photos (the gallery's srcset widths —
+  // keep in sync with SRCSET_WIDTHS in src/App.tsx) so their first viewers
+  // get cache HITs instead of cold per-variant generation.
+  const WARM_WIDTHS = [400, 700, 1000, 1400, 1800];
+  console.log(`\nwarming ${rows.length * WARM_WIDTHS.length} CDN variants…`);
+  let warmed = 0;
+  for (const row of rows) {
+    await Promise.all(WARM_WIDTHS.map(async (width) => {
+      try {
+        const { data } = supabase.storage
+          .from(bucket)
+          .getPublicUrl(row.storage_path, { transform: { width, quality: width >= 1800 ? 76 : 72, resize: "contain" } });
+        const res = await fetch(data.publicUrl);
+        await res.arrayBuffer();
+        warmed += 1;
+      } catch { /* warming only — never fail the import */ }
+    }));
+  }
+  console.log(`warmed ${warmed} variants`);
 }
 
 // ---- summary ----------------------------------------------------------------

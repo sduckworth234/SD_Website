@@ -110,7 +110,12 @@ for (const it of items) {
 
   const image = sharp(it.path, { failOn: "none" }).rotate();
   const meta = await image.metadata();
-  const aspect = inferAspect(meta.width, meta.height);
+  // metadata reports pre-rotation dims — orientations 5-8 swap width/height.
+  const sideways = (meta.orientation ?? 1) >= 5;
+  const outW = sideways ? meta.height : meta.width;
+  const outH = sideways ? meta.width : meta.height;
+  const aspect = inferAspect(outW, outH);
+  const ratio = outW && outH ? Number((outW / outH).toFixed(4)) : null;
   const year = exifYear(meta);
   const storagePath = `approved/${year ?? "unknown"}/${slugLoc}/${baseSlug}-${hash}.webp`;
   const localOut = `${compressedDir}/${String(idx).padStart(4, "0")}-${hash}.webp`;
@@ -140,6 +145,7 @@ for (const it of items) {
       kind: "Drone",
       year_taken: year ?? null,
       aspect,
+      ratio,
       storage_bucket: bucket,
       storage_path: storagePath,
       is_featured: false,

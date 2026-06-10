@@ -244,17 +244,18 @@ export function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-export async function uploadPhotoAsset(file: File) {
+export async function uploadPhotoAsset(file: Blob, originalName: string) {
   if (!supabase) throw new Error("Supabase is not configured.");
 
-  const extension = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const safeName = slugify(file.name.replace(/\.[^/.]+$/, "")) || "photo";
+  const extension = file.type === "image/webp" ? "webp" : originalName.split(".").pop()?.toLowerCase() ?? "jpg";
+  const safeName = slugify(originalName.replace(/\.[^/.]+$/, "")) || "photo";
   const path = `incoming/${Date.now()}-${safeName}.${extension}`;
 
   const { data, error } = await supabase.storage
     .from(photoBucket)
     .upload(path, file, {
       cacheControl: "31536000",
+      contentType: file.type || undefined,
       upsert: false,
     });
 
@@ -269,6 +270,11 @@ export async function createPhotoRecord(input: {
   kind: Photo["kind"];
   year?: number;
   aspect: Photo["aspect"];
+  ratio?: number | null;
+  capturedAt?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  relativeAltitude?: number | null;
   storagePath: string;
   sourcePath?: string; // original filename, so manual uploads keep the link too
   isFeatured: boolean;
@@ -286,6 +292,11 @@ export async function createPhotoRecord(input: {
     kind: input.kind,
     year_taken: input.year || null,
     aspect: input.aspect,
+    ratio: input.ratio ?? null,
+    captured_at: input.capturedAt ?? null,
+    latitude: input.latitude ?? null,
+    longitude: input.longitude ?? null,
+    relative_altitude_m: input.relativeAltitude ?? null,
     storage_bucket: photoBucket,
     storage_path: input.storagePath,
     source_path: input.sourcePath || null,

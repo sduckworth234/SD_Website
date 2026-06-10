@@ -33,8 +33,10 @@ EXIF/XMP — and derives:
 - **Drone height** — DJI-XMP `RelativeAltitude` (metres above takeoff), clamped to
   a plausible −200…1000 m band. → `relative_altitude_m`.
 - **Year + capture date** — EXIF `DateTimeOriginal`. → `year_taken`, `captured_at`.
-- **Aspect** — measured from the compressed output dimensions, so EXIF rotation is
-  honoured. → `portrait | landscape | square | wide`.
+- **Aspect + exact ratio** — measured from the compressed output dimensions, so
+  EXIF rotation is honoured. → `aspect` (`portrait | landscape | square | wide`)
+  and `ratio` (width/height, 4dp — reserves the gallery tile's true shape so the
+  masonry never reflows while images load).
 - **Location + title** — reverse-geocodes the coords via OpenStreetMap Nominatim
   (cached, rate-limited). Convention: **location = the gallery filter category**
   (a *suburb* for local AU work, a *country* for overseas trips); **title = the
@@ -47,9 +49,15 @@ EXIF/XMP — and derives:
   `scripts/source-path-backfill.mjs`.
 
 Then it compresses (sharp `rotate → fit-inside 2400px → WebP q78`), uploads to the
-`photos` bucket (`upsert`), and inserts a published row. **Idempotent**: any
-`storage_path` already in `photos` is skipped, so re-running the same folder is
-safe. A provenance manifest is written to `imports/import-<folder>-manifest.json`.
+`photos` bucket (`upsert`), inserts a published row, and **warms the transform
+CDN** (fetches each new photo's srcset variants once so first viewers get cache
+HITs, not cold generation). **Idempotent**: any `storage_path` already in
+`photos` is skipped, so re-running the same folder is safe. A provenance
+manifest is written to `imports/import-<folder>-manifest.json`.
+
+Safety nets if anything is ever missed: `scripts/ratio-backfill.mjs` (fills
+missing `ratio`, idempotent) and `scripts/warm-transforms.mjs` (re-warms every
+published photo's variants).
 
 ### Knobs (env vars on the `node` command)
 - `DRY_RUN=1` — plan only: read + geocode + compress, **no upload, no DB**.
