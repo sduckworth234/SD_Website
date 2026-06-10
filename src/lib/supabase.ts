@@ -52,6 +52,7 @@ type PhotoRow = {
   kind: Photo["kind"];
   year_taken: number | null;
   aspect: Photo["aspect"];
+  ratio?: number | string | null;
   storage_bucket: string;
   storage_path: string | null;
   source_path: string | null;
@@ -118,6 +119,8 @@ function mapPhoto(row: PhotoRow): Photo {
     kind: row.kind,
     year: row.year_taken?.toString() ?? "",
     aspect: row.aspect,
+    // numeric comes back as a string from PostgREST.
+    ratio: row.ratio != null ? Number(row.ratio) : null,
     featured: row.is_featured,
     published: row.is_published,
     imageUrl: publicImageUrl(row),
@@ -144,22 +147,32 @@ export async function getGalleryData() {
     };
   }
 
-  const [{ data: locations, error: locationError }, { data: photos, error: photoError }] =
+  const PUBLIC_PHOTO_COLUMNS =
+    "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, collection_order, in_shop, shop_order, locations(id, slug, name, region, description, sort_order)";
+  const photoQuery = (columns: string) =>
+    supabase!
+      .from("photos")
+      .select(columns)
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+
+  // eslint-disable-next-line prefer-const
+  let [{ data: locations, error: locationError }, { data: photos, error: photoError }] =
     await Promise.all([
       supabase
         .from("locations")
         .select("id, slug, name, region, description, sort_order, map_feed_order")
         .eq("is_visible", true)
         .order("sort_order", { ascending: true }),
-      supabase
-        .from("photos")
-        .select(
-          "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, collection_order, in_shop, shop_order, locations(id, slug, name, region, description, sort_order)",
-        )
-        .eq("is_published", true)
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: false }),
+      // `ratio` ships ahead of its migration — retry without it until the
+      // column exists (otherwise the whole site would fall back to bundled
+      // data over one missing column).
+      photoQuery(`ratio, ${PUBLIC_PHOTO_COLUMNS}`),
     ]);
+  if (photoError) {
+    ({ data: photos, error: photoError } = await photoQuery(PUBLIC_PHOTO_COLUMNS));
+  }
 
   if (locationError || photoError) {
     console.warn("Using fallback gallery data", locationError ?? photoError);

@@ -31,6 +31,10 @@ export function SmartImage({
   srcSet?: string;
 }) {
   const [loaded, setLoaded] = useState(false);
+  // Already-cached images (e.g. pre-warmed by the gallery gate) appear
+  // instantly instead of re-playing the fade — the surrounding reveal
+  // animation stays the only motion.
+  const [instant, setInstant] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const ref = useRef<HTMLImageElement | null>(null);
   const retryTimer = useRef<number | undefined>(undefined);
@@ -59,7 +63,9 @@ export function SmartImage({
   useEffect(() => {
     setLoaded(false);
     setAttempt(0);
-    if (ref.current?.complete && ref.current.naturalHeight > 0) handleLoaded(ref.current);
+    const cached = Boolean(ref.current?.complete && ref.current.naturalHeight > 0);
+    setInstant(cached);
+    if (cached) handleLoaded(ref.current);
     return () => window.clearTimeout(retryTimer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src]);
@@ -69,7 +75,7 @@ export function SmartImage({
       {loaded ? null : <span className="img-skeleton" aria-hidden="true" />}
       <img
         alt={alt}
-        className={`smart-img${loaded ? " is-loaded" : ""}${className ? ` ${className}` : ""}`}
+        className={`smart-img${loaded ? " is-loaded" : ""}${instant ? " is-instant" : ""}${className ? ` ${className}` : ""}`}
         decoding="async"
         draggable={false}
         fetchPriority={priority ? "high" : undefined}

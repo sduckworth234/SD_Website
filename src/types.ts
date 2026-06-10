@@ -23,6 +23,10 @@ export type Photo = {
   kind: PhotoKind;
   year: string;
   aspect: "portrait" | "landscape" | "square" | "wide";
+  // Exact image proportion (width / height, e.g. 1.5 for 3:2). Reserves the
+  // tile's true shape before the image loads; null falls back to the aspect
+  // bucket's nominal ratio.
+  ratio?: number | null;
   featured?: boolean;
   published?: boolean;
   imageUrl: string;

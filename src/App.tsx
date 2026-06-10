@@ -90,6 +90,16 @@ function thumbUrl(photo: Photo, width: number): string {
   return photo.storagePath ? getTransformedPublicUrl(photoBucket, photo.storagePath, width) : photo.imageUrl;
 }
 
+// Nominal width/height per aspect bucket — the tile-shape fallback for photos
+// whose exact `ratio` hasn't been backfilled. Close enough that the cover-crop
+// is a few percent at most.
+const BUCKET_RATIO: Record<Photo["aspect"], number> = { portrait: 0.75, landscape: 1.45, square: 1, wide: 2 };
+const tileRatio = (photo: Photo) => photo.ratio ?? BUCKET_RATIO[photo.aspect] ?? 1.45;
+
+// The grid's rendered-width hint, shared by the tiles and the preloaders so
+// they all resolve to the same srcset variant.
+const GRID_SIZES = "(max-width: 620px) 50vw, (max-width: 1024px) 33vw, 25vw";
+
 // Responsive srcset across a range of widths so phones don't download the full
 // 1800px image. Falls back to the single imageUrl when there's no storage path.
 const SRCSET_WIDTHS = [400, 700, 1000, 1400, 1800];
@@ -576,7 +586,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
     // Warm only the first screenful, and with the SAME srcset/sizes the grid
     // tiles use — the browser then resolves to the identical (small) variant
     // instead of pulling the full 1800px image for every photo in the category.
-    const batch = filteredPhotos.filter((p) => p.imageUrl).slice(0, 12);
+    const batch = filteredPhotos.filter((p) => p.imageUrl).slice(0, 15);
     if (!batch.length) { setImagesReady(true); return; }
     let cancelled = false; setImagesReady(false); let done = 0;
     const tick = () => { done += 1; if (!cancelled && done >= batch.length) setImagesReady(true); };
@@ -586,7 +596,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
       im.onerror = tick;
       const srcset = srcSetFor(photo);
       if (srcset) {
-        im.sizes = "(max-width: 620px) 50vw, (max-width: 1024px) 33vw, 25vw";
+        im.sizes = GRID_SIZES;
         im.srcset = srcset;
       }
       im.src = photo.imageUrl;
@@ -595,6 +605,36 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
     const timer = window.setTimeout(() => { if (!cancelled) setImagesReady(true); }, 5000);
     return () => { cancelled = true; window.clearTimeout(timer); imgs.forEach((im) => { im.onload = null; im.onerror = null; }); };
   }, [filteredPhotos, isLoading, activeLocation, locationNames]);
+
+  // Once the current category is up, quietly warm the first few images of the
+  // OTHER categories during idle time — switching tabs then opens on cached
+  // images (and the CDN's cold transform cost is paid invisibly).
+  useEffect(() => {
+    if (isLoading || !imagesReady) return;
+    const idle: (cb: () => void) => number =
+      "requestIdleCallback" in window
+        ? (cb) => window.requestIdleCallback(cb, { timeout: 4000 })
+        : (cb) => window.setTimeout(cb, 1500);
+    const cancelIdle: (handle: number) => void =
+      "cancelIdleCallback" in window ? (h) => window.cancelIdleCallback(h) : (h) => window.clearTimeout(h);
+    const handle = idle(() => {
+      const perLocation = new Map<string, number>();
+      for (const p of publicPhotos) {
+        if (p.location === activeLocation || !p.imageUrl) continue;
+        const seen = perLocation.get(p.location) ?? 0;
+        if (seen >= 4) continue;
+        perLocation.set(p.location, seen + 1);
+        const im = new Image();
+        const srcset = srcSetFor(p);
+        if (srcset) {
+          im.sizes = GRID_SIZES;
+          im.srcset = srcset;
+        }
+        im.src = p.imageUrl;
+      }
+    });
+    return () => cancelIdle(handle);
+  }, [imagesReady, isLoading, activeLocation, publicPhotos]);
 
   // Switching location should land you back at the top of the gallery, even if
   // you'd scrolled down (changing the filter isn't a route change, so the
@@ -1902,14 +1942,25 @@ function Gallery({
           }}
           role="button"
           tabIndex={0}
-          style={{ "--reveal-delay": `${Math.min(index, 12) * 38}ms` } as CSSProperties}
+          style={
+            {
+              "--reveal-delay": `${Math.min(index, 12) * 38}ms`,
+              // Flow view reserves each tile's true shape up front so the
+              // masonry never reflows as images arrive. (Box view keeps its
+              // uniform CSS aspect.)
+              ...(view === "flow" ? { aspectRatio: String(tileRatio(photo)) } : null),
+            } as CSSProperties
+          }
         >
           <SmartImage
             src={photo.imageUrl}
             srcSet={srcSetFor(photo)}
-            sizes="(max-width: 620px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            sizes={GRID_SIZES}
             alt={`${photo.title}, ${photo.location}`}
-            eager
+            // First screenful loads immediately (and is pre-warmed by the
+            // gallery gate); the rest fetch lazily as you scroll, so the page
+            // never trickles in from the bottom.
+            eager={index < 15}
           />
           <div className="photo-meta">
             <span>
