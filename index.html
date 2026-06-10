@@ -3,7 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <!-- Google tag (gtag.js) — GA4. One tag for the whole SPA (this file serves
-         every route). Page-view tracking is automatic on load. -->
+         every route). Page-view tracking is automatic on load.
+         NOTE: the inline snippet below is allow-listed by a sha256 hash in the
+         vercel.json Content-Security-Policy — if you change even a character of
+         it, recompute the hash (sha256, base64, of the exact text between the
+         script tags) or GA silently stops loading. -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-PJ829H05BE"></script>
     <script>
       window.dataLayer = window.dataLayer || [];

@@ -177,21 +177,42 @@ export async function getGalleryData() {
   };
 }
 
+const ADMIN_SELECT =
+  "id, title, slug, description, location_id, kind, year_taken, captured_at, aspect, storage_bucket, storage_path, source_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, collection_order, in_shop, shop_order";
+
 export async function getAdminPhotos() {
   if (!supabase) return [];
 
   // Admin-only fetch: includes source_path + captured_at (NOT in the public
-  // query — source_path is a private drive path). Runs as the authenticated
-  // (admin) role, which keeps full-table SELECT per the source_path migration.
-  const { data, error } = await supabase
-    .from("photos")
-    .select(
-      "id, title, slug, description, location_id, kind, year_taken, captured_at, aspect, storage_bucket, storage_path, source_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, collection_order, in_shop, shop_order, locations(id, slug, name, region, description, sort_order)",
-    )
+  // query — source_path is a private drive path). Reads the is_admin()-gated
+  // `admin_photos` view (see the authenticated-hardening migration): the
+  // authenticated role's direct column grant on `photos` excludes source_path,
+  // so the view is the only path to it. Location names are joined client-side
+  // (PostgREST can't always embed through a view).
+  let { data, error } = await supabase
+    .from("admin_photos")
+    .select(ADMIN_SELECT)
     .order("created_at", { ascending: false });
 
+  // Fallback for the window before the hardening migration is applied: the
+  // view doesn't exist yet, but the old blanket grant still does.
+  if (error) {
+    ({ data, error } = await supabase
+      .from("photos")
+      .select(ADMIN_SELECT)
+      .order("created_at", { ascending: false }));
+  }
   if (error) throw error;
-  return ((data ?? []) as unknown as PhotoRow[]).map(mapPhoto);
+
+  const { data: locations, error: locationError } = await supabase
+    .from("locations")
+    .select("id, slug, name, region, description, sort_order");
+  if (locationError) throw locationError;
+
+  const locationById = new Map((locations ?? []).map((l) => [l.id, l]));
+  return ((data ?? []) as unknown as PhotoRow[]).map((row) =>
+    mapPhoto({ ...row, locations: row.location_id ? locationById.get(row.location_id) ?? null : null }),
+  );
 }
 
 export async function isCurrentUserAdmin() {
@@ -242,11 +263,8 @@ export async function createPhotoRecord(input: {
 }) {
   if (!supabase) throw new Error("Supabase is not configured.");
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const slugBase = slugify(input.title) || "untitled";
+  // created_by is stamped server-side (column default auth.uid()).
   const { error } = await supabase.from("photos").insert({
     title: input.title,
     slug: `${slugBase}-${Date.now()}`,
@@ -260,7 +278,6 @@ export async function createPhotoRecord(input: {
     source_path: input.sourcePath || null,
     is_featured: input.isFeatured,
     is_published: input.isPublished,
-    created_by: user?.id ?? null,
   });
 
   if (error) throw error;
@@ -325,6 +342,9 @@ export async function updatePhotoDetails(
     isFeatured?: boolean;
     isPublished?: boolean;
     isMapFeature?: boolean;
+    // Pass the photo's current title so the slug only regenerates on rename,
+    // not on every save (slugs should stay stable).
+    previousTitle?: string;
   },
 ) {
   if (!supabase) throw new Error("Supabase is not configured.");
@@ -336,8 +356,10 @@ export async function updatePhotoDetails(
     location_id: input.locationId || null,
     year_taken: input.year || null,
     aspect: input.aspect,
-    slug: `${slugify(title) || "untitled"}-${Date.now()}`,
   };
+  if (input.previousTitle === undefined || title !== input.previousTitle) {
+    updates.slug = `${slugify(title) || "untitled"}-${Date.now()}`;
+  }
   if (input.kind) updates.kind = input.kind;
   if (input.capturedAt !== undefined) updates.captured_at = input.capturedAt || null;
   if (input.relativeAltitude !== undefined) updates.relative_altitude_m = input.relativeAltitude;
@@ -398,13 +420,16 @@ export async function sendPhotoToTop(photoId: string) {
 export async function deletePhoto(photoId: string, storagePath?: string | null) {
   if (!supabase) throw new Error("Supabase is not configured.");
 
-  // Remove the stored image (ignore if the object is already gone), then the row.
-  if (storagePath) {
-    await supabase.storage.from(photoBucket).remove([storagePath]);
-  }
-
+  // Row first, storage second: if the row delete fails the photo stays intact,
+  // and a failed storage cleanup only leaves an orphaned object (harmless)
+  // rather than a live row pointing at a missing file.
   const { error } = await supabase.from("photos").delete().eq("id", photoId);
   if (error) throw error;
+
+  if (storagePath) {
+    const { error: removeError } = await supabase.storage.from(photoBucket).remove([storagePath]);
+    if (removeError) console.warn("Photo row deleted but storage cleanup failed", removeError);
+  }
 }
 
 export async function createLocation(name: string, region = "Northern Beaches") {
@@ -457,6 +482,8 @@ export async function getRecentPhotos(limit = 5): Promise<Photo[]> {
       .select(RECENT_SELECT)
       .eq("is_published", true)
       .eq("is_featured", true)
+      // Unsorted (no location) is never public — even when pinned.
+      .not("location_id", "is", null)
       .order("sort_order", { ascending: true }),
     supabase
       .from("photos")

@@ -85,6 +85,8 @@ export default function MapPage({ onNavigate }: { onNavigate: (route: string) =>
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [stats, setStats] = useState({ places: 0, photos: 0 });
   const [selected, setSelected] = useState<SelectedPhoto | null>(null);
 
@@ -94,11 +96,9 @@ export default function MapPage({ onNavigate }: { onNavigate: (route: string) =>
   });
 
   function openLocation(name: string) {
-    window.history.pushState({}, "", `/?location=${encodeURIComponent(name)}`);
-    onNavigate("/");
+    window.history.pushState({}, "", `/galleries?location=${encodeURIComponent(name)}`);
+    onNavigate("/galleries");
   }
-  const openRef = useRef(openLocation);
-  openRef.current = openLocation;
 
   // Esc closes the photo lightbox.
   useEffect(() => {
@@ -111,6 +111,15 @@ export default function MapPage({ onNavigate }: { onNavigate: (route: string) =>
   useEffect(() => {
     let cancelled = false;
     let map: maplibregl.Map | undefined;
+    setReady(false);
+    setFailed(false);
+
+    // If the basemap style/tiles never arrive (third-party outage, blocked
+    // network), `load` never fires — swap the loader for an error + retry
+    // instead of spinning forever.
+    const failTimer = window.setTimeout(() => {
+      if (!cancelled) setFailed(true);
+    }, 15000);
 
     getGalleryData().then((data) => {
       if (cancelled || !containerRef.current) return;
@@ -240,6 +249,7 @@ export default function MapPage({ onNavigate }: { onNavigate: (route: string) =>
             map.fitBounds(bounds, { padding: { top: 66, bottom: 30, left: 26, right: 26 }, maxZoom: focus ? 13 : 6.5, duration: 0 });
           }
         }
+        window.clearTimeout(failTimer);
         setReady(true);
 
         // Click a cluster: zoom to exactly where it splits, centred on its own
@@ -271,12 +281,26 @@ export default function MapPage({ onNavigate }: { onNavigate: (route: string) =>
           if (!f) return;
           map!.getCanvas().style.cursor = "pointer";
           const p = f.properties as PhotoProps;
+          // Build with DOM APIs (not setHTML) so DB strings can never inject markup.
+          const pop = document.createElement("div");
+          pop.className = "map-pop";
+          const thumb = document.createElement("span");
+          thumb.className = "map-pop-thumb";
+          const img = document.createElement("img");
+          img.src = p.imageUrl;
+          img.alt = "";
+          thumb.appendChild(img);
+          const meta = document.createElement("span");
+          meta.className = "map-pop-meta";
+          const title = document.createElement("strong");
+          title.textContent = p.title;
+          const loc = document.createElement("small");
+          loc.textContent = p.location;
+          meta.append(title, loc);
+          pop.append(thumb, meta);
           popup
             .setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number])
-            .setHTML(
-              `<div class="map-pop"><span class="map-pop-thumb"><img src="${p.imageUrl}" alt=""/></span>` +
-              `<span class="map-pop-meta"><strong>${p.title}</strong><small>${p.location}</small></span></div>`,
-            )
+            .setDOMContent(pop)
             .addTo(map!);
         };
         const hidePopup = () => { map!.getCanvas().style.cursor = ""; popup.remove(); };
@@ -287,14 +311,17 @@ export default function MapPage({ onNavigate }: { onNavigate: (route: string) =>
         map.on("mouseenter", "clusters", () => { map!.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", "clusters", () => { map!.getCanvas().style.cursor = ""; });
       });
+    }).catch(() => {
+      if (!cancelled) setFailed(true);
     });
 
     return () => {
       cancelled = true;
+      window.clearTimeout(failTimer);
       map?.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [attempt]);
 
   return (
     <main className="map-shell">
@@ -313,8 +340,19 @@ export default function MapPage({ onNavigate }: { onNavigate: (route: string) =>
         <div className={`map-gl${ready ? " is-ready" : ""}`} ref={containerRef} />
         {!ready ? (
           <div className="map-loading-screen">
-            <span className="map-loading-pulse" aria-hidden="true" />
-            <p>Mapping the archive</p>
+            {failed ? (
+              <>
+                <p>The map could not load. Check your connection and try again.</p>
+                <button className="solid-button" type="button" onClick={() => setAttempt((a) => a + 1)}>
+                  Retry
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="map-loading-pulse" aria-hidden="true" />
+                <p>Mapping the archive</p>
+              </>
+            )}
           </div>
         ) : null}
       </section>

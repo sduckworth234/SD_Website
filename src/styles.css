@@ -997,6 +997,11 @@ footer {
   padding: clamp(16px, 4vw, 48px);
 }
 
+/* Lock the page scroll while any modal overlay is open. */
+body:has(.lightbox) {
+  overflow: hidden;
+}
+
 .lightbox-backdrop {
   position: absolute;
   inset: 0;

@@ -98,6 +98,17 @@ function srcSetFor(photo: Photo): string | undefined {
   return SRCSET_WIDTHS.map((w) => `${getTransformedPublicUrl(photoBucket, photo.storagePath as string, w)} ${w}w`).join(", ");
 }
 
+// Surface inline admin mutation failures (RLS/network) instead of silently
+// swallowing them — these fire from the public pages, which have no message
+// banner, so a plain alert is the honest fallback.
+async function reportAdminError(action: () => Promise<void>) {
+  try {
+    await action();
+  } catch (error) {
+    window.alert(error instanceof Error ? error.message : "The change could not be saved.");
+  }
+}
+
 function useScrollReveal(dependencies: DependencyList) {
   useEffect(() => {
     const elements = Array.from(
@@ -160,19 +171,24 @@ function AltitudeBadge({ photo }: { photo: Photo }) {
 }
 
 function App() {
-  const [route, setRoute] = useState(window.location.pathname);
+  // Route state carries path + query so history moves between e.g.
+  // /galleries?location=A and /galleries?location=B re-render the page (the
+  // query is read in component initializers; the key below remounts on change).
+  const currentHref = () => window.location.pathname + window.location.search;
+  const [route, setRoute] = useState(currentHref);
 
   // Programmatic navigation: switch page AND jump to the top, so clicking a
   // collection card (etc.) lands at the top of the destination rather than
-  // keeping the previous page's scroll offset. The Back button (popstate)
+  // keeping the previous page's scroll offset. Callers pushState before calling
+  // this, so the source of truth is window.location. The Back button (popstate)
   // keeps its own scroll restoration — it doesn't go through here.
-  const navigate = useCallback((next: string) => {
-    setRoute(next);
+  const navigate = useCallback((_next: string) => {
+    setRoute(currentHref());
     window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
   }, []);
 
   useEffect(() => {
-    const onPopState = () => setRoute(window.location.pathname);
+    const onPopState = () => setRoute(currentHref());
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
@@ -187,27 +203,31 @@ function App() {
     return () => document.removeEventListener("contextmenu", block);
   }, []);
 
-  if (route.startsWith("/admin")) {
+  // Exact-or-subpath match (plain startsWith would let /mapping render the map).
+  const path = route.split("?")[0];
+  const matches = (base: string) => path === base || path === `${base}/`;
+
+  if (matches("/admin")) {
     return <AdminApp onNavigate={navigate} />;
   }
 
-  if (route.startsWith("/map")) {
+  if (matches("/map")) {
     return (
       <Suspense fallback={<div className="map-shell map-loading" aria-label="Loading map" />}>
-        <MapPage onNavigate={navigate} />
+        <MapPage key={route} onNavigate={navigate} />
       </Suspense>
     );
   }
 
-  if (route.startsWith("/shop")) {
+  if (matches("/shop")) {
     return <ShopPage onNavigate={navigate} />;
   }
 
-  if (route.startsWith("/galleries")) {
-    return <GalleriesPage onNavigate={navigate} />;
+  if (matches("/galleries")) {
+    return <GalleriesPage key={route} onNavigate={navigate} />;
   }
 
-  if (route === "/" || route === "") {
+  if (path === "/" || path === "") {
     return <Home onNavigate={navigate} />;
   }
 
@@ -458,7 +478,13 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
       {recentSlot !== null ? (
         <RecentPicker
           onClose={() => setRecentSlot(null)}
-          onPick={async (photo) => { await assignRecentSlot(recentSlot, photo.id); await loadGallery(); setRecentSlot(null); }}
+          onPick={async (photo) => {
+            await reportAdminError(async () => {
+              await assignRecentSlot(recentSlot, photo.id);
+              await loadGallery();
+              setRecentSlot(null);
+            });
+          }}
           photos={photos}
         />
       ) : null}
@@ -506,11 +532,17 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [imagesReady, setImagesReady] = useState(false);
 
   async function unpublishPhoto(photo: Photo) {
-    await updatePhotoVisibility(photo.id, { featured: Boolean(photo.featured), published: false });
-    await loadGallery();
+    await reportAdminError(async () => {
+      await updatePhotoVisibility(photo.id, { featured: Boolean(photo.featured), published: false });
+      await loadGallery();
+    });
   }
-  async function sendToTop(photo: Photo) { await sendPhotoToTop(photo.id); await loadGallery(); }
-  async function toggleMapFeature(photo: Photo) { await setMapFeature(photo.id, !photo.mapFeature); await loadGallery(); }
+  async function sendToTop(photo: Photo) {
+    await reportAdminError(async () => { await sendPhotoToTop(photo.id); await loadGallery(); });
+  }
+  async function toggleMapFeature(photo: Photo) {
+    await reportAdminError(async () => { await setMapFeature(photo.id, !photo.mapFeature); await loadGallery(); });
+  }
   function viewOnMap() {
     const query = activeLocation !== allLocations ? `?focus=${encodeURIComponent(activeLocation)}` : "";
     window.history.pushState({}, "", `/map${query}`);
@@ -533,15 +565,36 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   }, [activeLocation, publicPhotos]);
 
   useEffect(() => {
-    if (isLoading || activeLocation === allLocations) return;
-    const urls = filteredPhotos.map((p) => p.imageUrl).filter(Boolean);
-    if (!urls.length) { setImagesReady(true); return; }
+    if (isLoading) return;
+    if (activeLocation === allLocations) {
+      // Normally transient (the landing effect picks a category) — but with no
+      // published photos at all there's nothing to land on, so release the
+      // skeleton rather than shimmer forever.
+      if (!locationNames.length) setImagesReady(true);
+      return;
+    }
+    // Warm only the first screenful, and with the SAME srcset/sizes the grid
+    // tiles use — the browser then resolves to the identical (small) variant
+    // instead of pulling the full 1800px image for every photo in the category.
+    const batch = filteredPhotos.filter((p) => p.imageUrl).slice(0, 12);
+    if (!batch.length) { setImagesReady(true); return; }
     let cancelled = false; setImagesReady(false); let done = 0;
-    const tick = () => { done += 1; if (!cancelled && done >= urls.length) setImagesReady(true); };
-    const imgs = urls.map((url) => { const im = new Image(); im.onload = tick; im.onerror = tick; im.src = url; return im; });
+    const tick = () => { done += 1; if (!cancelled && done >= batch.length) setImagesReady(true); };
+    const imgs = batch.map((photo) => {
+      const im = new Image();
+      im.onload = tick;
+      im.onerror = tick;
+      const srcset = srcSetFor(photo);
+      if (srcset) {
+        im.sizes = "(max-width: 620px) 50vw, (max-width: 1024px) 33vw, 25vw";
+        im.srcset = srcset;
+      }
+      im.src = photo.imageUrl;
+      return im;
+    });
     const timer = window.setTimeout(() => { if (!cancelled) setImagesReady(true); }, 5000);
     return () => { cancelled = true; window.clearTimeout(timer); imgs.forEach((im) => { im.onload = null; im.onerror = null; }); };
-  }, [filteredPhotos, isLoading, activeLocation]);
+  }, [filteredPhotos, isLoading, activeLocation, locationNames]);
 
   // Switching location should land you back at the top of the gallery, even if
   // you'd scrolled down (changing the filter isn't a route change, so the
@@ -712,12 +765,6 @@ const SHOP_SIZES = [
   { id: "A2", cm: "42×59 cm", price: 260 },
   { id: "A1", cm: "59×84 cm", price: 390 },
 ];
-const NB_LOCATIONS = new Set([
-  "Manly", "Forty Baskets", "Narrabeen", "Warriewood", "Bayview", "Mona Vale",
-  "North Curl Curl", "Freshwater", "Freemans Waterhole", "Pie in the Sky",
-  "Hunter Valley", "Jindabyne", "Denhams Beach", "Malua Bay", "North Head", "Travels",
-]);
-
 function ShopProduct({ photo, onAdd }: { photo: Photo; onAdd: () => void }) {
   const [size, setSize] = useState(1);
   const orient = photo.aspect === "portrait" || photo.aspect === "square" ? "portrait" : "landscape";
@@ -769,7 +816,7 @@ function WallPreview({ ids, photos }: { ids: string[]; photos: Photo[] }) {
 }
 
 function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
-  const { publicPhotos, flags, isAdmin, settingValue, loadGallery } = useSiteData();
+  const { publicPhotos, locations, flags, isAdmin, settingValue, loadGallery } = useSiteData();
   const [cart, setCart] = useState(0);
   const [filter, setFilter] = useState("All");
   // Two independent curations: "shop" = the products for sale (in_shop), "wall" =
@@ -782,7 +829,10 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
   });
 
   function goHome() { window.history.pushState({}, "", "/"); onNavigate("/"); }
-  const region = (p: Photo) => (NB_LOCATIONS.has(p.location) ? "Australia" : "Europe");
+  // Classify by the location's DB region (no hardcoded place list — a newly
+  // created Australian location should never file under Europe).
+  const regionByLocation = useMemo(() => new Map(locations.map((l) => [l.name, l.region])), [locations]);
+  const region = (p: Photo) => (regionByLocation.get(p.location) === "Europe" ? "Europe" : "Australia");
 
   // Explicit true — so before settings load (flags empty) we default to the
   // safe "not live" preview, never a flash of the transactional shop.
@@ -1139,6 +1189,8 @@ function OrderedPhotoPicker({
     setSaving(true);
     try {
       await onSave(picks);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "The picks could not be saved.");
     } finally {
       setSaving(false);
     }
@@ -1217,7 +1269,13 @@ function HeroPicker({
   async function save() {
     if (!selected) return;
     setSaving(true);
-    try { await onSave(selected.id, rotate); } finally { setSaving(false); }
+    try {
+      await onSave(selected.id, rotate);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "The hero pick could not be saved.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -1286,7 +1344,7 @@ function Hero({ photo, locations, isAdmin, rotate, onPickHero }: { photo?: Photo
     <section className={`hero landing-stage cinematic${rotClass}`} id="top" aria-label="Sam Duckworth Photography">
       {photo ? (
         <div className="landing-photo" aria-hidden="true">
-          <SmartImage src={photo.imageUrl} alt="" eager />
+          <SmartImage src={photo.imageUrl} alt="" priority />
         </div>
       ) : null}
       <div className="landing-copy scroll-reveal is-visible">
@@ -1483,7 +1541,9 @@ function MapPromo({
 
   if (frames.length < 2) return null;
 
-  const f = frames[active];
+  // `frames` can shrink under a live `active` index when the data silently
+  // refreshes (tab refocus, admin edit) — clamp instead of crashing.
+  const f = frames[active] ?? frames[0];
   const altPart = f.alt != null && Math.round(f.alt) >= 1 ? `  ·  ${Math.round(f.alt)}m` : "";
   const coords = `${Math.abs(f.lat).toFixed(2)}°${f.lat < 0 ? "S" : "N"}  ${Math.abs(f.lon).toFixed(2)}°${f.lon < 0 ? "W" : "E"}${altPart}`;
 
@@ -2320,9 +2380,13 @@ function AdminDashboard({ session }: { session: Session }) {
   async function bulkUpdate(input: { featured?: boolean; published?: boolean }) {
     const ids = [...selectedPhotoIds];
     if (!ids.length) return;
-    await updatePhotoCuration(ids, input);
-    setSelectedPhotoIds(new Set());
-    await refresh();
+    try {
+      await updatePhotoCuration(ids, input);
+      setSelectedPhotoIds(new Set());
+      await refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not update photos.");
+    }
   }
 
   function selectAllFiltered() {
@@ -2332,22 +2396,31 @@ function AdminDashboard({ session }: { session: Session }) {
   async function bulkRename() {
     const ids = [...selectedPhotoIds];
     if (!ids.length || !bulkTitle.trim()) return;
-    await bulkEditPhotos(ids, { title: bulkTitle.trim() });
-    setBulkTitle("");
-    setSelectedPhotoIds(new Set());
-    setMessage(`Renamed ${ids.length} photo${ids.length === 1 ? "" : "s"}.`);
-    await refresh();
+    try {
+      await bulkEditPhotos(ids, { title: bulkTitle.trim() });
+      setBulkTitle("");
+      setSelectedPhotoIds(new Set());
+      setMessage(`Renamed ${ids.length} photo${ids.length === 1 ? "" : "s"}.`);
+      await refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not rename photos.");
+    }
   }
 
   async function bulkSetLocation() {
     const ids = [...selectedPhotoIds];
     if (!ids.length) return;
     const locationName = locations.find((l) => l.id === bulkLocationId)?.name ?? "Unsorted";
-    await bulkEditPhotos(ids, { locationId: bulkLocationId || null, title: locationName });
-    setBulkLocationId("");
-    setSelectedPhotoIds(new Set());
-    setMessage(`Moved ${ids.length} photo${ids.length === 1 ? "" : "s"} to ${locationName}.`);
-    await refresh();
+    try {
+      // Move only — titles are curated individually and must survive a re-bucket.
+      await bulkEditPhotos(ids, { locationId: bulkLocationId || null });
+      setBulkLocationId("");
+      setSelectedPhotoIds(new Set());
+      setMessage(`Moved ${ids.length} photo${ids.length === 1 ? "" : "s"} to ${locationName}.`);
+      await refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not move photos.");
+    }
   }
 
   async function removePhoto(photo: Photo) {
@@ -2535,7 +2608,11 @@ function AdminDashboard({ session }: { session: Session }) {
                       updatePhotoVisibility(photo.id, {
                         featured: Boolean(photo.featured),
                         published: event.target.checked,
-                      }).then(refresh)
+                      })
+                        .then(refresh)
+                        .catch((error) =>
+                          setMessage(error instanceof Error ? error.message : "Could not update the photo."),
+                        )
                     }
                     type="checkbox"
                   />
@@ -2811,7 +2888,10 @@ function PhotoEditOverlay({
 
   async function save(formData: FormData) {
     try {
-      await updatePhotoDetails(photo.id, formToPhotoDetails(formData));
+      await updatePhotoDetails(photo.id, {
+        ...formToPhotoDetails(formData),
+        previousTitle: photo.title,
+      });
       await onSaved();
       onClose();
     } catch (error) {
