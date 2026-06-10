@@ -51,16 +51,17 @@
       content="Aerial drone and landscape photography from Sydney's Northern Beaches and beyond."
     />
     <meta property="og:url" content="https://www.samduckworth.com/" />
-    <meta property="og:image" content="https://www.samduckworth.com/og-image.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
+    <!-- Share preview = the CURRENT landing hero: /api/og-image resolves the
+         admin-chosen hero (same logic as the home page) and redirects to its
+         image, so iMessage/WhatsApp/Facebook cards always match the site. -->
+    <meta property="og:image" content="https://www.samduckworth.com/api/og-image" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Sam Duckworth Photography — Aerial &amp; Landscape" />
     <meta
       name="twitter:description"
       content="Aerial drone and landscape photography from Sydney's Northern Beaches and beyond."
     />
-    <meta name="twitter:image" content="https://www.samduckworth.com/og-image.png" />
+    <meta name="twitter:image" content="https://www.samduckworth.com/api/og-image" />
 
     <!-- Structured data: who + what, for search + local SEO -->
     <script type="application/ld+json">
