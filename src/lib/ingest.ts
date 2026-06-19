@@ -85,9 +85,30 @@ function inferAspect(w: number, h: number): CompressedPhoto["aspect"] {
   return "landscape";
 }
 
+function isHeic(file: File): boolean {
+  return /image\/(heic|heif)/i.test(file.type) || /\.(heic|heif)$/i.test(file.name);
+}
+
+// Decode the original to a bitmap. iPhones shoot HEIC; most browsers (Chrome,
+// Firefox, Android) can't decode it with createImageBitmap, so on failure we
+// convert HEIC→JPEG with heic2any (lazy-loaded — a big wasm decoder that must
+// never reach the public bundle) and decode that. iOS Safari usually hands us a
+// JPEG already (the OS converts on pick), so this path mostly serves Android.
+async function decodeToBitmap(file: File): Promise<ImageBitmap> {
+  try {
+    // from-image applies the EXIF orientation, so dimensions match what you see.
+    return await createImageBitmap(file, { imageOrientation: "from-image" });
+  } catch (error) {
+    if (!isHeic(file)) throw error;
+    const { default: heic2any } = await import("heic2any");
+    const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+    const jpeg = Array.isArray(converted) ? converted[0] : converted;
+    return await createImageBitmap(jpeg, { imageOrientation: "from-image" });
+  }
+}
+
 export async function compressToWebp(file: File): Promise<CompressedPhoto> {
-  // from-image applies the EXIF orientation, so dimensions match what you see.
-  const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  const bitmap = await decodeToBitmap(file);
   try {
     const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
     const width = Math.round(bitmap.width * scale);

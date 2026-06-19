@@ -47,6 +47,7 @@ import {
   setLocationFeedOrder,
   setMapFeature,
   setPhotoShop,
+  removeUploadedAsset,
   setSiteFlag,
   setSiteSetting,
   supabase,
@@ -110,6 +111,12 @@ const GRID_SIZES = "(max-width: 620px) 50vw, (max-width: 1024px) 33vw, 25vw";
 // Responsive srcset across a range of widths so phones don't download the full
 // 1800px image. Falls back to the single imageUrl when there's no storage path.
 const SRCSET_WIDTHS = [400, 700, 1000, 1400, 1800];
+
+// How many tiles load eagerly / get pre-warmed before reveal. Phones show ~2
+// columns, so 15 would pull several off-screen rows before first paint — scale
+// it down on small screens so phones paint sooner on a slow network.
+const EAGER_TILE_COUNT =
+  typeof window !== "undefined" && window.matchMedia?.("(max-width: 620px)").matches ? 6 : 15;
 function srcSetFor(photo: Photo): string | undefined {
   if (!photo.storagePath) return undefined;
   return SRCSET_WIDTHS.map((w) => `${getTransformedPublicUrl(photoBucket, photo.storagePath as string, w)} ${w}w`).join(", ");
@@ -549,6 +556,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [imagesReady, setImagesReady] = useState(false);
 
   async function unpublishPhoto(photo: Photo) {
+    if (!window.confirm(`Unpublish "${photo.title}"? It will disappear from the public gallery.`)) return;
     await reportAdminError(async () => {
       await updatePhotoVisibility(photo.id, { featured: Boolean(photo.featured), published: false });
       await loadGallery();
@@ -593,7 +601,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
     // Warm only the first screenful, and with the SAME srcset/sizes the grid
     // tiles use — the browser then resolves to the identical (small) variant
     // instead of pulling the full 1800px image for every photo in the category.
-    const batch = filteredPhotos.filter((p) => p.imageUrl).slice(0, 15);
+    const batch = filteredPhotos.filter((p) => p.imageUrl).slice(0, EAGER_TILE_COUNT);
     if (!batch.length) { setImagesReady(true); return; }
     let cancelled = false; setImagesReady(false); let done = 0;
     const tick = () => { done += 1; if (!cancelled && done >= batch.length) setImagesReady(true); };
@@ -645,9 +653,13 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
 
   // Switching location should land you back at the top of the gallery, even if
   // you'd scrolled down (changing the filter isn't a route change, so the
-  // navigate() scroll-reset doesn't fire here).
+  // navigate() scroll-reset doesn't fire here). Skip the very first run — that's
+  // the automatic landing-category pick, and a smooth/animated scroll there
+  // would hijack a phone user who's already started scrolling.
+  const skipLandScroll = useRef(true);
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (skipLandScroll.current) { skipLandScroll.current = false; return; }
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   }, [activeLocation]);
 
   const seoLoc = activeLocation === allLocations ? null : activeLocation;
@@ -1967,7 +1979,7 @@ function Gallery({
             // First screenful loads immediately (and is pre-warmed by the
             // gallery gate); the rest fetch lazily as you scroll, so the page
             // never trickles in from the bottom.
-            eager={index < 15}
+            eager={index < EAGER_TILE_COUNT}
           />
           <div className="photo-meta">
             <span>
@@ -2378,6 +2390,18 @@ function AdminDashboard({ session }: { session: Session }) {
   const [bulkLocationId, setBulkLocationId] = useState("");
   const [newLocationName, setNewLocationName] = useState("");
   const [message, setMessage] = useState("");
+  // One global in-flight flag: disables write controls during any save so a
+  // tap-again on a slow connection can't double-submit (e.g. delete twice). The
+  // ref guards the gap before `disabled` re-renders (a rapid double-tap).
+  const [working, setWorking] = useState(false);
+  const workingRef = useRef(false);
+
+  // Auto-dismiss the toast so a stale success/error doesn't linger.
+  useEffect(() => {
+    if (!message) return;
+    const t = window.setTimeout(() => setMessage(""), 6000);
+    return () => window.clearTimeout(t);
+  }, [message]);
 
   async function refresh() {
     const [galleryData, nextAdminPhotos] = await Promise.all([
@@ -2386,6 +2410,21 @@ function AdminDashboard({ session }: { session: Session }) {
     ]);
     setLocations(galleryData.locations);
     setAdminPhotos(nextAdminPhotos);
+  }
+
+  // Wrap a write so controls lock while it runs and a failure always surfaces.
+  async function run(fn: () => Promise<void>, failMsg: string) {
+    if (workingRef.current) return;
+    workingRef.current = true;
+    setWorking(true);
+    try {
+      await fn();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : failMsg);
+    } finally {
+      workingRef.current = false;
+      setWorking(false);
+    }
   }
 
   useEffect(() => {
@@ -2438,13 +2477,12 @@ function AdminDashboard({ session }: { session: Session }) {
   async function bulkUpdate(input: { featured?: boolean; published?: boolean }) {
     const ids = [...selectedPhotoIds];
     if (!ids.length) return;
-    try {
+    await run(async () => {
       await updatePhotoCuration(ids, input);
       setSelectedPhotoIds(new Set());
+      setMessage(`Updated ${ids.length} photo${ids.length === 1 ? "" : "s"}.`);
       await refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not update photos.");
-    }
+    }, "Could not update photos.");
   }
 
   function selectAllFiltered() {
@@ -2454,31 +2492,29 @@ function AdminDashboard({ session }: { session: Session }) {
   async function bulkRename() {
     const ids = [...selectedPhotoIds];
     if (!ids.length || !bulkTitle.trim()) return;
-    try {
+    if (!window.confirm(`Rename ${ids.length} selected photo${ids.length === 1 ? "" : "s"} to "${bulkTitle.trim()}"?`)) return;
+    await run(async () => {
       await bulkEditPhotos(ids, { title: bulkTitle.trim() });
       setBulkTitle("");
       setSelectedPhotoIds(new Set());
       setMessage(`Renamed ${ids.length} photo${ids.length === 1 ? "" : "s"}.`);
       await refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not rename photos.");
-    }
+    }, "Could not rename photos.");
   }
 
   async function bulkSetLocation() {
     const ids = [...selectedPhotoIds];
     if (!ids.length) return;
     const locationName = locations.find((l) => l.id === bulkLocationId)?.name ?? "Unsorted";
-    try {
+    if (!window.confirm(`Move ${ids.length} selected photo${ids.length === 1 ? "" : "s"} to ${locationName}?`)) return;
+    await run(async () => {
       // Move only — titles are curated individually and must survive a re-bucket.
       await bulkEditPhotos(ids, { locationId: bulkLocationId || null });
       setBulkLocationId("");
       setSelectedPhotoIds(new Set());
       setMessage(`Moved ${ids.length} photo${ids.length === 1 ? "" : "s"} to ${locationName}.`);
       await refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not move photos.");
-    }
+    }, "Could not move photos.");
   }
 
   async function removePhoto(photo: Photo) {
@@ -2489,7 +2525,7 @@ function AdminDashboard({ session }: { session: Session }) {
     ) {
       return;
     }
-    try {
+    await run(async () => {
       await deletePhoto(photo.id, photo.storagePath);
       setSelectedPhotoIds((current) => {
         const next = new Set(current);
@@ -2498,22 +2534,18 @@ function AdminDashboard({ session }: { session: Session }) {
       });
       setMessage(`Deleted "${photo.title}".`);
       await refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not delete photo.");
-    }
+    }, "Could not delete photo.");
   }
 
   async function addLocation() {
     const name = newLocationName.trim();
     if (!name) return;
-    try {
+    await run(async () => {
       await createLocation(name);
       setNewLocationName("");
       setMessage(`Added location "${name}".`);
       await refresh();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not add location.");
-    }
+    }, "Could not add location.");
   }
 
   // The photo being edited (from the full admin records, so it carries
@@ -2535,7 +2567,9 @@ function AdminDashboard({ session }: { session: Session }) {
         </button>
       </div>
       <UploadPanel locations={locations} onUploaded={refresh} setMessage={setMessage} />
-      {message ? <p className="form-note">{message}</p> : null}
+      {message ? (
+        <div className="admin-toast" role="status" onClick={() => setMessage("")}>{message}</div>
+      ) : null}
       <MapFeedAdmin photos={adminPhotos} locations={locations} onChanged={refresh} />
       <VisibilityAdmin photos={adminPhotos} />
       <LocationRail
@@ -2567,10 +2601,10 @@ function AdminDashboard({ session }: { session: Session }) {
         <button className="text-button" onClick={() => setSelectedPhotoIds(new Set())} type="button">
           Clear
         </button>
-        <button className="solid-button" onClick={() => bulkUpdate({ published: true })} type="button">
+        <button className="solid-button" onClick={() => bulkUpdate({ published: true })} type="button" disabled={working || !selectedPhotoIds.size}>
           Publish
         </button>
-        <button className="text-button" onClick={() => bulkUpdate({ published: false })} type="button">
+        <button className="text-button" onClick={() => bulkUpdate({ published: false })} type="button" disabled={working || !selectedPhotoIds.size}>
           Unpublish
         </button>
       </section>
@@ -2582,7 +2616,7 @@ function AdminDashboard({ session }: { session: Session }) {
             type="text"
             value={bulkTitle}
           />
-          <button className="text-button" onClick={bulkRename} type="button">
+          <button className="text-button" onClick={bulkRename} type="button" disabled={working}>
             Rename
           </button>
         </div>
@@ -2595,7 +2629,7 @@ function AdminDashboard({ session }: { session: Session }) {
               </option>
             ))}
           </select>
-          <button className="text-button" onClick={bulkSetLocation} type="button">
+          <button className="text-button" onClick={bulkSetLocation} type="button" disabled={working || !selectedPhotoIds.size}>
             Move to location
           </button>
         </div>
@@ -2606,7 +2640,7 @@ function AdminDashboard({ session }: { session: Session }) {
             type="text"
             value={newLocationName}
           />
-          <button className="text-button" onClick={addLocation} type="button">
+          <button className="text-button" onClick={addLocation} type="button" disabled={working || !newLocationName.trim()}>
             <Plus size={14} aria-hidden="true" /> Add location
           </button>
         </div>
@@ -2655,23 +2689,21 @@ function AdminDashboard({ session }: { session: Session }) {
                   <button className="text-button edit-button" onClick={() => setEditingPhotoId(photo.id)} type="button">
                     <Pencil size={13} aria-hidden="true" /> Edit details
                   </button>
-                  <button className="text-button danger" onClick={() => removePhoto(photo)} type="button">
+                  <button className="text-button danger" onClick={() => removePhoto(photo)} type="button" disabled={working}>
                     <Trash2 size={13} aria-hidden="true" /> Delete
                   </button>
                 </div>
                 <label>
                   <input
                     checked={Boolean(photo.published)}
-                    onChange={(event) =>
-                      updatePhotoVisibility(photo.id, {
-                        featured: Boolean(photo.featured),
-                        published: event.target.checked,
-                      })
-                        .then(refresh)
-                        .catch((error) =>
-                          setMessage(error instanceof Error ? error.message : "Could not update the photo."),
-                        )
-                    }
+                    disabled={working}
+                    onChange={(event) => {
+                      const published = event.target.checked;
+                      void run(async () => {
+                        await updatePhotoVisibility(photo.id, { featured: Boolean(photo.featured), published });
+                        await refresh();
+                      }, "Could not update the photo.");
+                    }}
                     type="checkbox"
                   />
                   Published
@@ -2843,6 +2875,7 @@ function PhotoEditForm({
               Altitude (m)
               <input
                 defaultValue={photo.relativeAltitude ?? ""}
+                inputMode="decimal"
                 name="altitude"
                 placeholder="—"
                 step="0.1"
@@ -2851,15 +2884,15 @@ function PhotoEditForm({
             </label>
             <label>
               Sort order
-              <input defaultValue={photo.sortOrder ?? ""} name="sortOrder" placeholder="—" type="number" />
+              <input defaultValue={photo.sortOrder ?? ""} inputMode="numeric" name="sortOrder" placeholder="—" type="number" />
             </label>
             <label>
               Latitude
-              <input defaultValue={photo.latitude ?? ""} name="latitude" placeholder="—" step="any" type="number" />
+              <input defaultValue={photo.latitude ?? ""} inputMode="decimal" name="latitude" placeholder="—" step="any" type="number" />
             </label>
             <label>
               Longitude
-              <input defaultValue={photo.longitude ?? ""} name="longitude" placeholder="—" step="any" type="number" />
+              <input defaultValue={photo.longitude ?? ""} inputMode="decimal" name="longitude" placeholder="—" step="any" type="number" />
             </label>
           </div>
           <label>
@@ -2999,15 +3032,23 @@ type QueueItem = {
   meta: ExtractedPhotoMeta | null;
   geo: Placement | null;
   hasGps: boolean;
+  locating: boolean; // GPS present, reverse-geocode still in flight
   title: string;
+  titleAuto: string; // the auto-derived title, so we know if the user edited it
   locationChoice: string; // existing location id | NEW_LOCATION | "" (Unsorted)
+  locationTouched: boolean; // user picked a location → don't overwrite from geo
   newLocationName: string;
   newLocationRegion: string;
   kind: Photo["kind"];
+  aspect: Photo["aspect"] | null; // measured at compression, cached for retry
+  ratio: number | null;
+  uploadedPath: string | null; // set once the asset is in storage, so a retry reuses it
 };
 
 const NEW_LOCATION = "__new__";
 const UPLOAD_CONCURRENCY = 2; // phone-friendly: at most 2 images encoding at once
+const ANALYZE_CONCURRENCY = 3; // bound exifr/preview work so big batches don't spike memory
+const MAX_BATCH_FILES = 60; // soft cap — mobile Safari will kill the tab past this
 let queueSeq = 0;
 
 function kindFor(meta: ExtractedPhotoMeta | null, geo: Placement | null): Photo["kind"] {
@@ -3049,6 +3090,16 @@ function UploadPanel({
   // Revoke object URLs on unmount so big batches don't leak memory.
   useEffect(() => () => { itemsRef.current.forEach((it) => URL.revokeObjectURL(it.previewUrl)); }, []);
 
+  // Warn before leaving with an upload in flight or unsaved photos queued —
+  // phone users switch apps constantly and mobile Safari evicts background tabs.
+  useEffect(() => {
+    const hasWork = isUploading || items.some((it) => it.status === "ready" || it.status === "error");
+    if (!hasWork) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [isUploading, items]);
+
   const patchItem = useCallback(
     (id: string, patch: Partial<QueueItem> | ((it: QueueItem) => Partial<QueueItem>)) => {
       setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...(typeof patch === "function" ? patch(it) : patch) } : it)));
@@ -3065,56 +3116,47 @@ function UploadPanel({
   const locationByNameRef = useRef(locationByName);
   locationByNameRef.current = locationByName;
 
-  // Read metadata, then (if there's GPS) reverse-geocode a location suggestion.
+  // Read metadata (fast) → item becomes uploadable immediately. The GPS
+  // reverse-geocode runs in the BACKGROUND and fills the location suggestion
+  // when it arrives, so the Upload button is never gated on Nominatim's rate
+  // limit (a 30-stop road trip would otherwise stall for ~36s). The background
+  // patch never overwrites a title/location the user has already edited.
   const analyze = useCallback(
     async (id: string, file: File) => {
+      let meta: ExtractedPhotoMeta | null = null;
       try {
-        const meta = await extractPhotoMetadata(file);
-        const hasGps = meta.latitude != null && meta.longitude != null;
-        let geo: Placement | null = null;
-        if (hasGps) {
-          patchItem(id, { stage: "Locating", meta });
-          geo = await reverseGeocode(meta.latitude as number, meta.longitude as number);
-        }
-        const baseTitle =
-          geo && geo.title && geo.title !== "Unsorted" ? geo.title : file.name.replace(/\.[^/.]+$/, "");
-
-        let locationChoice = "";
-        let newLocationName = "";
-        let newLocationRegion = "Northern Beaches";
-        if (geo && geo.category && geo.category !== "Unsorted") {
-          const match = locationByNameRef.current.get(geo.category.trim().toLowerCase());
-          if (match) {
-            locationChoice = match.id;
-          } else {
-            locationChoice = NEW_LOCATION;
-            newLocationName = geo.category;
-            newLocationRegion = geo.isHome ? "Northern Beaches" : geo.region || geo.country || "Travel";
-          }
-        }
-        patchItem(id, {
-          status: "ready",
-          stage: "",
-          meta,
-          geo,
-          hasGps,
-          title: baseTitle,
-          locationChoice,
-          newLocationName,
-          newLocationRegion,
-          kind: kindFor(meta, geo),
-        });
+        meta = await extractPhotoMetadata(file);
       } catch {
-        // Even unreadable metadata never blocks an upload — fall back to filename
-        // + manual location.
-        patchItem(id, (it) => ({
-          status: "ready",
-          stage: "",
-          hasGps: false,
-          title: it.title || file.name.replace(/\.[^/.]+$/, ""),
-          kind: "Landscape",
-        }));
+        meta = null; // unreadable metadata never blocks an upload
       }
+      const hasGps = Boolean(meta && meta.latitude != null && meta.longitude != null);
+      patchItem(id, { status: "ready", stage: "", meta, hasGps, locating: hasGps, kind: kindFor(meta, null) });
+
+      if (!hasGps || !meta) return;
+      void (async () => {
+        const geo = await reverseGeocode(meta.latitude as number, meta.longitude as number);
+        patchItem(id, (it) => {
+          const patch: Partial<QueueItem> = { geo, locating: false, kind: kindFor(it.meta, geo) };
+          if (!geo || geo.category === "Unsorted") return patch;
+          // Title: only if the user hasn't edited it away from the auto value.
+          if (it.title === it.titleAuto && geo.title && geo.title !== "Unsorted") {
+            patch.title = geo.title;
+            patch.titleAuto = geo.title;
+          }
+          // Location: only if the user hasn't picked one yet.
+          if (!it.locationTouched && !it.locationChoice) {
+            const match = locationByNameRef.current.get(geo.category.trim().toLowerCase());
+            if (match) {
+              patch.locationChoice = match.id;
+            } else {
+              patch.locationChoice = NEW_LOCATION;
+              patch.newLocationName = geo.category;
+              patch.newLocationRegion = geo.isHome ? "Northern Beaches" : geo.region || geo.country || "Travel";
+            }
+          }
+          return patch;
+        });
+      })();
     },
     [patchItem],
   );
@@ -3122,10 +3164,18 @@ function UploadPanel({
   const addFiles = useCallback(
     (fileList: FileList | null) => {
       if (!fileList || !fileList.length) return;
+      const room = MAX_BATCH_FILES - itemsRef.current.length;
+      if (room <= 0) {
+        setMessage(`That's the limit (${MAX_BATCH_FILES} at a time). Upload these first, then add more.`);
+        return;
+      }
       const incoming: QueueItem[] = [];
+      let skipped = false;
       for (const file of Array.from(fileList)) {
         if (!file.type.startsWith("image/") && !/\.(jpe?g|png|webp|heic|heif|tiff?)$/i.test(file.name)) continue;
+        if (incoming.length >= room) { skipped = true; break; }
         queueSeq += 1;
+        const autoTitle = file.name.replace(/\.[^/.]+$/, "");
         incoming.push({
           id: `q${Date.now()}-${queueSeq}`,
           file,
@@ -3136,24 +3186,47 @@ function UploadPanel({
           meta: null,
           geo: null,
           hasGps: false,
-          title: file.name.replace(/\.[^/.]+$/, ""),
+          locating: false,
+          title: autoTitle,
+          titleAuto: autoTitle,
           locationChoice: "",
+          locationTouched: false,
           newLocationName: "",
           newLocationRegion: "Northern Beaches",
           kind: "Landscape",
+          aspect: null,
+          ratio: null,
+          uploadedPath: null,
         });
       }
       if (!incoming.length) return;
+      if (skipped) setMessage(`Added ${incoming.length} — capped at ${MAX_BATCH_FILES} per batch.`);
       setItems((prev) => [...prev, ...incoming]);
-      incoming.forEach((it) => { void analyze(it.id, it.file); });
+      // Throttle metadata reading so a big selection doesn't spike memory. The
+      // background geocode inside analyze() isn't awaited here, so it doesn't
+      // gate the pool — it self-paces in geocode.ts.
+      let cursor = 0;
+      const pump = async () => {
+        while (cursor < incoming.length) {
+          const it = incoming[cursor];
+          cursor += 1;
+          await analyze(it.id, it.file);
+        }
+      };
+      for (let i = 0; i < Math.min(ANALYZE_CONCURRENCY, incoming.length); i += 1) void pump();
     },
-    [analyze],
+    [analyze, setMessage],
   );
 
   const removeItem = useCallback((id: string) => {
     setItems((prev) => {
       const target = prev.find((it) => it.id === id);
-      if (target) URL.revokeObjectURL(target.previewUrl);
+      if (target) {
+        URL.revokeObjectURL(target.previewUrl);
+        // If the asset reached storage but no row was ever created (a failed
+        // insert the user is now abandoning), clean up the orphan.
+        if (target.uploadedPath && target.status !== "done") void removeUploadedAsset(target.uploadedPath);
+      }
       return prev.filter((it) => it.id !== id);
     });
   }, []);
@@ -3166,14 +3239,35 @@ function UploadPanel({
   }, []);
 
   // One photo, end-to-end: compress → upload asset → insert row → warm CDN.
+  // Idempotent on retry: if the asset already uploaded (item.uploadedPath), we
+  // reuse it instead of re-compressing and minting a duplicate storage object —
+  // so retrying a failed ROW insert costs no bandwidth and leaves no orphans.
   const uploadItem = useCallback(
     async (item: QueueItem, locationIdByName: Map<string, string>) => {
       patchItem(item.id, { status: "uploading", stage: "Compressing", error: "" });
-      let compressed;
-      try {
-        compressed = await compressToWebp(item.file);
-      } catch {
-        throw new Error("Couldn't process this image (unsupported format?). Try a JPEG.");
+
+      let storagePath = item.uploadedPath;
+      let aspect = item.aspect;
+      let ratio = item.ratio;
+      if (!storagePath || aspect == null) {
+        let compressed;
+        try {
+          compressed = await compressToWebp(item.file);
+        } catch {
+          const heic = /image\/(heic|heif)/i.test(item.file.type) || /\.(heic|heif)$/i.test(item.file.name);
+          throw new Error(
+            heic
+              ? "Couldn't convert this HEIC photo. On iPhone: Settings → Camera → Formats → 'Most Compatible' shoots JPEG."
+              : "Couldn't process this image. Try a JPEG.",
+          );
+        }
+        aspect = compressed.aspect;
+        ratio = compressed.ratio;
+        patchItem(item.id, { stage: "Uploading", aspect, ratio });
+        storagePath = await retryAsync(() => uploadPhotoAsset(compressed.blob, item.file.name));
+        // Remember the path the moment storage succeeds, so a later row-insert
+        // failure + retry reuses it.
+        patchItem(item.id, { uploadedPath: storagePath });
       }
 
       let locationId: string | null = null;
@@ -3183,9 +3277,6 @@ function UploadPanel({
         locationId = item.locationChoice;
       }
 
-      patchItem(item.id, { stage: "Uploading" });
-      const storagePath = await retryAsync(() => uploadPhotoAsset(compressed.blob, item.file.name));
-
       patchItem(item.id, { stage: "Saving" });
       await retryAsync(() =>
         createPhotoRecord({
@@ -3193,8 +3284,8 @@ function UploadPanel({
           locationId: locationId ?? undefined,
           kind: item.kind,
           year: item.meta?.year ?? undefined,
-          aspect: compressed.aspect,
-          ratio: compressed.ratio,
+          aspect: aspect ?? "landscape",
+          ratio,
           capturedAt: item.meta?.capturedAt ?? null,
           latitude: item.meta?.latitude ?? null,
           longitude: item.meta?.longitude ?? null,
@@ -3370,7 +3461,9 @@ function BatchRow({
     if (item.meta?.capturedAt) badges.push(item.meta.capturedAt);
     badges.push(item.kind);
   }
-  const needsLocation = item.status !== "analyzing" && !item.locationChoice;
+  // Don't nag about a missing location while the background geocode might still
+  // fill it in.
+  const needsLocation = item.status !== "analyzing" && !item.locationChoice && !item.locating;
   const locked = disabled || item.status === "uploading" || item.status === "done";
 
   return (
@@ -3394,7 +3487,7 @@ function BatchRow({
         </div>
 
         {item.status === "analyzing" ? (
-          <p className="batch-note">{item.stage === "Locating" ? "Finding location…" : "Reading metadata…"}</p>
+          <p className="batch-note">Reading metadata…</p>
         ) : (
           <>
             <label className="batch-field">
@@ -3409,8 +3502,12 @@ function BatchRow({
             </label>
 
             <label className={`batch-field${needsLocation ? " needs" : ""}`}>
-              <span>{needsLocation ? "Location — set one to publish" : "Location"}</span>
-              <select value={item.locationChoice} disabled={locked} onChange={(e) => onChange(item.id, { locationChoice: e.target.value })}>
+              <span>{item.locating ? "Location · finding from GPS…" : needsLocation ? "Location — set one to publish" : "Location"}</span>
+              <select
+                value={item.locationChoice}
+                disabled={locked}
+                onChange={(e) => onChange(item.id, { locationChoice: e.target.value, locationTouched: true })}
+              >
                 <option value="">Unsorted (stays a draft)</option>
                 {locations.map((l) => (
                   <option key={l.id} value={l.id}>{l.name}</option>

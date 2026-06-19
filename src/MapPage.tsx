@@ -305,9 +305,16 @@ export default function MapPage({ onNavigate }: { onNavigate: (route: string) =>
         };
         const hidePopup = () => { map!.getCanvas().style.cursor = ""; popup.remove(); };
 
-        map.on("mouseenter", "photo", showPhotoPopup);
-        map.on("mousemove", "photo", showPhotoPopup);
-        map.on("mouseleave", "photo", hidePopup);
+        // Only wire the hover preview on real pointers. On touch, MapLibre
+        // synthesises a mouse event on tap, which would both open the lightbox
+        // AND leave a popup stranded (no mouseleave ever fires). Tapping a pin
+        // opens the lightbox directly instead.
+        const canHover = typeof window !== "undefined" && window.matchMedia?.("(hover: hover)").matches;
+        if (canHover) {
+          map.on("mouseenter", "photo", showPhotoPopup);
+          map.on("mousemove", "photo", showPhotoPopup);
+          map.on("mouseleave", "photo", hidePopup);
+        }
         map.on("mouseenter", "clusters", () => { map!.getCanvas().style.cursor = "pointer"; });
         map.on("mouseleave", "clusters", () => { map!.getCanvas().style.cursor = ""; });
       });

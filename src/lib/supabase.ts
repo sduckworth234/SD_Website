@@ -138,14 +138,33 @@ function mapPhoto(row: PhotoRow): Photo {
   };
 }
 
+// The bundled fallback (dev / outage). Strip storage_path so the consumers fall
+// back to the rows' own imageUrl instead of generating Supabase transform URLs
+// for objects that don't exist (which would 404-storm the CDN on a phone).
+function fallbackGallery() {
+  return {
+    locations: fallbackLocations,
+    photos: fallbackPhotos.map((p) => ({ ...p, storagePath: undefined })),
+    source: "fallback" as const,
+  };
+}
+
 export async function getGalleryData() {
-  if (!supabase) {
-    return {
-      locations: fallbackLocations,
-      photos: fallbackPhotos,
-      source: "fallback" as const,
-    };
+  if (!supabase) return fallbackGallery();
+
+  try {
+    return await getGalleryDataInner();
+  } catch (error) {
+    // supabase-js REJECTS (not {error}) on a network/DNS/CORS failure — without
+    // this the home page would hang permanently empty. Serve bundled data; the
+    // focus/visibility refetch self-heals once the network returns.
+    console.warn("Gallery fetch failed — using fallback data", error);
+    return fallbackGallery();
   }
+}
+
+async function getGalleryDataInner() {
+  if (!supabase) return fallbackGallery();
 
   const PUBLIC_PHOTO_COLUMNS =
     "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, collection_order, in_shop, shop_order, locations(id, slug, name, region, description, sort_order)";
@@ -176,11 +195,7 @@ export async function getGalleryData() {
 
   if (locationError || photoError) {
     console.warn("Using fallback gallery data", locationError ?? photoError);
-    return {
-      locations: fallbackLocations,
-      photos: fallbackPhotos,
-      source: "fallback" as const,
-    };
+    return fallbackGallery();
   }
 
   return {
@@ -265,6 +280,18 @@ export async function uploadPhotoAsset(file: Blob, originalName: string) {
 
   if (error) throw error;
   return data.path;
+}
+
+// Best-effort removal of an orphaned storage object — e.g. an asset that
+// uploaded successfully but whose DB row insert then failed. Never throws, so a
+// cleanup failure can't mask the original error.
+export async function removeUploadedAsset(storagePath: string) {
+  if (!supabase || !storagePath) return;
+  try {
+    await supabase.storage.from(photoBucket).remove([storagePath]);
+  } catch (error) {
+    console.warn("Could not clean up orphaned upload", error);
+  }
 }
 
 export async function createPhotoRecord(input: {
@@ -535,6 +562,7 @@ const RECENT_SELECT =
 export async function getRecentPhotos(limit = 5): Promise<Photo[]> {
   if (!supabase) return [];
 
+  try {
   const [pinnedResult, recentResult] = await Promise.all([
     supabase
       .from("photos")
@@ -594,6 +622,10 @@ export async function getRecentPhotos(limit = 5): Promise<Photo[]> {
   }
 
   return slots.filter(Boolean) as Photo[];
+  } catch (error) {
+    console.warn("Recent photos fetch failed", error);
+    return [];
+  }
 }
 
 // Pin a photo into a Recent Work slot (1-based), replacing whatever was there.
@@ -683,14 +715,19 @@ export async function setPhotoShop(
 // Public-safe: anon may read. Returns [] when Supabase isn't configured.
 export async function getSiteSettings(): Promise<SiteSetting[]> {
   if (!supabase) return [];
-  const { data, error } = await supabase
-    .from("site_settings")
-    .select("key, enabled, value, label");
-  if (error) {
-    console.warn("Could not read site settings", error);
+  try {
+    const { data, error } = await supabase
+      .from("site_settings")
+      .select("key, enabled, value, label");
+    if (error) {
+      console.warn("Could not read site settings", error);
+      return [];
+    }
+    return (data ?? []) as SiteSetting[];
+  } catch (error) {
+    console.warn("Site settings fetch failed", error);
     return [];
   }
-  return (data ?? []) as SiteSetting[];
 }
 
 // Flip a visibility flag on/off (admin only — enforced by RLS).

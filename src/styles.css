@@ -1004,7 +1004,9 @@ footer {
 }
 
 /* Lock the page scroll while any modal overlay is open. */
-body:has(.lightbox) {
+body:has(.lightbox),
+body:has(.about-overlay),
+body:has(.contact-overlay) {
   overflow: hidden;
 }
 
@@ -1809,6 +1811,43 @@ body:has(.lightbox) {
   line-height: 1.55;
 }
 
+/* Admin status toast: fixed above the home indicator so success/error feedback
+   is visible no matter how far down the (long) curation page you've scrolled on
+   a phone. Tap to dismiss; also auto-clears. */
+.admin-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 50;
+  max-width: min(92vw, 460px);
+  padding: 13px 18px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: #f8f6f0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+
+/* Finger-friendly tap targets on touch devices (no hover). */
+@media (hover: none) {
+  .text-button {
+    min-height: 44px;
+  }
+
+  .card-actions {
+    gap: 18px;
+  }
+
+  .map-feed-move button {
+    width: 40px;
+    height: 40px;
+  }
+}
+
 .admin-dashboard .location-rail {
   position: sticky;
   top: 83px;
@@ -1820,8 +1859,8 @@ body:has(.lightbox) {
   z-index: 9;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
-  overflow-x: auto;
   border-block: 1px solid var(--line);
   background: rgba(243, 238, 229, 0.92);
   padding: 12px 0;
