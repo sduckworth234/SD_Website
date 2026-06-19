@@ -15,8 +15,10 @@ import {
   Lock,
   LogOut,
   MapPin,
+  LoaderCircle,
   Pencil,
   Plus,
+  RotateCw,
   Search,
   Trash2,
   TriangleAlert,
@@ -31,6 +33,7 @@ import {
   createLocation,
   createPhotoRecord,
   deletePhoto,
+  ensureLocation,
   getAdminPhotos,
   getGalleryData,
   getRecentPhotos,
@@ -54,6 +57,9 @@ import {
 } from "./lib/supabase";
 import type { GalleryLocation, LocationBucket, Photo, SiteSetting } from "./types";
 import { compressToWebp, extractPhotoMetadata } from "./lib/ingest";
+import type { ExtractedPhotoMeta } from "./lib/ingest";
+import { reverseGeocode } from "./lib/geocode";
+import type { Placement } from "./lib/geocode";
 import { useSeo } from "./lib/seo";
 import { Header } from "./components/Header";
 import { OakFrame } from "./components/OakFrame";
@@ -2971,6 +2977,60 @@ function PhotoEditOverlay({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Batch photo uploader (admin). Drop in one or many photos at once; each gets
+// the SAME metadata tracing as a script import — GPS, drone altitude, capture
+// date, exact ratio/aspect — plus a reverse-geocoded location suggestion.
+// Titles and locations are editable per photo before upload, and new locations
+// can be created inline. Built mobile-first and network-resilient (per-photo
+// progress + retry, capped concurrency) because batches get uploaded from a
+// phone, often on a poor overseas connection.
+// ---------------------------------------------------------------------------
+
+type QueueStatus = "analyzing" | "ready" | "uploading" | "done" | "error";
+
+type QueueItem = {
+  id: string;
+  file: File;
+  previewUrl: string;
+  status: QueueStatus;
+  stage: string; // short status label while busy, e.g. "Compressing"
+  error: string;
+  meta: ExtractedPhotoMeta | null;
+  geo: Placement | null;
+  hasGps: boolean;
+  title: string;
+  locationChoice: string; // existing location id | NEW_LOCATION | "" (Unsorted)
+  newLocationName: string;
+  newLocationRegion: string;
+  kind: Photo["kind"];
+};
+
+const NEW_LOCATION = "__new__";
+const UPLOAD_CONCURRENCY = 2; // phone-friendly: at most 2 images encoding at once
+let queueSeq = 0;
+
+function kindFor(meta: ExtractedPhotoMeta | null, geo: Placement | null): Photo["kind"] {
+  if (meta?.relativeAltitude != null) return "Drone";
+  if (geo && !geo.isHome) return "Travel";
+  return "Landscape";
+}
+
+// Retry a flaky async step (network upload / DB insert) with linear backoff.
+// Compression is deterministic, so it's deliberately NOT retried.
+async function retryAsync<T>(fn: () => Promise<T>, attempts = 3, baseDelayMs = 800): Promise<T> {
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, baseDelayMs * (i + 1)));
+    }
+  }
+  throw lastError;
+}
+
 function UploadPanel({
   locations,
   onUploaded,
@@ -2980,120 +3040,415 @@ function UploadPanel({
   onUploaded: () => Promise<void>;
   setMessage: (message: string) => void;
 }) {
+  const [items, setItems] = useState<QueueItem[]>([]);
+  const [published, setPublished] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const itemsRef = useRef<QueueItem[]>(items);
+  itemsRef.current = items;
 
-  async function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    const file = formData.get("file");
+  // Revoke object URLs on unmount so big batches don't leak memory.
+  useEffect(() => () => { itemsRef.current.forEach((it) => URL.revokeObjectURL(it.previewUrl)); }, []);
 
-    if (!(file instanceof File) || !file.size) {
-      setMessage("Choose a photo first.");
-      return;
-    }
+  const patchItem = useCallback(
+    (id: string, patch: Partial<QueueItem> | ((it: QueueItem) => Partial<QueueItem>)) => {
+      setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...(typeof patch === "function" ? patch(it) : patch) } : it)));
+    },
+    [],
+  );
 
-    setIsUploading(true);
-    try {
-      // Mirror the import script: read GPS / drone altitude / capture date
-      // from the ORIGINAL before compression strips them, then upload the
-      // site-standard WebP (never the full-res original) with the exact
-      // ratio + aspect measured from the output.
-      const [meta, compressed] = await Promise.all([
-        extractPhotoMetadata(file),
-        compressToWebp(file),
-      ]);
-      const storagePath = await uploadPhotoAsset(compressed.blob, file.name);
-      const manualAspect = String(formData.get("aspect") || "");
-      await createPhotoRecord({
-        title: String(formData.get("title") || file.name.replace(/\.[^/.]+$/, "")),
-        description: String(formData.get("description") || ""),
-        locationId: String(formData.get("locationId") || ""),
-        kind: meta.relativeAltitude != null ? "Drone" : "Landscape",
-        year: Number(formData.get("year")) || meta.year || undefined,
-        aspect: (manualAspect || compressed.aspect) as Photo["aspect"],
-        ratio: compressed.ratio,
-        capturedAt: meta.capturedAt,
-        latitude: meta.latitude,
-        longitude: meta.longitude,
-        relativeAltitude: meta.relativeAltitude,
-        storagePath,
-        sourcePath: file.name, // record the original filename for the source link
-        isFeatured: formData.get("isFeatured") === "on",
-        isPublished: formData.get("isPublished") === "on",
-      });
-      // Pre-generate the grid's transform variants so the photo's first
-      // viewers hit the warm CDN (fire-and-forget).
+  // Match a reverse-geocoded category name to an existing location row.
+  const locationByName = useMemo(() => {
+    const m = new Map<string, GalleryLocation>();
+    for (const l of locations) m.set(l.name.trim().toLowerCase(), l);
+    return m;
+  }, [locations]);
+  const locationByNameRef = useRef(locationByName);
+  locationByNameRef.current = locationByName;
+
+  // Read metadata, then (if there's GPS) reverse-geocode a location suggestion.
+  const analyze = useCallback(
+    async (id: string, file: File) => {
+      try {
+        const meta = await extractPhotoMetadata(file);
+        const hasGps = meta.latitude != null && meta.longitude != null;
+        let geo: Placement | null = null;
+        if (hasGps) {
+          patchItem(id, { stage: "Locating", meta });
+          geo = await reverseGeocode(meta.latitude as number, meta.longitude as number);
+        }
+        const baseTitle =
+          geo && geo.title && geo.title !== "Unsorted" ? geo.title : file.name.replace(/\.[^/.]+$/, "");
+
+        let locationChoice = "";
+        let newLocationName = "";
+        let newLocationRegion = "Northern Beaches";
+        if (geo && geo.category && geo.category !== "Unsorted") {
+          const match = locationByNameRef.current.get(geo.category.trim().toLowerCase());
+          if (match) {
+            locationChoice = match.id;
+          } else {
+            locationChoice = NEW_LOCATION;
+            newLocationName = geo.category;
+            newLocationRegion = geo.isHome ? "Northern Beaches" : geo.region || geo.country || "Travel";
+          }
+        }
+        patchItem(id, {
+          status: "ready",
+          stage: "",
+          meta,
+          geo,
+          hasGps,
+          title: baseTitle,
+          locationChoice,
+          newLocationName,
+          newLocationRegion,
+          kind: kindFor(meta, geo),
+        });
+      } catch {
+        // Even unreadable metadata never blocks an upload — fall back to filename
+        // + manual location.
+        patchItem(id, (it) => ({
+          status: "ready",
+          stage: "",
+          hasGps: false,
+          title: it.title || file.name.replace(/\.[^/.]+$/, ""),
+          kind: "Landscape",
+        }));
+      }
+    },
+    [patchItem],
+  );
+
+  const addFiles = useCallback(
+    (fileList: FileList | null) => {
+      if (!fileList || !fileList.length) return;
+      const incoming: QueueItem[] = [];
+      for (const file of Array.from(fileList)) {
+        if (!file.type.startsWith("image/") && !/\.(jpe?g|png|webp|heic|heif|tiff?)$/i.test(file.name)) continue;
+        queueSeq += 1;
+        incoming.push({
+          id: `q${Date.now()}-${queueSeq}`,
+          file,
+          previewUrl: URL.createObjectURL(file),
+          status: "analyzing",
+          stage: "Reading",
+          error: "",
+          meta: null,
+          geo: null,
+          hasGps: false,
+          title: file.name.replace(/\.[^/.]+$/, ""),
+          locationChoice: "",
+          newLocationName: "",
+          newLocationRegion: "Northern Beaches",
+          kind: "Landscape",
+        });
+      }
+      if (!incoming.length) return;
+      setItems((prev) => [...prev, ...incoming]);
+      incoming.forEach((it) => { void analyze(it.id, it.file); });
+    },
+    [analyze],
+  );
+
+  const removeItem = useCallback((id: string) => {
+    setItems((prev) => {
+      const target = prev.find((it) => it.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((it) => it.id !== id);
+    });
+  }, []);
+
+  const clearDone = useCallback(() => {
+    setItems((prev) => {
+      prev.filter((it) => it.status === "done").forEach((it) => URL.revokeObjectURL(it.previewUrl));
+      return prev.filter((it) => it.status !== "done");
+    });
+  }, []);
+
+  // One photo, end-to-end: compress → upload asset → insert row → warm CDN.
+  const uploadItem = useCallback(
+    async (item: QueueItem, locationIdByName: Map<string, string>) => {
+      patchItem(item.id, { status: "uploading", stage: "Compressing", error: "" });
+      let compressed;
+      try {
+        compressed = await compressToWebp(item.file);
+      } catch {
+        throw new Error("Couldn't process this image (unsupported format?). Try a JPEG.");
+      }
+
+      let locationId: string | null = null;
+      if (item.locationChoice === NEW_LOCATION) {
+        locationId = locationIdByName.get(item.newLocationName.trim().toLowerCase()) ?? null;
+      } else if (item.locationChoice) {
+        locationId = item.locationChoice;
+      }
+
+      patchItem(item.id, { stage: "Uploading" });
+      const storagePath = await retryAsync(() => uploadPhotoAsset(compressed.blob, item.file.name));
+
+      patchItem(item.id, { stage: "Saving" });
+      await retryAsync(() =>
+        createPhotoRecord({
+          title: item.title.trim() || item.file.name.replace(/\.[^/.]+$/, ""),
+          locationId: locationId ?? undefined,
+          kind: item.kind,
+          year: item.meta?.year ?? undefined,
+          aspect: compressed.aspect,
+          ratio: compressed.ratio,
+          capturedAt: item.meta?.capturedAt ?? null,
+          latitude: item.meta?.latitude ?? null,
+          longitude: item.meta?.longitude ?? null,
+          relativeAltitude: item.meta?.relativeAltitude ?? null,
+          storagePath,
+          sourcePath: item.file.name, // record the original filename for the source link
+          isFeatured: false,
+          // No-location photos stay drafts (Unsorted is hidden from the public
+          // gallery, so "published with no location" would be invisible).
+          isPublished: published && locationId != null,
+        }),
+      );
+
+      // Warm the grid's transform variants so first viewers hit a warm CDN.
       for (const width of SRCSET_WIDTHS) {
         const url = getTransformedPublicUrl(photoBucket, storagePath, width, width >= 1800 ? 76 : 72);
         if (url) fetch(url).catch(() => { /* warming only */ });
       }
-      form.reset();
-      const extras = [
-        meta.latitude != null ? "GPS" : null,
-        meta.relativeAltitude != null ? `${Math.round(meta.relativeAltitude)}m altitude` : null,
-        meta.capturedAt ?? null,
-      ].filter(Boolean);
-      setMessage(`Photo uploaded and saved${extras.length ? ` (${extras.join(", ")})` : ""}.`);
-      await onUploaded();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Upload failed.");
-    } finally {
-      setIsUploading(false);
-    }
-  }
+      patchItem(item.id, { status: "done", stage: "", error: "" });
+    },
+    [patchItem, published],
+  );
+
+  const runUpload = useCallback(
+    async (targetItems: QueueItem[]) => {
+      if (!targetItems.length) return;
+      setIsUploading(true);
+      try {
+        // 1) Resolve every NEW location name to an id, once each (deduped).
+        const newSpecs = new Map<string, { name: string; region: string }>();
+        for (const it of targetItems) {
+          if (it.locationChoice === NEW_LOCATION) {
+            const name = it.newLocationName.trim();
+            if (name) newSpecs.set(name.toLowerCase(), { name, region: it.newLocationRegion });
+          }
+        }
+        const locationIdByName = new Map<string, string>();
+        for (const [key, spec] of newSpecs) {
+          try {
+            locationIdByName.set(key, await ensureLocation(spec.name, spec.region));
+          } catch (error) {
+            const msg = error instanceof Error ? error.message : "Could not create location.";
+            targetItems
+              .filter((it) => it.locationChoice === NEW_LOCATION && it.newLocationName.trim().toLowerCase() === key)
+              .forEach((it) => patchItem(it.id, { status: "error", stage: "", error: msg }));
+          }
+        }
+
+        // 2) Upload with a small concurrency pool (phone-friendly).
+        const queue = targetItems.filter(
+          (it) => !(it.locationChoice === NEW_LOCATION && !locationIdByName.has(it.newLocationName.trim().toLowerCase())),
+        );
+        let cursor = 0;
+        let ok = 0;
+        let failed = targetItems.length - queue.length; // items dropped by a location-create failure
+        const worker = async () => {
+          while (cursor < queue.length) {
+            const item = queue[cursor];
+            cursor += 1;
+            try {
+              await uploadItem(item, locationIdByName);
+              ok += 1;
+            } catch (error) {
+              failed += 1;
+              patchItem(item.id, { status: "error", stage: "", error: error instanceof Error ? error.message : "Upload failed." });
+            }
+          }
+        };
+        await Promise.all(Array.from({ length: Math.min(UPLOAD_CONCURRENCY, queue.length) }, worker));
+
+        setMessage(`Uploaded ${ok} photo${ok === 1 ? "" : "s"}${failed ? `, ${failed} failed — tap Retry` : ""}.`);
+        await onUploaded();
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [onUploaded, patchItem, setMessage, uploadItem],
+  );
+
+  const uploadAll = useCallback(() => {
+    void runUpload(itemsRef.current.filter((it) => it.status === "ready" || it.status === "error"));
+  }, [runUpload]);
+
+  const retryFailed = useCallback(() => {
+    void runUpload(itemsRef.current.filter((it) => it.status === "error"));
+  }, [runUpload]);
+
+  const analyzing = items.some((it) => it.status === "analyzing");
+  const pending = items.filter((it) => it.status === "ready" || it.status === "error").length;
+  const failedCount = items.filter((it) => it.status === "error").length;
+  const doneCount = items.filter((it) => it.status === "done").length;
 
   return (
-    <form className="upload-panel" onSubmit={submit}>
-      <label>
-        Photo
-        <input accept="image/*" name="file" required type="file" />
-      </label>
-      <label>
-        Title
-        <input name="title" placeholder="Barrenjoey after rain" type="text" />
-      </label>
-      <label>
-        Description
-        <textarea name="description" placeholder="Short caption or field note" rows={3} />
-      </label>
-      <label>
-        Location
-        <select name="locationId">
-          <option value="">Unsorted</option>
-          {locations.map((location) => (
-            <option key={location.id} value={location.id}>
-              {location.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Year
-        <input name="year" placeholder="2026" type="number" />
-      </label>
-      <label>
-        Aspect
-        <select name="aspect" defaultValue="">
-          <option value="">Auto (from photo)</option>
-          <option>landscape</option>
-          <option>portrait</option>
-          <option>square</option>
-          <option>wide</option>
-        </select>
-      </label>
-      <div className="check-row">
-        <label>
-          <input name="isPublished" type="checkbox" /> Published
-        </label>
-        <label>
-          <input name="isFeatured" type="checkbox" /> Featured
+    <div className="batch-upload">
+      <div className="batch-head">
+        <div className="batch-head-text">
+          <h2>Add photos</h2>
+          <p>
+            Pick one or many. Each photo's GPS, drone height, date &amp; shape are read automatically and the location is
+            suggested from GPS — edit the title or location below before uploading.
+          </p>
+        </div>
+        <label className="solid-button batch-add">
+          <Plus size={15} aria-hidden="true" /> Choose photos
+          <input
+            accept="image/*"
+            multiple
+            type="file"
+            hidden
+            onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
+          />
         </label>
       </div>
-      <button className="solid-button" disabled={isUploading} type="submit">
-        <Upload size={15} aria-hidden="true" /> {isUploading ? "Uploading" : "Upload photo"}
-      </button>
-    </form>
+
+      {items.length > 0 && (
+        <>
+          <div className="batch-controls">
+            <label className="batch-publish">
+              <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
+              Publish on upload <span>(no-location photos stay drafts)</span>
+            </label>
+            <div className="batch-actions">
+              {doneCount > 0 && (
+                <button className="text-button" type="button" onClick={clearDone} disabled={isUploading}>
+                  Clear {doneCount} done
+                </button>
+              )}
+              {failedCount > 0 && !isUploading && (
+                <button className="text-button" type="button" onClick={retryFailed}>
+                  <RotateCw size={15} aria-hidden="true" /> Retry {failedCount}
+                </button>
+              )}
+              <button
+                className="solid-button"
+                type="button"
+                onClick={uploadAll}
+                disabled={isUploading || analyzing || pending === 0}
+              >
+                <Upload size={15} aria-hidden="true" />{" "}
+                {isUploading ? "Uploading…" : analyzing ? "Reading…" : `Upload ${pending}`}
+              </button>
+            </div>
+          </div>
+
+          <ul className="batch-list">
+            {items.map((it) => (
+              <BatchRow key={it.id} item={it} locations={locations} disabled={isUploading} onChange={patchItem} onRemove={removeItem} />
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
+
+function BatchRow({
+  item,
+  locations,
+  disabled,
+  onChange,
+  onRemove,
+}: {
+  item: QueueItem;
+  locations: GalleryLocation[];
+  disabled: boolean;
+  onChange: (id: string, patch: Partial<QueueItem>) => void;
+  onRemove: (id: string) => void;
+}) {
+  const badges: string[] = [];
+  if (item.status !== "analyzing") {
+    badges.push(item.hasGps ? "GPS" : "No GPS");
+    if (item.meta?.relativeAltitude != null) badges.push(`${Math.round(item.meta.relativeAltitude)}m`);
+    if (item.meta?.capturedAt) badges.push(item.meta.capturedAt);
+    badges.push(item.kind);
+  }
+  const needsLocation = item.status !== "analyzing" && !item.locationChoice;
+  const locked = disabled || item.status === "uploading" || item.status === "done";
+
+  return (
+    <li className={`batch-row status-${item.status}`}>
+      <div className="batch-thumb">
+        <img src={item.previewUrl} alt="" loading="lazy" />
+        {(item.status === "analyzing" || item.status === "uploading") && (
+          <span className="batch-spinner"><LoaderCircle size={18} aria-hidden="true" /></span>
+        )}
+        {item.status === "done" && <span className="batch-tick"><Check size={16} aria-hidden="true" /></span>}
+      </div>
+
+      <div className="batch-fields">
+        <div className="batch-row-top">
+          <span className="batch-filename" title={item.file.name}>{item.file.name}</span>
+          {item.status !== "uploading" && item.status !== "done" && (
+            <button className="batch-remove" type="button" onClick={() => onRemove(item.id)} disabled={disabled} aria-label="Remove">
+              <X size={15} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+
+        {item.status === "analyzing" ? (
+          <p className="batch-note">{item.stage === "Locating" ? "Finding location…" : "Reading metadata…"}</p>
+        ) : (
+          <>
+            <label className="batch-field">
+              <span>Title</span>
+              <input
+                type="text"
+                value={item.title}
+                disabled={locked}
+                placeholder="Title"
+                onChange={(e) => onChange(item.id, { title: e.target.value })}
+              />
+            </label>
+
+            <label className={`batch-field${needsLocation ? " needs" : ""}`}>
+              <span>{needsLocation ? "Location — set one to publish" : "Location"}</span>
+              <select value={item.locationChoice} disabled={locked} onChange={(e) => onChange(item.id, { locationChoice: e.target.value })}>
+                <option value="">Unsorted (stays a draft)</option>
+                {locations.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+                <option value={NEW_LOCATION}>＋ New location…</option>
+              </select>
+            </label>
+
+            {item.locationChoice === NEW_LOCATION && (
+              <label className="batch-field">
+                <span>New location name</span>
+                <input
+                  type="text"
+                  value={item.newLocationName}
+                  disabled={locked}
+                  placeholder="e.g. Positano"
+                  onChange={(e) => onChange(item.id, { newLocationName: e.target.value })}
+                />
+              </label>
+            )}
+
+            {badges.length > 0 && (
+              <div className="batch-badges">
+                {badges.map((b) => (
+                  <span key={b} className="batch-badge">{b}</span>
+                ))}
+              </div>
+            )}
+
+            {item.status === "uploading" && <p className="batch-note">{item.stage}…</p>}
+            {item.status === "done" && <p className="batch-note done">Uploaded</p>}
+            {item.status === "error" && (
+              <p className="batch-note error"><TriangleAlert size={13} aria-hidden="true" /> {item.error || "Failed"}</p>
+            )}
+          </>
+        )}
+      </div>
+    </li>
   );
 }
 

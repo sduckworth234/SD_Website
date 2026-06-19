@@ -249,7 +249,11 @@ export async function uploadPhotoAsset(file: Blob, originalName: string) {
 
   const extension = file.type === "image/webp" ? "webp" : originalName.split(".").pop()?.toLowerCase() ?? "jpg";
   const safeName = slugify(originalName.replace(/\.[^/.]+$/, "")) || "photo";
-  const path = `incoming/${Date.now()}-${safeName}.${extension}`;
+  // A random token alongside the timestamp keeps batch uploads (many files
+  // started in the same millisecond, possibly sharing a filename) from
+  // colliding on the same path, which would fail the upsert:false upload.
+  const token = Math.random().toString(36).slice(2, 8);
+  const path = `incoming/${Date.now()}-${token}-${safeName}.${extension}`;
 
   const { data, error } = await supabase.storage
     .from(photoBucket)
@@ -473,6 +477,37 @@ export async function createLocation(name: string, region = "Northern Beaches") 
     is_visible: true,
   });
   if (error) throw error;
+}
+
+// Find a location by name (case-insensitive), creating it if absent, and return
+// its id. Used by the batch uploader to resolve a reverse-geocoded or manually
+// typed location name into a real row in one call. Mirrors ensureLocation in
+// scripts/import-shoot.mjs.
+export async function ensureLocation(name: string, region = "Northern Beaches"): Promise<string> {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const clean = name.trim();
+  if (!clean) throw new Error("Enter a location name.");
+
+  // ilike with no wildcards = a plain case-insensitive equality test. Location
+  // names don't contain % or _, so this is safe.
+  const { data: existing, error: findError } = await supabase
+    .from("locations")
+    .select("id")
+    .ilike("name", clean)
+    .limit(1);
+  if (findError) throw findError;
+  if (existing && existing.length) return existing[0].id as string;
+
+  const { data: all } = await supabase.from("locations").select("sort_order");
+  const nextSort = (all ?? []).reduce((max, l) => Math.max(max, l.sort_order ?? 0), 0) + 1;
+
+  const { data, error } = await supabase
+    .from("locations")
+    .insert({ name: clean, slug: slugify(clean), region: region || "Northern Beaches", sort_order: nextSort, is_visible: true })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
 }
 
 export async function bulkEditPhotos(

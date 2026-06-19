@@ -1909,6 +1909,264 @@ body:has(.lightbox) {
   gap: 8px;
 }
 
+/* ---------------------------------------------------------------------------
+   Batch photo uploader (admin) — mobile-first. Drop in many photos at once;
+   each row shows the traced metadata + editable title/location before upload.
+   --------------------------------------------------------------------------- */
+.batch-upload {
+  display: grid;
+  gap: 16px;
+  border: 1px solid var(--line);
+  background: rgba(248, 246, 240, 0.5);
+  padding: clamp(16px, 3vw, 28px);
+}
+
+.batch-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.batch-head-text h2 {
+  margin: 0 0 4px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.6rem;
+  font-weight: 400;
+}
+
+.batch-head-text p {
+  margin: 0;
+  max-width: 54ch;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.batch-add {
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
+.batch-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  border-block: 1px solid var(--line);
+  padding: 12px 0;
+}
+
+.batch-publish {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 0.85rem;
+}
+
+.batch-publish span {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.batch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.batch-actions .text-button {
+  border: 1px solid var(--line);
+  padding: 10px 13px;
+  gap: 6px;
+}
+
+.batch-actions .text-button:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.batch-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.batch-row {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.45);
+  padding: 12px;
+}
+
+.batch-row.status-error {
+  border-color: #d8a39a;
+}
+
+.batch-row.status-done {
+  opacity: 0.65;
+}
+
+.batch-thumb {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.batch-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.batch-spinner,
+.batch-tick {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.batch-spinner svg {
+  animation: batch-spin 0.9s linear infinite;
+}
+
+.batch-tick {
+  background: rgba(40, 90, 60, 0.5);
+}
+
+@keyframes batch-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.batch-fields {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.batch-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.batch-filename {
+  min-width: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.batch-remove {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.batch-remove:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.batch-field {
+  display: grid;
+  gap: 4px;
+}
+
+.batch-field > span {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.batch-field.needs > span {
+  color: #b3402f;
+}
+
+.batch-field.needs select {
+  border-color: #d8a39a;
+}
+
+.batch-field input,
+.batch-field select {
+  width: 100%;
+  padding: 10px 11px;
+  /* 16px keeps iOS Safari from zooming the page when a field is focused. */
+  font-size: 16px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+}
+
+.batch-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.batch-badge {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  padding: 3px 7px;
+}
+
+.batch-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.batch-note.error {
+  color: #b3402f;
+}
+
+.batch-note.done {
+  color: #2f7a4f;
+}
+
+@media (min-width: 720px) {
+  .batch-row {
+    grid-template-columns: 110px minmax(0, 1fr);
+  }
+
+  .batch-thumb {
+    width: 110px;
+    height: 110px;
+  }
+}
+
 .admin-photo-list {
   display: grid;
   gap: 1px;
