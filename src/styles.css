@@ -1192,6 +1192,138 @@ body:has(.contact-overlay) {
   scroll-margin-top: 92px;
 }
 
+/* 2026 Europe hero: cinematic crossfade banner, a themed sibling to .hero
+   above it. Inset like a card (same rounding + gutter as the Recent Work
+   tiles) with the same breathing room above it that every other home section
+   gets, rather than bleeding flush into the landing hero. Clickable through
+   to the full gallery — a card, not just a picture. */
+.hero-2026 {
+  position: relative;
+  overflow: hidden;
+  display: block;
+  width: auto;
+  height: 46vh;
+  min-height: 320px;
+  margin: clamp(36px, 7vw, 84px) clamp(18px, 4vw, 56px) 0;
+  border: 0;
+  border-radius: 8px;
+  background: #15130f;
+  cursor: var(--circle-cursor), pointer;
+  --reveal-distance: 30px;
+  --reveal-scale: 0.99;
+}
+
+.hero-2026:focus-visible {
+  outline: 2px solid var(--foam);
+  outline-offset: 3px;
+}
+
+.hero-2026-photos {
+  position: absolute;
+  inset: 0;
+}
+
+.hero-2026-photos::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  content: "";
+  transition: opacity 400ms ease;
+  background:
+    linear-gradient(180deg, rgba(15, 19, 18, 0.5), rgba(15, 19, 18, 0.05) 30%, rgba(15, 19, 18, 0.1) 55%, rgba(15, 19, 18, 0.62)),
+    radial-gradient(circle at 50% 42%, rgba(15, 19, 18, 0), rgba(15, 19, 18, 0.2) 98%);
+}
+
+.hero-2026:hover .hero-2026-photos::after,
+.hero-2026:focus-visible .hero-2026-photos::after {
+  opacity: 0.82;
+}
+
+.hero-2026-frame {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1400ms ease;
+}
+
+.hero-2026-frame .smart-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-2026-frame.is-active {
+  opacity: 1;
+  animation: h26-kenburns 9000ms ease both;
+}
+
+@keyframes h26-kenburns {
+  from { transform: scale(1); }
+  to { transform: scale(1.07); }
+}
+
+.hero-2026-copy {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  color: var(--foam);
+  padding: 0 clamp(18px, 4vw, 56px);
+}
+
+.hero-2026-year {
+  margin: 0;
+  font-family: "Bebas Neue", Impact, "Arial Narrow", sans-serif;
+  font-size: clamp(3.6rem, 10vw, 6.8rem);
+  line-height: 0.9;
+  letter-spacing: 0.01em;
+  text-shadow: 0 2px 44px rgba(0, 0, 0, 0.36);
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-2026-route {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #9fc6c2;
+}
+
+.hero-2026-route .dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #9fc6c2;
+}
+
+.hero-2026-route .seg {
+  width: 30px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(159, 198, 194, 0.15), rgba(159, 198, 194, 0.7), rgba(159, 198, 194, 0.15));
+}
+
+.hero-2026-locs {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(248, 246, 240, 0.9);
+  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-2026-frame.is-active { animation: none; }
+}
+
+@media (max-width: 640px) {
+  .hero-2026 { height: 54vh; min-height: 360px; margin-left: 14px; margin-right: 14px; }
+}
+
 /* "Recent Work" — editorial mosaic of the latest photos above the gallery */
 .recent-work {
   padding: clamp(36px, 7vw, 84px) clamp(18px, 4vw, 56px) clamp(18px, 2.6vw, 34px);
@@ -3603,6 +3735,16 @@ body:has(.contact-overlay) {
 .banner-slot-label { color: var(--muted); font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; margin-right: auto; }
 
 @media (max-width: 560px) { .banner-slots { grid-template-columns: 1fr; } }
+
+.hero2026-strip { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+.hero2026-thumb {
+  position: relative; width: 84px; height: 84px; overflow: hidden; border: 1px solid var(--line);
+}
+.hero2026-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.hero2026-thumb span {
+  position: absolute; left: 4px; bottom: 4px; min-width: 16px; padding: 1px 4px; text-align: center;
+  background: rgba(21, 19, 15, 0.72); color: var(--foam); font-size: 0.62rem; letter-spacing: 0.04em;
+}
 
 /* ===================================================================
    Mobile / iPhone refinements (whole-site pass)

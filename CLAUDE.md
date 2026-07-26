@@ -216,6 +216,15 @@ Publish/unpublish, delete (row + storage file), feature/Recent Work slots,
 send-to-top, bulk rename, bulk move-to-location, create location — from `/admin`
 and (edit/unpublish/send-to-top) inline on the live gallery when signed in.
 
+**2026 Europe hero (`/admin` → Visibility):** the home page's crossfading "2026"
+trip banner, sat between the landing hero and Recent Work and clicking through to
+`/galleries`. Its photos are an **ordered id list in one `site_settings` row**
+(`hero_2026_photos`, a JSON array string — the same trick the shop's `shop_preview`
+wall uses), so it needed **no migration**. The picker offers Europe-region photos
+only; order drives both the crossfade sequence and the location ticker (read off
+the photos' own `location`, nothing hardcoded). No picks = the section doesn't
+render at all. The `hero_2026` visibility flag hides it independently.
+
 **Full per-photo editor (`/admin`):** every field is editable — title,
 description, location, year, capture date, kind, aspect, altitude, lat/lon,
 **source file path**, sort order, published/featured/map-feature — plus

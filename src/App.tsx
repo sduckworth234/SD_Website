@@ -17,6 +17,7 @@ import {
   MapPin,
   LoaderCircle,
   Pencil,
+  Plane,
   Plus,
   RotateCw,
   Search,
@@ -404,6 +405,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
 
   function goToMap() { window.history.pushState({}, "", "/map"); onNavigate("/map"); }
   function goToShop() { window.history.pushState({}, "", "/shop"); onNavigate("/shop"); }
+  function goToGalleries() { window.history.pushState({}, "", "/galleries"); onNavigate("/galleries"); }
   function viewPhotoOnMap(photo: Photo) {
     if (photo.latitude == null || photo.longitude == null) return;
     window.history.pushState({}, "", `/map?lat=${photo.latitude}&lng=${photo.longitude}`);
@@ -448,6 +450,20 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
   // crop). "0" = no rotation (covers/centre-crops as usual).
   const heroRotate = settingValue.hero_mobile_rotate ?? "0";
 
+  // The 2026 Europe hero: an admin-curated, ordered photo list stored as a
+  // JSON id array in site_settings (same pattern as the shop's "wall" preview).
+  // Empty/unset = the section doesn't render at all (see Hero2026).
+  const hero2026Photos = useMemo(() => {
+    let ids: string[] = [];
+    try {
+      ids = settingValue.hero_2026_photos ? (JSON.parse(settingValue.hero_2026_photos) as string[]) : [];
+    } catch {
+      ids = [];
+    }
+    const byId = new Map(publicPhotos.map((p) => [p.id, p]));
+    return ids.map((id) => byId.get(id)).filter((p): p is Photo => Boolean(p));
+  }, [publicPhotos, settingValue.hero_2026_photos]);
+
   useSeo("Sam Duckworth Photography — Aerial & Landscape, Northern Beaches", { path: "/" });
   useScrollReveal([isLoading, recentPhotos.length, locationNames.length]);
 
@@ -463,6 +479,11 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
         </>
       ) : (
         <>
+          {hero2026Photos.length ? (
+            <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "hero_2026")} label="2026 Europe hero">
+              <Hero2026 photos={hero2026Photos} onOpen={goToGalleries} />
+            </AdminHideable>
+          ) : null}
           {recentPhotos.length >= 5 ? (
             <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "recent_work")} label="Recent Work">
               <RecentWork
@@ -580,7 +601,9 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   }
 
   useEffect(() => {
-    const valid = activeLocation !== allLocations && publicPhotos.some((p) => p.location === activeLocation);
+    // "All work" is always valid; a specific (e.g. deep-linked) location is only
+    // valid while it still has photos — otherwise fall back to a random landing.
+    const valid = activeLocation === allLocations || publicPhotos.some((p) => p.location === activeLocation);
     if (!valid && locationNames.length) setActiveLocation(pickLandingLocation(locationNames));
   }, [activeLocation, publicPhotos, locationNames]);
 
@@ -1468,6 +1491,81 @@ function RotatingLocations({ locations }: { locations: string[] }) {
   );
 }
 
+// The 2026 Europe trip banner: a themed sibling to the landing Hero, sat
+// between it and Recent Work. Crossfades through the admin-curated photo set
+// (site_settings "hero_2026_photos" — see VisibilityAdmin); "2026" stands in
+// for the wordmark and the location ticker is read straight off the curated
+// photos' own `location` field, so nothing about which countries is hardcoded.
+// Renders nothing until at least one photo is curated.
+function Hero2026({ photos, onOpen }: { photos: Photo[]; onOpen: () => void }) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    setIndex(0);
+  }, [photos.length]);
+
+  useEffect(() => {
+    if (photos.length <= 1) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = window.setInterval(() => setIndex((i) => (i + 1) % photos.length), 4500);
+    return () => window.clearInterval(id);
+  }, [photos.length]);
+
+  const locationTicker = useMemo(() => {
+    const seen = new Set<string>();
+    const list: string[] = [];
+    for (const photo of photos) {
+      if (photo.location && !seen.has(photo.location)) {
+        seen.add(photo.location);
+        list.push(photo.location);
+      }
+    }
+    return list;
+  }, [photos]);
+
+  if (!photos.length) return null;
+
+  return (
+    <section
+      aria-label="2026 Europe trip — view the gallery"
+      className="hero-2026 scroll-reveal"
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        onOpen();
+      }}
+      role="link"
+      tabIndex={0}
+    >
+      <div className="hero-2026-photos" aria-hidden="true">
+        {photos.map((photo, i) => (
+          <div className={`hero-2026-frame${i === index ? " is-active" : ""}`} key={photo.id}>
+            <SmartImage
+              alt=""
+              priority={i === 0}
+              sizes="100vw"
+              src={photo.imageUrl}
+              srcSet={srcSetFor(photo)}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="hero-2026-copy">
+        <p className="hero-2026-year">2026</p>
+        <div className="hero-2026-route" aria-hidden="true">
+          <span className="dot" />
+          <span className="seg" />
+          <Plane size={13} style={{ transform: "rotate(45deg)" }} />
+          <span className="seg" />
+          <span className="dot" />
+        </div>
+        {locationTicker.length ? <p className="hero-2026-locs">{locationTicker.join(" · ")}</p> : null}
+      </div>
+    </section>
+  );
+}
+
 function LocationRail({
   activeLocation,
   excludeUnsorted = false,
@@ -2113,6 +2211,7 @@ function Lightbox({
 // The public visibility flags the admin can toggle. Labels live here (not just
 // the DB) so the panel reads well even if a seed row is missing.
 const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
+  { key: "hero_2026", label: "Home — 2026 Europe hero", hint: "The crossfading trip banner near the top of the home page." },
   { key: "recent_work", label: "Home — Recent Work mosaic", hint: "The editorial photo mosaic near the top of the home page." },
   { key: "map_promo", label: "Home — Map promo", hint: "The interactive-map teaser on the home page." },
   { key: "collection_cards", label: "Home — Collection cards", hint: "The cycling location tiles on the home page." },
@@ -2123,10 +2222,15 @@ const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
 
 // Admin panel: flip what the public can see, and choose the two photos shown in
 // the home Framed Editions banner. Reads/writes public.site_settings.
-function VisibilityAdmin({ photos }: { photos: Photo[] }) {
+function VisibilityAdmin({ photos, locations }: { photos: Photo[]; locations: GalleryLocation[] }) {
   const [settings, setSettings] = useState<SiteSetting[]>([]);
   const [bannerSlot, setBannerSlot] = useState<null | "portrait" | "landscape">(null);
+  const [curatingHero2026, setCuratingHero2026] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // For the 2026 picker's candidate list — narrows a big archive down to the
+  // trip's own photos so curating doesn't mean scrolling past every gallery.
+  const regionByLocation = useMemo(() => new Map(locations.map((l) => [l.name, l.region])), [locations]);
 
   const load = useCallback(async () => {
     setSettings(await getSiteSettings());
@@ -2170,6 +2274,30 @@ function VisibilityAdmin({ photos }: { photos: Photo[] }) {
     portrait: photos.find((p) => p.id === value.banner_portrait),
     landscape: photos.find((p) => p.id === value.banner_landscape),
   };
+
+  // The 2026 Europe hero carousel: an ordered id list in one site_settings
+  // value (same JSON-array-in-a-string trick the shop's "wall" preview uses).
+  const hero2026Ids = useMemo(() => {
+    try {
+      return value.hero_2026_photos ? (JSON.parse(value.hero_2026_photos) as string[]) : [];
+    } catch {
+      return [];
+    }
+  }, [value.hero_2026_photos]);
+  const hero2026Chosen = useMemo(() => {
+    const byId = new Map(photos.map((p) => [p.id, p]));
+    return hero2026Ids.map((id) => byId.get(id)).filter((p): p is Photo => Boolean(p));
+  }, [hero2026Ids, photos]);
+  async function saveHero2026(orderedIds: string[]) {
+    setBusy(true);
+    try {
+      await setSiteSetting("hero_2026_photos", orderedIds.length ? JSON.stringify(orderedIds) : null);
+      await load();
+      setCuratingHero2026(false);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <section className="admin-visibility" aria-label="Visibility and banner">
@@ -2232,6 +2360,45 @@ function VisibilityAdmin({ photos }: { photos: Photo[] }) {
           initialIds={value[bannerSlot === "portrait" ? "banner_portrait" : "banner_landscape"] ? [value[bannerSlot === "portrait" ? "banner_portrait" : "banner_landscape"] as string] : []}
           onClose={() => setBannerSlot(null)}
           onSave={async (ids) => { await pickBanner(bannerSlot, ids[0] ?? null); }}
+        />
+      ) : null}
+      <div className="admin-sec-head vis-banner-head"><Images size={16} aria-hidden="true" /><h2>2026 Europe hero</h2></div>
+      <p className="admin-sec-hint">
+        Photos that crossfade in the home page's "2026" banner. Order sets the crossfade sequence and the
+        location ticker beneath it — pick them in the order you want the trip to read. Empty = the banner
+        stays hidden.
+      </p>
+      <div className="hero2026-strip">
+        {hero2026Chosen.length ? (
+          hero2026Chosen.map((photo, i) => (
+            <div className="hero2026-thumb" key={photo.id}>
+              <img alt={photo.title} src={thumbUrl(photo, 160)} />
+              <span>{i + 1}</span>
+            </div>
+          ))
+        ) : (
+          <div className="banner-slot-empty">None chosen — banner hidden</div>
+        )}
+      </div>
+      <div className="banner-slot-actions">
+        <button className="ghost-button" type="button" onClick={() => setCuratingHero2026(true)} disabled={busy}>
+          Choose photos
+        </button>
+        {hero2026Chosen.length ? (
+          <button className="text-button" type="button" onClick={() => saveHero2026([])} disabled={busy}>
+            Clear
+          </button>
+        ) : null}
+      </div>
+      {curatingHero2026 ? (
+        <OrderedPhotoPicker
+          title="2026 Europe hero carousel"
+          hint="Pick and order up to 16 photos from the trip. They crossfade in that order on the home page; the ticker beneath reads their locations, first-seen order."
+          max={16}
+          photos={photos.filter((p) => p.published && regionByLocation.get(p.location) === "Europe")}
+          initialIds={hero2026Ids}
+          onClose={() => setCuratingHero2026(false)}
+          onSave={saveHero2026}
         />
       ) : null}
     </section>
@@ -2571,7 +2738,7 @@ function AdminDashboard({ session }: { session: Session }) {
         <div className="admin-toast" role="status" onClick={() => setMessage("")}>{message}</div>
       ) : null}
       <MapFeedAdmin photos={adminPhotos} locations={locations} onChanged={refresh} />
-      <VisibilityAdmin photos={adminPhotos} />
+      <VisibilityAdmin photos={adminPhotos} locations={locations} />
       <LocationRail
         activeLocation={activeLocation}
         locations={locations}
