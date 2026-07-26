@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { fallbackLocations, photos as fallbackPhotos } from "../data/photos";
-import type { GalleryLocation, Photo, SiteSetting } from "../types";
+import type { Collection, GalleryLocation, Photo, SiteSetting } from "../types";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabasePublishableKey =
@@ -138,6 +138,58 @@ function mapPhoto(row: PhotoRow): Photo {
   };
 }
 
+type SeriesRow = {
+  id: string;
+  slug: string;
+  name: string;
+  period: string | null;
+  subtitle: string | null;
+  sort_order: number;
+  is_visible: boolean;
+};
+
+function mapCollection(row: SeriesRow): Collection {
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    period: row.period,
+    subtitle: row.subtitle,
+    sortOrder: row.sort_order,
+    isVisible: row.is_visible,
+  };
+}
+
+const NO_COLLECTIONS = { collections: [] as Collection[], membership: new Map<string, string[]>() };
+
+// Collections (public.series) ship AHEAD of their migration, so every failure
+// here degrades to "no collections" rather than taking the gallery down with
+// it — before the SQL is applied the site renders exactly as it did before.
+async function fetchCollections(): Promise<typeof NO_COLLECTIONS> {
+  if (!supabase) return NO_COLLECTIONS;
+  try {
+    const [{ data: series, error: seriesError }, { data: links, error: linkError }] =
+      await Promise.all([
+        supabase
+          .from("series")
+          .select("id, slug, name, period, subtitle, sort_order, is_visible")
+          .order("sort_order", { ascending: true }),
+        supabase.from("photo_series").select("photo_id, series_id"),
+      ]);
+    if (seriesError || linkError) return NO_COLLECTIONS;
+
+    const membership = new Map<string, string[]>();
+    for (const link of (links ?? []) as { photo_id: string; series_id: string }[]) {
+      const existing = membership.get(link.photo_id);
+      if (existing) existing.push(link.series_id);
+      else membership.set(link.photo_id, [link.series_id]);
+    }
+    return { collections: ((series ?? []) as SeriesRow[]).map(mapCollection), membership };
+  } catch {
+    return NO_COLLECTIONS;
+  }
+}
+
 // The bundled fallback (dev / outage). Strip storage_path so the consumers fall
 // back to the rows' own imageUrl instead of generating Supabase transform URLs
 // for objects that don't exist (which would 404-storm the CDN on a phone).
@@ -145,6 +197,7 @@ function fallbackGallery() {
   return {
     locations: fallbackLocations,
     photos: fallbackPhotos.map((p) => ({ ...p, storagePath: undefined })),
+    collections: [] as Collection[],
     source: "fallback" as const,
   };
 }
@@ -177,7 +230,7 @@ async function getGalleryDataInner() {
       .order("created_at", { ascending: false });
 
   // eslint-disable-next-line prefer-const
-  let [{ data: locations, error: locationError }, { data: photos, error: photoError }] =
+  let [{ data: locations, error: locationError }, { data: photos, error: photoError }, collectionData] =
     await Promise.all([
       supabase
         .from("locations")
@@ -188,6 +241,7 @@ async function getGalleryDataInner() {
       // column exists (otherwise the whole site would fall back to bundled
       // data over one missing column).
       photoQuery(`ratio, ${PUBLIC_PHOTO_COLUMNS}`),
+      fetchCollections(),
     ]);
   if (photoError) {
     ({ data: photos, error: photoError } = await photoQuery(PUBLIC_PHOTO_COLUMNS));
@@ -200,7 +254,12 @@ async function getGalleryDataInner() {
 
   return {
     locations: (locations ?? []).map(mapLocation),
-    photos: ((photos ?? []) as unknown as PhotoRow[]).map(mapPhoto),
+    photos: ((photos ?? []) as unknown as PhotoRow[]).map((row) => {
+      const photo = mapPhoto(row);
+      photo.collectionIds = collectionData.membership.get(row.id) ?? [];
+      return photo;
+    }),
+    collections: collectionData.collections,
     source: "supabase" as const,
   };
 }
@@ -709,6 +768,168 @@ export async function setPhotoShop(
 
   const { error } = await supabase.from("photos").update(updates).eq("id", photoId);
   if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Collections (public.series) — admin CRUD + membership.
+// ---------------------------------------------------------------------------
+
+// Admin view: every collection including hidden ones (RLS lets authenticated
+// read them all). Returns [] when the migration hasn't been applied yet.
+export async function getAdminCollections(): Promise<Collection[]> {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from("series")
+      .select("id, slug, name, period, subtitle, sort_order, is_visible")
+      .order("sort_order", { ascending: true });
+    if (error) {
+      console.warn("Could not read collections", error);
+      return [];
+    }
+    return ((data ?? []) as SeriesRow[]).map(mapCollection);
+  } catch (error) {
+    console.warn("Collections fetch failed", error);
+    return [];
+  }
+}
+
+function slugifyCollection(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export async function createCollection(input: {
+  name: string;
+  period?: string | null;
+  subtitle?: string | null;
+}): Promise<Collection> {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const name = input.name.trim();
+  if (!name) throw new Error("A collection needs a name.");
+
+  // Slug comes from the display title so "2026 Europe" -> europe... no: keep the
+  // period first, matching how the collection reads ("2026 Europe" -> 2026-europe).
+  const base = slugifyCollection([input.period, name].filter(Boolean).join(" ")) || "collection";
+
+  // Land it at the top of the rail — new trips are the ones worth showing first.
+  const { data: existing } = await supabase.from("series").select("slug, sort_order");
+  const taken = new Set((existing ?? []).map((row: { slug: string }) => row.slug));
+  let slug = base;
+  for (let i = 2; taken.has(slug); i += 1) slug = `${base}-${i}`;
+
+  const { data, error } = await supabase
+    .from("series")
+    .insert({
+      slug,
+      name,
+      period: input.period?.trim() || null,
+      subtitle: input.subtitle?.trim() || null,
+      sort_order: 0,
+    })
+    .select("id, slug, name, period, subtitle, sort_order, is_visible")
+    .single();
+  if (error) throw error;
+
+  // Push everything else down one so the newcomer leads.
+  for (const row of (existing ?? []) as { slug: string; sort_order: number }[]) {
+    await supabase.from("series").update({ sort_order: row.sort_order + 1 }).eq("slug", row.slug);
+  }
+  return mapCollection(data as SeriesRow);
+}
+
+export async function updateCollection(
+  id: string,
+  input: {
+    name?: string;
+    period?: string | null;
+    subtitle?: string | null;
+    sortOrder?: number;
+    isVisible?: boolean;
+  },
+) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const updates: Record<string, string | number | boolean | null> = {};
+  if (input.name !== undefined) {
+    const name = input.name.trim();
+    if (!name) throw new Error("A collection needs a name.");
+    updates.name = name;
+  }
+  if (input.period !== undefined) updates.period = input.period?.trim() || null;
+  if (input.subtitle !== undefined) updates.subtitle = input.subtitle?.trim() || null;
+  if (input.sortOrder !== undefined) updates.sort_order = input.sortOrder;
+  if (input.isVisible !== undefined) updates.is_visible = input.isVisible;
+  if (!Object.keys(updates).length) return;
+
+  const { error } = await supabase.from("series").update(updates).eq("id", id);
+  if (error) throw error;
+}
+
+// Deletes the collection itself; `on delete cascade` clears its membership rows.
+// The photos are untouched.
+export async function deleteCollection(id: string) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const { error } = await supabase.from("series").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// Replace a collection's membership wholesale with `photoIds`, preserving the
+// given order. Diffs against what's already there so re-saving an unchanged
+// selection is a no-op rather than a delete-and-reinsert storm.
+export async function setCollectionPhotos(collectionId: string, photoIds: string[]) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const { data: current, error: readError } = await supabase
+    .from("photo_series")
+    .select("photo_id")
+    .eq("series_id", collectionId);
+  if (readError) throw readError;
+
+  const before = new Set((current ?? []).map((row: { photo_id: string }) => row.photo_id));
+  const after = new Set(photoIds);
+
+  const removed = [...before].filter((id) => !after.has(id));
+  if (removed.length) {
+    const { error } = await supabase
+      .from("photo_series")
+      .delete()
+      .eq("series_id", collectionId)
+      .in("photo_id", removed);
+    if (error) throw error;
+  }
+
+  const rows = photoIds.map((photoId, index) => ({
+    photo_id: photoId,
+    series_id: collectionId,
+    sort_order: index,
+  }));
+  if (rows.length) {
+    const { error } = await supabase
+      .from("photo_series")
+      .upsert(rows, { onConflict: "photo_id,series_id" });
+    if (error) throw error;
+  }
+}
+
+// Every photo id currently in a collection (admin curation needs the full set,
+// including unpublished drafts, which the public membership map omits).
+export async function getCollectionMembership(): Promise<Map<string, string[]>> {
+  const map = new Map<string, string[]>();
+  if (!supabase) return map;
+  try {
+    const { data, error } = await supabase.from("photo_series").select("photo_id, series_id");
+    if (error) return map;
+    for (const link of (data ?? []) as { photo_id: string; series_id: string }[]) {
+      const existing = map.get(link.series_id);
+      if (existing) existing.push(link.photo_id);
+      else map.set(link.series_id, [link.photo_id]);
+    }
+    return map;
+  } catch {
+    return map;
+  }
 }
 
 // Read every site_settings row (visibility flags + small key/value settings).

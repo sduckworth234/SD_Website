@@ -51,7 +51,29 @@ export type Photo = {
   // Sold as a Framed Edition print on /shop, and its manual order there (asc).
   inShop?: boolean;
   shopOrder?: number | null;
+  // Ids of the Collections this photo belongs to (public.photo_series). A photo
+  // can sit in several. Empty/absent = it only ever shows under "All work".
+  collectionIds?: string[];
 };
+
+// A gallery "Collection" — a trip or body of work, the second filter axis on
+// /galleries above the location tabs. Stored in public.series (NOT "collections"
+// — `photos.collection_order` already means the home page location cards).
+export type Collection = {
+  id: string;
+  slug: string;
+  name: string;
+  // Big line in the rail: "2026", "Ongoing", "Road trips". Null shows name alone.
+  period?: string | null;
+  subtitle?: string | null;
+  sortOrder: number;
+  isVisible: boolean;
+};
+
+// "2026 Europe" — the rail's big+small lines joined, and the gallery page title.
+export function collectionTitle(collection: Collection): string {
+  return [collection.period, collection.name].filter(Boolean).join(" ");
+}
 
 // A row from public.site_settings: visibility flags + small key/value settings
 // (e.g. the chosen Framed Editions banner photos). Anon reads; admins write.

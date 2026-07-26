@@ -216,6 +216,27 @@ Publish/unpublish, delete (row + storage file), feature/Recent Work slots,
 send-to-top, bulk rename, bulk move-to-location, create location — from `/admin`
 and (edit/unpublish/send-to-top) inline on the live gallery when signed in.
 
+**Collections — the galleries page's second filter axis (`/admin` → Collections).**
+Trips/bodies of work ("2024 Europe") shown as a rail ABOVE the location tabs;
+picking one narrows the places rail to only the places inside it. This exists
+because a place tab alone became ambiguous — **Italy spans 2022, 2024 and 2026**.
+- **Naming, important:** the tables are **`series` / `photo_series`**, but the UI
+  and the TS type say **Collection**. "Collection" was already taken —
+  `photos.collection_order` + the `collection_cards` flag mean the HOME PAGE's
+  per-location cards. DB says series, humans say Collections.
+- Membership is **many-to-many**, so a photo can be in "2024 Europe" and a later
+  cross-cutting set without a migration.
+- Desktop = collections rail + a scope breadcrumb ("Showing 2024 Europe › Italy ·
+  50 photos · Clear"). Phones (≤760px) = a Collections/Places switch instead, so
+  two sticky rails never eat the viewport; only the PLACES rail is sticky.
+- Fully editable from `/admin`: create/rename/reorder/hide/delete, and curate by
+  filtering the archive on place, year or free text with bulk add/remove.
+- Fail-safe: a collection with no published photo is hidden from the public; a
+  place missing from a newly-picked collection resets to "All places" rather than
+  showing an empty grid; URL is `?collection=slug&location=Name`.
+- `src/lib/supabase.ts` **degrades to zero collections if the tables are absent**,
+  so the app can ship before the SQL is run.
+
 **2026 Europe hero (`/admin` → Visibility):** the home page's crossfading "2026"
 trip banner, sat between the landing hero and Recent Work and clicking through to
 `/galleries`. Its photos are an **ordered id list in one `site_settings` row**
@@ -223,7 +244,11 @@ trip banner, sat between the landing hero and Recent Work and clicking through t
 wall uses), so it needed **no migration**. The picker offers Europe-region photos
 only; order drives both the crossfade sequence and the location ticker (read off
 the photos' own `location`, nothing hardcoded). No picks = the section doesn't
-render at all. The `hero_2026` visibility flag hides it independently.
+render at all. The `hero_2026` visibility flag hides it independently. Its
+heading is the `hero_2026_title` setting (default "Europe 2026"), and clicking it
+opens the gallery scoped to a collection — by default whichever collection its own
+curated photos belong to, overridable via `hero_2026_collection` (a slug, or
+`__none__` for the unscoped gallery).
 
 **Full per-photo editor (`/admin`):** every field is editable — title,
 description, location, year, capture date, kind, aspect, altitude, lat/lon,

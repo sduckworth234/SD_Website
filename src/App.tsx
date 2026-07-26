@@ -31,11 +31,15 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import {
   assignRecentSlot,
   bulkEditPhotos,
+  createCollection,
   createLocation,
   createPhotoRecord,
+  deleteCollection,
   deletePhoto,
   ensureLocation,
+  getAdminCollections,
   getAdminPhotos,
+  getCollectionMembership,
   getGalleryData,
   getRecentPhotos,
   getSiteSettings,
@@ -44,6 +48,7 @@ import {
   photoBucket,
   isCurrentUserAdmin,
   sendPhotoToTop,
+  setCollectionPhotos,
   setCollectionPicks,
   setLocationFeedOrder,
   setMapFeature,
@@ -52,12 +57,14 @@ import {
   setSiteFlag,
   setSiteSetting,
   supabase,
+  updateCollection,
   updatePhotoDetails,
   updatePhotoCuration,
   updatePhotoVisibility,
   uploadPhotoAsset,
 } from "./lib/supabase";
-import type { GalleryLocation, LocationBucket, Photo, SiteSetting } from "./types";
+import type { Collection, GalleryLocation, LocationBucket, Photo, SiteSetting } from "./types";
+import { collectionTitle } from "./types";
 import { compressToWebp, extractPhotoMetadata } from "./lib/ingest";
 import type { ExtractedPhotoMeta } from "./lib/ingest";
 import { reverseGeocode } from "./lib/geocode";
@@ -91,6 +98,30 @@ function pickLandingLocation(names: string[]): string {
 // category. Falls back to the random landing when absent or invalid.
 function readLocationParam(): string | null {
   try { return new URLSearchParams(window.location.search).get("location"); } catch { return null; }
+}
+
+// /galleries?collection=europe-2024 — how the 2026 hero and any shared link
+// open the gallery scoped to one collection.
+function readCollectionParam(): string | null {
+  try { return new URLSearchParams(window.location.search).get("collection"); } catch { return null; }
+}
+
+// Tracks a media query. Drives the galleries filter's one real breakpoint:
+// desktop shows both rails at once, phones switch between them (two sticky
+// rails would eat most of a phone screen before a single photo appeared).
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(() => {
+    try { return window.matchMedia(query).matches; } catch { return false; }
+  });
+  useEffect(() => {
+    let mq: MediaQueryList;
+    try { mq = window.matchMedia(query); } catch { return; }
+    const onChange = () => setMatches(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [query]);
+  return matches;
 }
 
 // A right-sized image variant (the gallery imageUrl is 1800px — too big for small
@@ -265,6 +296,7 @@ function useSiteData() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [recentPhotos, setRecentPhotos] = useState<Photo[]>([]);
   const [locations, setLocations] = useState<GalleryLocation[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [settings, setSettings] = useState<SiteSetting[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminChecked, setAdminChecked] = useState(false);
@@ -279,6 +311,7 @@ function useSiteData() {
     ]);
     setPhotos(data.photos);
     setLocations(data.locations);
+    setCollections(data.collections ?? []);
     setRecentPhotos(recent);
     setSettings(siteSettings);
   }, []);
@@ -369,7 +402,18 @@ function useSiteData() {
     return map;
   }, [settings]);
 
-  return { photos, recentPhotos, locations, settings, flags, settingValue, publicPhotos, locationNames, isAdmin, adminChecked, isScrolled, isLoading, loadGallery };
+  // Only collections that still have a published photo reach the public rail —
+  // a trip created before its upload (2026 Europe) stays invisible until it has
+  // something to show. Admins see every collection so they can curate it.
+  const visibleCollections = useMemo(() => {
+    const populated = new Set<string>();
+    for (const photo of publicPhotos) {
+      for (const id of photo.collectionIds ?? []) populated.add(id);
+    }
+    return collections.filter((c) => (isAdmin ? true : c.isVisible && populated.has(c.id)));
+  }, [collections, publicPhotos, isAdmin]);
+
+  return { photos, recentPhotos, locations, collections, visibleCollections, settings, flags, settingValue, publicPhotos, locationNames, isAdmin, adminChecked, isScrolled, isLoading, loadGallery };
 }
 
 // A flag is "on" unless explicitly set to false (absent row = visible).
@@ -394,7 +438,7 @@ function AdminHideable({ visible, isAdmin, label, children }: { visible: boolean
 // The landing page: hero, recent work, the map teaser, location collection cards,
 // and (admin-only for now) the Framed Editions shop banner.
 function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
-  const { photos, recentPhotos, publicPhotos, locations, locationNames, flags, settingValue, isAdmin, isScrolled, isLoading, loadGallery } = useSiteData();
+  const { photos, recentPhotos, publicPhotos, locations, locationNames, collections, flags, settingValue, isAdmin, isScrolled, isLoading, loadGallery } = useSiteData();
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [recentSlot, setRecentSlot] = useState<number | null>(null);
@@ -405,7 +449,11 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
 
   function goToMap() { window.history.pushState({}, "", "/map"); onNavigate("/map"); }
   function goToShop() { window.history.pushState({}, "", "/shop"); onNavigate("/shop"); }
-  function goToGalleries() { window.history.pushState({}, "", "/galleries"); onNavigate("/galleries"); }
+  function goToGalleries(collectionSlug?: string | null) {
+    const query = collectionSlug ? `?collection=${encodeURIComponent(collectionSlug)}` : "";
+    window.history.pushState({}, "", `/galleries${query}`);
+    onNavigate("/galleries");
+  }
   function viewPhotoOnMap(photo: Photo) {
     if (photo.latitude == null || photo.longitude == null) return;
     window.history.pushState({}, "", `/map?lat=${photo.latitude}&lng=${photo.longitude}`);
@@ -464,6 +512,26 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
     return ids.map((id) => byId.get(id)).filter((p): p is Photo => Boolean(p));
   }, [publicPhotos, settingValue.hero_2026_photos]);
 
+  // Where the banner clicks through to. Defaults to whichever collection its own
+  // curated photos mostly belong to — so it lands on the trip it depicts without
+  // anything to configure — and `hero_2026_collection` overrides that by slug.
+  const hero2026Target = useMemo(() => {
+    const explicit = settingValue.hero_2026_collection;
+    // Sentinel from the admin dropdown: deliberately open the whole gallery.
+    if (explicit === "__none__") return null;
+    if (explicit) return explicit;
+    const tally = new Map<string, number>();
+    for (const photo of hero2026Photos) {
+      for (const id of photo.collectionIds ?? []) tally.set(id, (tally.get(id) ?? 0) + 1);
+    }
+    let bestId: string | null = null;
+    let best = 0;
+    for (const [id, count] of tally) {
+      if (count > best) { best = count; bestId = id; }
+    }
+    return bestId ? collections.find((c) => c.id === bestId)?.slug ?? null : null;
+  }, [settingValue.hero_2026_collection, hero2026Photos, collections]);
+
   useSeo("Sam Duckworth Photography — Aerial & Landscape, Northern Beaches", { path: "/" });
   useScrollReveal([isLoading, recentPhotos.length, locationNames.length]);
 
@@ -481,7 +549,11 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
         <>
           {hero2026Photos.length ? (
             <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "hero_2026")} label="2026 Europe hero">
-              <Hero2026 photos={hero2026Photos} onOpen={goToGalleries} />
+              <Hero2026
+                heading={settingValue.hero_2026_title || "Europe 2026"}
+                onOpen={() => goToGalleries(hero2026Target)}
+                photos={hero2026Photos}
+              />
             </AdminHideable>
           ) : null}
           {recentPhotos.length >= 5 ? (
@@ -569,12 +641,55 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
 // The full photo gallery (moved off the home page): filter rail + masonry/box
 // grid + lightbox, with inline admin tools and ?location= deep-linking.
 function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) {
-  const { publicPhotos, locations, locationNames, isAdmin, isLoading, loadGallery } = useSiteData();
+  const { publicPhotos, locations, visibleCollections, isAdmin, isLoading, loadGallery } = useSiteData();
   const [activeLocation, setActiveLocation] = useState<ActiveLocation>(() => readLocationParam() ?? allLocations);
+  const [activeCollectionId, setActiveCollectionId] = useState<string>(ALL_COLLECTIONS);
+  // Phones can't afford two sticky rails, so they switch between them instead.
+  const isPhone = useMediaQuery("(max-width: 760px)");
+  const [mobileAxis, setMobileAxis] = useState<"collections" | "places">("collections");
   const [view, setView] = useState<GalleryView>("flow");
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [imagesReady, setImagesReady] = useState(false);
+
+  const activeCollection = activeCollectionId === ALL_COLLECTIONS
+    ? null
+    : visibleCollections.find((c) => c.id === activeCollectionId) ?? null;
+
+  // Resolve ?collection=slug once the collections have loaded.
+  const collectionParamApplied = useRef(false);
+  useEffect(() => {
+    if (collectionParamApplied.current || !visibleCollections.length) return;
+    collectionParamApplied.current = true;
+    const slug = readCollectionParam();
+    if (!slug) return;
+    const match = visibleCollections.find((c) => c.slug === slug);
+    if (match) setActiveCollectionId(match.id);
+  }, [visibleCollections]);
+
+  // Photos inside the active collection — the pool everything else derives from.
+  const scopedPhotos = useMemo(() => {
+    if (!activeCollection) return publicPhotos;
+    return publicPhotos.filter((p) => (p.collectionIds ?? []).includes(activeCollection.id));
+  }, [publicPhotos, activeCollection]);
+
+  // The places rail is rebuilt from the scoped pool, so choosing "2022 Europe"
+  // leaves only Italy/Monaco/Greece — the whole point of the collections axis.
+  const scopedLocationNames = useMemo(() => {
+    const seen = new Set<string>();
+    for (const photo of scopedPhotos) {
+      if (photo.location && photo.location !== "Unsorted") seen.add(photo.location);
+    }
+    return [...seen];
+  }, [scopedPhotos]);
+
+  const collectionCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const photo of publicPhotos) {
+      for (const id of photo.collectionIds ?? []) counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return counts;
+  }, [publicPhotos]);
 
   async function unpublishPhoto(photo: Photo) {
     if (!window.confirm(`Unpublish "${photo.title}"? It will disappear from the public gallery.`)) return;
@@ -601,26 +716,53 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   }
 
   useEffect(() => {
-    // "All work" is always valid; a specific (e.g. deep-linked) location is only
-    // valid while it still has photos — otherwise fall back to a random landing.
-    const valid = activeLocation === allLocations || publicPhotos.some((p) => p.location === activeLocation);
-    if (!valid && locationNames.length) setActiveLocation(pickLandingLocation(locationNames));
-  }, [activeLocation, publicPhotos, locationNames]);
+    // "All work" is always valid; a specific place is only valid while it still
+    // has photos WITHIN THE ACTIVE COLLECTION. Switching to a collection that
+    // lacks your current place (Albania is 2024-only) drops back to "All work"
+    // rather than stranding you on an empty grid you never asked for.
+    if (activeLocation === allLocations) return;
+    if (scopedLocationNames.includes(activeLocation)) return;
+    // Outside a collection, keep the old behaviour: a dead deep link lands
+    // somewhere real instead of showing nothing.
+    if (!activeCollection && scopedLocationNames.length) {
+      setActiveLocation(pickLandingLocation(scopedLocationNames));
+      return;
+    }
+    setActiveLocation(allLocations);
+  }, [activeLocation, activeCollection, scopedLocationNames]);
 
   const filteredPhotos = useMemo(() => {
-    if (activeLocation === allLocations) return publicPhotos;
-    return publicPhotos.filter((p) => p.location === activeLocation);
-  }, [activeLocation, publicPhotos]);
+    if (activeLocation === allLocations) return scopedPhotos;
+    return scopedPhotos.filter((p) => p.location === activeLocation);
+  }, [activeLocation, scopedPhotos]);
+
+  // Keep the URL shareable: ?collection=slug&location=Name, both optional.
+  useEffect(() => {
+    if (isLoading) return;
+    const params = new URLSearchParams();
+    if (activeCollection) params.set("collection", activeCollection.slug);
+    if (activeLocation !== allLocations) params.set("location", activeLocation);
+    const query = params.toString();
+    const next = `/galleries${query ? `?${query}` : ""}`;
+    if (window.location.pathname + window.location.search !== next) {
+      window.history.replaceState({}, "", next);
+    }
+  }, [activeCollection, activeLocation, isLoading]);
+
+  function changeCollection(id: string) {
+    setActiveCollectionId(id);
+    // Drilling into a trip on a phone should land you on its places, not leave
+    // you staring at the rail you just used.
+    if (isPhone && id !== ALL_COLLECTIONS) setMobileAxis("places");
+  }
 
   useEffect(() => {
     if (isLoading) return;
-    if (activeLocation === allLocations) {
-      // Normally transient (the landing effect picks a category) — but with no
-      // published photos at all there's nothing to land on, so release the
-      // skeleton rather than shimmer forever.
-      if (!locationNames.length) setImagesReady(true);
-      return;
-    }
+    // NB: "All work" is a real, persistent state now that collections exist (it
+    // used to be transient, auto-replaced by a random landing category). So it
+    // gets warmed like any other filter — an early return here would leave the
+    // skeleton shimmering forever on the default view.
+    //
     // Warm only the first screenful, and with the SAME srcset/sizes the grid
     // tiles use — the browser then resolves to the identical (small) variant
     // instead of pulling the full 1800px image for every photo in the category.
@@ -642,7 +784,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
     });
     const timer = window.setTimeout(() => { if (!cancelled) setImagesReady(true); }, 5000);
     return () => { cancelled = true; window.clearTimeout(timer); imgs.forEach((im) => { im.onload = null; im.onerror = null; }); };
-  }, [filteredPhotos, isLoading, activeLocation, locationNames]);
+  }, [filteredPhotos, isLoading, activeLocation]);
 
   // Once the current category is up, quietly warm the first few images of the
   // OTHER categories during idle time — switching tabs then opens on cached
@@ -686,29 +828,97 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   }, [activeLocation]);
 
   const seoLoc = activeLocation === allLocations ? null : activeLocation;
+  const collectionLabel = activeCollection ? collectionTitle(activeCollection) : null;
+  // "Italy · 2024 Europe" beats a bare "Italy" now that Italy spans three trips.
+  const pageHeading = seoLoc ?? collectionLabel ?? "All work";
+  const seoTitle = [seoLoc, collectionLabel].filter(Boolean).join(" · ");
   useSeo(
-    seoLoc ? `${seoLoc} — Sam Duckworth Photography` : "Gallery — Sam Duckworth Photography",
-    seoLoc
-      ? { description: `Aerial and landscape photography from ${seoLoc}, by Sam Duckworth.`, path: `/galleries?location=${encodeURIComponent(seoLoc)}` }
+    seoTitle ? `${seoTitle} — Sam Duckworth Photography` : "Gallery — Sam Duckworth Photography",
+    seoTitle
+      ? {
+          description: `Aerial and landscape photography${seoLoc ? ` from ${seoLoc}` : ""}${collectionLabel ? ` — ${collectionLabel}` : ""}, by Sam Duckworth.`,
+          path: `/galleries?${new URLSearchParams({
+            ...(activeCollection ? { collection: activeCollection.slug } : {}),
+            ...(seoLoc ? { location: seoLoc } : {}),
+          }).toString()}`,
+        }
       : { path: "/galleries" },
   );
 
   useScrollReveal([isLoading, imagesReady, activeLocation, filteredPhotos.length, view]);
 
+  const showCollections = visibleCollections.length > 0;
+  // Desktop shows both rails; a phone shows one at a time behind the switch.
+  const showCollectionRail = showCollections && (!isPhone || mobileAxis === "collections");
+  // A one-place collection has nothing left to filter, so its rail is noise.
+  const showPlaceRail = scopedLocationNames.length > 1 && (!isPhone || !showCollections || mobileAxis === "places");
+
   return (
     <main className="gallery-page">
       <Header isScrolled onNavigate={onNavigate} />
       <section className="gallery-page-head">
-        <h1 className="gallery-page-title">{activeLocation === allLocations ? "All work" : activeLocation}</h1>
+        <h1 className="gallery-page-title">
+          {pageHeading}
+          {seoLoc && collectionLabel ? <span className="title-qual"> · {collectionLabel}</span> : null}
+        </h1>
       </section>
-      <LocationRail
-        activeLocation={activeLocation}
-        excludeUnsorted
-        includeAllWork={false}
-        locations={locations}
-        photos={publicPhotos}
-        onChange={setActiveLocation}
-      />
+      {showCollections && isPhone ? (
+        <div className="axis-switch">
+          <div className="axis-seg" role="tablist" aria-label="Browse by">
+            <button
+              aria-selected={mobileAxis === "collections"}
+              className={mobileAxis === "collections" ? "on" : ""}
+              onClick={() => setMobileAxis("collections")}
+              role="tab"
+              type="button"
+            >
+              Collections
+            </button>
+            <button
+              aria-selected={mobileAxis === "places"}
+              className={mobileAxis === "places" ? "on" : ""}
+              onClick={() => setMobileAxis("places")}
+              role="tab"
+              type="button"
+            >
+              Places
+            </button>
+          </div>
+          <span className="axis-note">
+            {mobileAxis === "collections"
+              ? "Every trip"
+              : activeCollection
+                ? `Places in ${collectionLabel}`
+                : "Places across all work"}
+          </span>
+        </div>
+      ) : null}
+      {showCollectionRail ? (
+        <CollectionRail
+          activeId={activeCollectionId}
+          collections={visibleCollections}
+          counts={collectionCounts}
+          onChange={changeCollection}
+        />
+      ) : null}
+      {activeCollection && !isPhone ? (
+        <CollectionScope
+          collection={activeCollection}
+          count={filteredPhotos.length}
+          onClear={() => { setActiveCollectionId(ALL_COLLECTIONS); setActiveLocation(allLocations); }}
+          place={activeLocation === allLocations ? null : activeLocation}
+        />
+      ) : null}
+      {showPlaceRail ? (
+        <LocationRail
+          activeLocation={activeLocation}
+          allLabel="All places"
+          excludeUnsorted
+          locations={locations}
+          photos={scopedPhotos}
+          onChange={setActiveLocation}
+        />
+      ) : null}
       <GalleryControls onChange={setView} onViewOnMap={viewOnMap} view={view} />
       {isLoading || !imagesReady ? (
         <GallerySkeleton view={view} />
@@ -1497,7 +1707,7 @@ function RotatingLocations({ locations }: { locations: string[] }) {
 // for the wordmark and the location ticker is read straight off the curated
 // photos' own `location` field, so nothing about which countries is hardcoded.
 // Renders nothing until at least one photo is curated.
-function Hero2026({ photos, onOpen }: { photos: Photo[]; onOpen: () => void }) {
+function Hero2026({ heading, photos, onOpen }: { heading: string; photos: Photo[]; onOpen: () => void }) {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -1527,7 +1737,7 @@ function Hero2026({ photos, onOpen }: { photos: Photo[]; onOpen: () => void }) {
 
   return (
     <section
-      aria-label="2026 Europe trip — view the gallery"
+      aria-label={`${heading} — view the gallery`}
       className="hero-2026 scroll-reveal"
       onClick={onOpen}
       onKeyDown={(event) => {
@@ -1552,7 +1762,7 @@ function Hero2026({ photos, onOpen }: { photos: Photo[]; onOpen: () => void }) {
         ))}
       </div>
       <div className="hero-2026-copy">
-        <p className="hero-2026-year">2026</p>
+        <p className="hero-2026-year">{heading}</p>
         <div className="hero-2026-route" aria-hidden="true">
           <span className="dot" />
           <span className="seg" />
@@ -1566,8 +1776,90 @@ function Hero2026({ photos, onOpen }: { photos: Photo[]; onOpen: () => void }) {
   );
 }
 
+// The Collections rail: the galleries page's first filter axis. Each tab is a
+// two-line chip (period over name — "2026" / "EUROPE") so a trip reads at a
+// glance without extra copy. "All work" leads and clears the filter.
+const ALL_COLLECTIONS = "__all__";
+
+function CollectionRail({
+  activeId,
+  collections,
+  counts,
+  onChange,
+}: {
+  activeId: string;
+  collections: Collection[];
+  counts: Map<string, number>;
+  onChange: (id: string) => void;
+}) {
+  return (
+    // Reuses .location-rail for the scrolling flex row, then overrides it to sit
+    // static (only the places rail sticks) with taller two-line tabs.
+    <section className="location-rail collection-rail" aria-label="Filter gallery by collection">
+      <button
+        className={activeId === ALL_COLLECTIONS ? "active" : ""}
+        onClick={() => onChange(ALL_COLLECTIONS)}
+        type="button"
+      >
+        <span className="rail-period">All</span>
+        <span className="rail-name">All work</span>
+      </button>
+      {collections.map((collection) => {
+        const count = counts.get(collection.id) ?? 0;
+        return (
+          <button
+            className={`${activeId === collection.id ? "active" : ""}${count === 0 ? " is-empty" : ""}`}
+            key={collection.id}
+            onClick={() => onChange(collection.id)}
+            title={collection.subtitle ?? undefined}
+            type="button"
+          >
+            <span className="rail-period">{collection.period || collection.name}</span>
+            <span className="rail-name">
+              {collection.period ? collection.name : "Collection"}
+              {count === 0 ? " · empty" : ""}
+            </span>
+          </button>
+        );
+      })}
+    </section>
+  );
+}
+
+// The scope line under the collections rail (desktop). Names exactly what's on
+// screen — "2024 Europe › Italy · 50 photos" — so a place tab can never be
+// mistaken for the same place in another trip, and offers the one way out.
+function CollectionScope({
+  collection,
+  place,
+  count,
+  onClear,
+}: {
+  collection: Collection;
+  place: string | null;
+  count: number;
+  onClear: () => void;
+}) {
+  return (
+    <div className="collection-scope">
+      <span className="scope-text">
+        Showing <b>{collectionTitle(collection)}</b>
+        {place ? (
+          <>
+            <span className="scope-sep" aria-hidden="true">›</span>
+            <b>{place}</b>
+          </>
+        ) : null}
+      </span>
+      <span className="scope-count">{count === 1 ? "1 photo" : `${count} photos`}</span>
+      <button className="scope-clear" onClick={onClear} type="button">Clear</button>
+    </div>
+  );
+}
+
 function LocationRail({
   activeLocation,
+  allLabel,
   excludeUnsorted = false,
   includeAllWork = true,
   locations,
@@ -1575,6 +1867,9 @@ function LocationRail({
   onChange,
 }: {
   activeLocation: ActiveLocation;
+  // What the "no place chosen" tab reads as. On the galleries page it sits
+  // beneath the collections rail, where "All places" is clearer than "All work".
+  allLabel?: string;
   excludeUnsorted?: boolean;
   includeAllWork?: boolean;
   locations: GalleryLocation[];
@@ -1582,15 +1877,22 @@ function LocationRail({
   onChange: (location: ActiveLocation) => void;
 }) {
   const photoLocationNames = new Set(photos.map((photo) => photo.location));
+  // Deduped by name: two `locations` rows can share a display name (the archive
+  // has a few), which otherwise emits duplicate React keys and renders the tab
+  // twice. The rail is keyed by name, so one tab per name is the correct shape.
   const visibleLocations: ActiveLocation[] = [
-    ...(includeAllWork ? [allLocations] : []),
-    ...locations
-      .map((location) => location.name)
-      .filter((locationName) => photoLocationNames.has(locationName)),
-    ...[...photoLocationNames].filter(
-      (locationName) => !locations.some((location) => location.name === locationName),
+    ...new Set(
+      [
+        ...(includeAllWork ? [allLocations] : []),
+        ...locations
+          .map((location) => location.name)
+          .filter((locationName) => photoLocationNames.has(locationName)),
+        ...[...photoLocationNames].filter(
+          (locationName) => !locations.some((location) => location.name === locationName),
+        ),
+      ].filter((locationName) => !excludeUnsorted || locationName !== "Unsorted"),
     ),
-  ].filter((locationName) => !excludeUnsorted || locationName !== "Unsorted");
+  ];
 
   return (
     <section className="location-rail" aria-label="Filter gallery by location">
@@ -1601,7 +1903,7 @@ function LocationRail({
           onClick={() => onChange(location)}
           type="button"
         >
-          {location}
+          {location === allLocations ? allLabel ?? location : location}
         </button>
       ))}
     </section>
@@ -1629,6 +1931,9 @@ function MapPromo({
     );
     const order = new Map(locations.map((l) => [l.name, l.mapFeedOrder ?? 0]));
     const toFrame = (p: Photo) => ({
+      // Carried so the rendered frames can be keyed uniquely: several featured
+      // photos may share a location, so the location name is not a unique key.
+      id: p.id,
       name: p.location,
       lat: p.latitude as number,
       lon: p.longitude as number,
@@ -1714,7 +2019,7 @@ function MapPromo({
       <button className="map-promo-mini" onClick={onOpen} type="button" aria-label="Open the map of photo locations">
         {frames.map((fr, i) => (
           <img
-            key={fr.name}
+            key={fr.id}
             className={`map-promo-frame${i === active ? " is-on" : ""}`}
             src={fr.image}
             alt=""
@@ -2208,6 +2513,403 @@ function Lightbox({
   );
 }
 
+// Curation picker for one Collection. The archive is ~430 photos, so picking by
+// hand alone would be miserable — the filters (location / year / free text) plus
+// "Add all N matching" let you assemble a trip in a couple of clicks, while
+// still allowing photo-by-photo control. Selection is kept as an ordered list.
+function CollectionCurator({
+  collection,
+  photos,
+  initialIds,
+  onClose,
+  onSave,
+}: {
+  collection: Collection;
+  photos: Photo[];
+  initialIds: string[];
+  onClose: () => void;
+  onSave: (ids: string[]) => Promise<void>;
+}) {
+  const [picks, setPicks] = useState<string[]>(initialIds);
+  const [location, setLocation] = useState("All");
+  const [year, setYear] = useState("All");
+  const [query, setQuery] = useState("");
+  const [onlyPicked, setOnlyPicked] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  const locationOptions = useMemo(
+    () => [...new Set(photos.map((p) => p.location).filter(Boolean))].sort(),
+    [photos],
+  );
+  const yearOptions = useMemo(
+    () => [...new Set(photos.map((p) => p.year).filter(Boolean))].sort().reverse(),
+    [photos],
+  );
+
+  const picked = useMemo(() => new Set(picks), [picks]);
+  const matching = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return photos.filter((p) => {
+      if (location !== "All" && p.location !== location) return false;
+      if (year !== "All" && p.year !== year) return false;
+      if (onlyPicked && !picked.has(p.id)) return false;
+      if (!needle) return true;
+      return (
+        p.title.toLowerCase().includes(needle) ||
+        p.location.toLowerCase().includes(needle) ||
+        (p.sourcePath ?? "").toLowerCase().includes(needle)
+      );
+    });
+  }, [photos, location, year, query, onlyPicked, picked]);
+
+  const unpickedMatches = matching.filter((p) => !picked.has(p.id));
+
+  function toggle(id: string) {
+    setPicks((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  }
+  function addAllMatching() {
+    setPicks((cur) => [...cur, ...unpickedMatches.map((p) => p.id).filter((id) => !cur.includes(id))]);
+  }
+  function removeAllMatching() {
+    const ids = new Set(matching.map((p) => p.id));
+    setPicks((cur) => cur.filter((id) => !ids.has(id)));
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      await onSave(picks);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "The collection could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="lightbox" role="dialog" aria-modal="true" aria-label={`Curate ${collectionTitle(collection)}`}>
+      <button className="lightbox-backdrop" onClick={onClose} type="button" aria-label="Close" />
+      <section className="picker-panel curator-panel">
+        <button className="icon-button close-button" onClick={onClose} type="button" aria-label="Close">
+          <X size={18} aria-hidden="true" />
+        </button>
+        <p className="eyebrow">Curate {collectionTitle(collection)}</p>
+        <p className="picker-hint">
+          Filter by place, year or name, then add them in bulk or one at a time. Photos can belong to
+          more than one collection.
+        </p>
+
+        <div className="curator-filters">
+          <label>
+            <span>Place</span>
+            <select value={location} onChange={(e) => setLocation(e.target.value)}>
+              <option value="All">All places</option>
+              {locationOptions.map((name) => <option key={name} value={name}>{name}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>Year</span>
+            <select value={year} onChange={(e) => setYear(e.target.value)}>
+              <option value="All">All years</option>
+              {yearOptions.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </label>
+          <label className="curator-search">
+            <span>Search</span>
+            <input
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Title, place or filename"
+              type="search"
+              value={query}
+            />
+          </label>
+          <label className="curator-check">
+            <input checked={onlyPicked} onChange={(e) => setOnlyPicked(e.target.checked)} type="checkbox" />
+            <span>Only chosen</span>
+          </label>
+        </div>
+
+        <div className="curator-bulk">
+          <span className="curator-matchcount">{matching.length} matching</span>
+          <button
+            className="ghost-button"
+            disabled={!unpickedMatches.length}
+            onClick={addAllMatching}
+            type="button"
+          >
+            Add all {unpickedMatches.length || ""} matching
+          </button>
+          <button
+            className="text-button"
+            disabled={!matching.some((p) => picked.has(p.id))}
+            onClick={removeAllMatching}
+            type="button"
+          >
+            Remove matching
+          </button>
+        </div>
+
+        <div className="picker-grid">
+          {matching.map((photo) => {
+            const index = picks.indexOf(photo.id);
+            return (
+              <button
+                aria-pressed={index >= 0}
+                className={`picker-tile${index >= 0 ? " is-picked" : ""}`}
+                key={photo.id}
+                onClick={() => toggle(photo.id)}
+                title={`${photo.title} — ${photo.location}${photo.year ? ` (${photo.year})` : ""}`}
+                type="button"
+              >
+                <SmartImage src={thumbUrl(photo, 300)} alt={`${photo.title}, ${photo.location}`} />
+                {index >= 0 ? <span className="picker-badge">{index + 1}</span> : null}
+                {!photo.published ? <span className="picker-draft">Draft</span> : null}
+              </button>
+            );
+          })}
+          {!matching.length ? <p className="picker-hint">Nothing matches those filters.</p> : null}
+        </div>
+
+        <div className="picker-actions">
+          <span className="picker-count">{picks.length} in this collection</span>
+          <span className="picker-actions-spacer" />
+          <button className="ghost-button" disabled={!picks.length || saving} onClick={() => setPicks([])} type="button">
+            Clear all
+          </button>
+          <button className="solid-button" disabled={saving} onClick={save} type="button">
+            {saving ? "Saving…" : "Save collection"}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// Admin panel: create, rename, reorder, hide and curate the gallery Collections.
+// Everything about a collection is editable here — nothing is hardcoded.
+function CollectionsAdmin({ photos }: { photos: Photo[] }) {
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [membership, setMembership] = useState<Map<string, string[]>>(new Map());
+  const [curating, setCurating] = useState<Collection | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState({ name: "", period: "", subtitle: "" });
+  const [newName, setNewName] = useState("");
+  const [newPeriod, setNewPeriod] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    const [list, links] = await Promise.all([getAdminCollections(), getCollectionMembership()]);
+    setCollections(list);
+    setMembership(links);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function run(fn: () => Promise<void>) {
+    setBusy(true);
+    setError("");
+    try {
+      await fn();
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "That change could not be saved.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startEdit(collection: Collection) {
+    setEditingId(collection.id);
+    setDraft({
+      name: collection.name,
+      period: collection.period ?? "",
+      subtitle: collection.subtitle ?? "",
+    });
+  }
+
+  async function move(collection: Collection, direction: -1 | 1) {
+    const index = collections.findIndex((c) => c.id === collection.id);
+    const swap = collections[index + direction];
+    if (!swap) return;
+    await run(async () => {
+      await updateCollection(collection.id, { sortOrder: swap.sortOrder });
+      await updateCollection(swap.id, { sortOrder: collection.sortOrder });
+    });
+  }
+
+  return (
+    <section className="admin-visibility" aria-label="Collections">
+      <div className="admin-sec-head"><LayoutGrid size={16} aria-hidden="true" /><h2>Collections</h2></div>
+      <p className="admin-sec-hint">
+        Trips and bodies of work, shown as the top filter on the gallery. Choosing one narrows the place
+        tabs to just its places. A collection stays hidden from the public until it has a published photo.
+      </p>
+
+      {!collections.length ? (
+        <p className="admin-sec-hint">
+          No collections yet — either none have been created, or the <code>series</code> migration hasn’t been
+          run against the database.
+        </p>
+      ) : null}
+
+      <div className="coll-list">
+        {collections.map((collection, index) => {
+          const count = (membership.get(collection.id) ?? []).length;
+          const isEditing = editingId === collection.id;
+          return (
+            <div className={`coll-row${collection.isVisible ? "" : " is-hidden"}`} key={collection.id}>
+              {isEditing ? (
+                <div className="coll-edit">
+                  <label>
+                    <span>Big line</span>
+                    <input
+                      onChange={(e) => setDraft({ ...draft, period: e.target.value })}
+                      placeholder="2026"
+                      value={draft.period}
+                    />
+                  </label>
+                  <label>
+                    <span>Name</span>
+                    <input
+                      onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                      placeholder="Europe"
+                      value={draft.name}
+                    />
+                  </label>
+                  <label className="coll-edit-wide">
+                    <span>Subtitle (optional)</span>
+                    <input
+                      onChange={(e) => setDraft({ ...draft, subtitle: e.target.value })}
+                      placeholder="Italy, Denmark, Portugal and Greece"
+                      value={draft.subtitle}
+                    />
+                  </label>
+                  <div className="coll-edit-actions">
+                    <button
+                      className="solid-button"
+                      disabled={busy}
+                      onClick={() => run(async () => {
+                        await updateCollection(collection.id, draft);
+                        setEditingId(null);
+                      })}
+                      type="button"
+                    >
+                      Save
+                    </button>
+                    <button className="text-button" onClick={() => setEditingId(null)} type="button">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="coll-id">
+                    <b>{collectionTitle(collection)}</b>
+                    <span>
+                      {count === 1 ? "1 photo" : `${count} photos`}
+                      {collection.subtitle ? ` · ${collection.subtitle}` : ""}
+                      {collection.isVisible ? "" : " · hidden"}
+                    </span>
+                  </div>
+                  <div className="coll-actions">
+                    <button
+                      aria-label="Move up"
+                      className="icon-button"
+                      disabled={busy || index === 0}
+                      onClick={() => move(collection, -1)}
+                      title="Move up"
+                      type="button"
+                    >
+                      <ArrowUpToLine size={14} aria-hidden="true" />
+                    </button>
+                    <button
+                      aria-label="Move down"
+                      className="icon-button"
+                      disabled={busy || index === collections.length - 1}
+                      onClick={() => move(collection, 1)}
+                      title="Move down"
+                      type="button"
+                    >
+                      <ArrowUpFromLine size={14} aria-hidden="true" />
+                    </button>
+                    <button className="ghost-button" disabled={busy} onClick={() => setCurating(collection)} type="button">
+                      Photos
+                    </button>
+                    <button className="ghost-button" disabled={busy} onClick={() => startEdit(collection)} type="button">
+                      Edit
+                    </button>
+                    <button
+                      className="text-button"
+                      disabled={busy}
+                      onClick={() => run(() => updateCollection(collection.id, { isVisible: !collection.isVisible }))}
+                      type="button"
+                    >
+                      {collection.isVisible ? "Hide" : "Show"}
+                    </button>
+                    <button
+                      className="text-button danger"
+                      disabled={busy}
+                      onClick={() => {
+                        if (!window.confirm(`Delete the "${collectionTitle(collection)}" collection? The photos themselves are kept.`)) return;
+                        run(() => deleteCollection(collection.id));
+                      }}
+                      type="button"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="coll-new">
+        <label>
+          <span>Big line</span>
+          <input onChange={(e) => setNewPeriod(e.target.value)} placeholder="2026" value={newPeriod} />
+        </label>
+        <label>
+          <span>Name</span>
+          <input onChange={(e) => setNewName(e.target.value)} placeholder="Europe" value={newName} />
+        </label>
+        <button
+          className="solid-button"
+          disabled={busy || !newName.trim()}
+          onClick={() => run(async () => {
+            await createCollection({ name: newName, period: newPeriod });
+            setNewName("");
+            setNewPeriod("");
+          })}
+          type="button"
+        >
+          <Plus size={14} aria-hidden="true" /> Add collection
+        </button>
+      </div>
+      {error ? <p className="coll-error">{error}</p> : null}
+
+      {curating ? (
+        <CollectionCurator
+          collection={curating}
+          initialIds={membership.get(curating.id) ?? []}
+          onClose={() => setCurating(null)}
+          onSave={async (ids) => {
+            await setCollectionPhotos(curating.id, ids);
+            await load();
+            setCurating(null);
+          }}
+          photos={photos}
+        />
+      ) : null}
+    </section>
+  );
+}
+
 // The public visibility flags the admin can toggle. Labels live here (not just
 // the DB) so the panel reads well even if a seed row is missing.
 const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
@@ -2226,6 +2928,7 @@ function VisibilityAdmin({ photos, locations }: { photos: Photo[]; locations: Ga
   const [settings, setSettings] = useState<SiteSetting[]>([]);
   const [bannerSlot, setBannerSlot] = useState<null | "portrait" | "landscape">(null);
   const [curatingHero2026, setCuratingHero2026] = useState(false);
+  const [adminCollections, setAdminCollections] = useState<Collection[]>([]);
   const [busy, setBusy] = useState(false);
 
   // For the 2026 picker's candidate list — narrows a big archive down to the
@@ -2233,8 +2936,21 @@ function VisibilityAdmin({ photos, locations }: { photos: Photo[]; locations: Ga
   const regionByLocation = useMemo(() => new Map(locations.map((l) => [l.name, l.region])), [locations]);
 
   const load = useCallback(async () => {
-    setSettings(await getSiteSettings());
+    const [siteSettings, collections] = await Promise.all([getSiteSettings(), getAdminCollections()]);
+    setSettings(siteSettings);
+    setAdminCollections(collections);
   }, []);
+
+  // Wrap a setting write so the controls lock while it's in flight.
+  async function run(fn: () => Promise<void>) {
+    setBusy(true);
+    try {
+      await fn();
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
   useEffect(() => {
     load();
   }, [load]);
@@ -2390,6 +3106,33 @@ function VisibilityAdmin({ photos, locations }: { photos: Photo[]; locations: Ga
           </button>
         ) : null}
       </div>
+      <label className="hero2026-target">
+        <span>Banner heading</span>
+        <input
+          defaultValue={value.hero_2026_title ?? "Europe 2026"}
+          disabled={busy}
+          onBlur={(e) => {
+            const next = e.target.value.trim();
+            if (next === (value.hero_2026_title ?? "Europe 2026")) return;
+            run(() => setSiteSetting("hero_2026_title", next || null));
+          }}
+          placeholder="Europe 2026"
+        />
+      </label>
+      <label className="hero2026-target">
+        <span>Clicking the banner opens</span>
+        <select
+          disabled={busy}
+          onChange={(e) => run(() => setSiteSetting("hero_2026_collection", e.target.value || null))}
+          value={value.hero_2026_collection ?? ""}
+        >
+          <option value="">Auto — the collection its photos are in</option>
+          {adminCollections.map((collection) => (
+            <option key={collection.id} value={collection.slug}>{collectionTitle(collection)}</option>
+          ))}
+          <option value="__none__">The full gallery (no collection)</option>
+        </select>
+      </label>
       {curatingHero2026 ? (
         <OrderedPhotoPicker
           title="2026 Europe hero carousel"
@@ -2738,6 +3481,7 @@ function AdminDashboard({ session }: { session: Session }) {
         <div className="admin-toast" role="status" onClick={() => setMessage("")}>{message}</div>
       ) : null}
       <MapFeedAdmin photos={adminPhotos} locations={locations} onChanged={refresh} />
+      <CollectionsAdmin photos={adminPhotos} />
       <VisibilityAdmin photos={adminPhotos} locations={locations} />
       <LocationRail
         activeLocation={activeLocation}
