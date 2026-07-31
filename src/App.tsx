@@ -721,10 +721,15 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
     // lacks your current place (Albania is 2024-only) drops back to "All work"
     // rather than stranding you on an empty grid you never asked for.
     if (activeLocation === allLocations) return;
+    // Nothing has loaded yet, so nothing can be judged invalid. Without this a
+    // deep-linked ?location= is wiped on first render (before the photos that
+    // would validate it arrive) and the URL-sync effect then scrubs the param —
+    // which silently broke every map-pin link into the gallery.
+    if (!scopedLocationNames.length) return;
     if (scopedLocationNames.includes(activeLocation)) return;
     // Outside a collection, keep the old behaviour: a dead deep link lands
     // somewhere real instead of showing nothing.
-    if (!activeCollection && scopedLocationNames.length) {
+    if (!activeCollection) {
       setActiveLocation(pickLandingLocation(scopedLocationNames));
       return;
     }
