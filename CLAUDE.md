@@ -230,9 +230,10 @@ Instagram**, so `vercel.json`'s CSP needs no loosening.
 - The rotating token lives in **`public.integration_secrets`**, which has RLS on
   and *no* anon/authenticated policy or grant — only the service-role key reads
   it. **Never move it into `site_settings`: anon can read that table in full.**
-- Env on Vercel: `INSTAGRAM_TOKEN` (seed, adopted into the DB on first run),
-  `INSTAGRAM_APP_SECRET`, `CRON_SECRET` (required by the endpoint when set).
-  `scripts/instagram-token.mjs` does the one-time short→long token exchange.
+- Env on Vercel: `INSTAGRAM_TOKEN` (seed, adopted into the DB on first run) and
+  `CRON_SECRET` (required by the endpoint when set). The **app secret is not
+  needed at runtime** — it only mints the first long-lived token via
+  `scripts/instagram-token.mjs`, so it can be rotated freely afterwards.
 - `getInstagramPosts()` degrades to `[]` if the table is absent, and the section
   doesn't render with zero posts. Hidden independently by the `instagram_feed` flag.
 

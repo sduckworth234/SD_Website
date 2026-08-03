@@ -10,6 +10,10 @@
 //   4. upserts the posts and prunes anything no longer in the feed,
 //   5. refreshes the token when it's over ~50 days old and stores the new one.
 //
+// Note: the app secret is NOT needed here. It's only used once, by
+// scripts/instagram-token.mjs, to mint the first long-lived token; refreshing
+// needs the token alone. So it never has to be stored on Vercel.
+//
 // Everything here uses the SERVICE ROLE key: it writes to instagram_posts and
 // is the only thing allowed to read integration_secrets (anon cannot).
 //
@@ -19,7 +23,6 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BUCKET = process.env.VITE_SUPABASE_PHOTO_BUCKET ?? "photos";
 const TOKEN_SEED = process.env.INSTAGRAM_TOKEN;
-const APP_SECRET = process.env.INSTAGRAM_APP_SECRET;
 const CRON_SECRET = process.env.CRON_SECRET;
 
 const LIMIT = Number(process.env.INSTAGRAM_LIMIT ?? 12);

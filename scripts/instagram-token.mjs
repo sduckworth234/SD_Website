@@ -66,7 +66,8 @@ if (meRes.ok) {
 }
 
 console.log("Add these to Vercel -> Settings -> Environment Variables:\n");
-console.log(`  INSTAGRAM_TOKEN       ${data.access_token}`);
-console.log(`  INSTAGRAM_APP_SECRET  ${appSecret}`);
-console.log(`  CRON_SECRET           ${crypto.randomUUID()}   (any random string; locks the sync endpoint)\n`);
+console.log(`  INSTAGRAM_TOKEN   ${data.access_token}`);
+console.log(`  CRON_SECRET       ${crypto.randomUUID()}   (any random string; locks the sync endpoint)\n`);
+console.log("The app secret is NOT needed on Vercel — it's only used here, once.");
+console.log("Rotate it whenever you like (App settings -> Basic -> Reset app secret).\n");
 console.log("Then redeploy, and hit /api/instagram-sync once to fill the feed.\n");
