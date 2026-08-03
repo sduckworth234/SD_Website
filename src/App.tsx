@@ -598,7 +598,12 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
       )}
       <Footer />
       {selectedPhoto ? (
-        <Lightbox photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} onViewOnMap={viewPhotoOnMap} />
+        <Lightbox
+          photo={selectedPhoto}
+          onClose={() => setSelectedPhoto(null)}
+          onViewOnMap={viewPhotoOnMap}
+          onViewGallery={(p) => openLocation(p.location)}
+        />
       ) : null}
       {editingPhoto ? (
         <PhotoEditOverlay locations={locations} onClose={() => setEditingPhoto(null)} onSaved={loadGallery} photo={editingPhoto} />
@@ -2556,10 +2561,14 @@ function Lightbox({
   photo,
   onClose,
   onViewOnMap,
+  onViewGallery,
 }: {
   photo: Photo;
   onClose: () => void;
   onViewOnMap: (photo: Photo) => void;
+  // Only passed on the home page — inside /galleries you're already looking at
+  // the place the photo belongs to, so the button would go nowhere useful.
+  onViewGallery?: (photo: Photo) => void;
 }) {
   // Measured width/height ratio of the loaded image. We start from the stored
   // aspect (no layout flash) and correct to the true ratio once it loads — so
@@ -2576,6 +2585,9 @@ function Lightbox({
   }, [onClose]);
 
   const hasCoords = photo.latitude != null && photo.longitude != null;
+  // "Unsorted" photos have no place page to land on, so the button is hidden
+  // rather than pointing at an empty gallery.
+  const canViewGallery = Boolean(onViewGallery && photo.location && photo.location !== "Unsorted");
   const guessPortrait = photo.aspect === "portrait" || photo.aspect === "square";
   // Taller-than-wide → portrait card (image beside the caption); otherwise the
   // classic landscape card (image above the caption).
@@ -2605,11 +2617,21 @@ function Lightbox({
           </span>
           <h2>{photo.title}</h2>
           {photo.year ? <small>{photo.year}</small> : null}
-          {hasCoords ? (
-            <button className="map-link-button" onClick={() => onViewOnMap(photo)} type="button">
-              <Globe size={14} aria-hidden="true" />
-              View on map
-            </button>
+          {hasCoords || canViewGallery ? (
+            <div className="lightbox-actions">
+              {canViewGallery ? (
+                <button className="map-link-button" onClick={() => onViewGallery!(photo)} type="button">
+                  <Images size={14} aria-hidden="true" />
+                  View gallery
+                </button>
+              ) : null}
+              {hasCoords ? (
+                <button className="map-link-button" onClick={() => onViewOnMap(photo)} type="button">
+                  <Globe size={14} aria-hidden="true" />
+                  View on map
+                </button>
+              ) : null}
+            </div>
           ) : null}
         </aside>
       </section>

@@ -3674,6 +3674,15 @@ body:has(.contact-overlay) {
 }
 
 /* "View on map" button in the gallery controls */
+/* "View gallery" + "View on map" sit side by side under the caption, and wrap
+   onto separate lines rather than shrinking on a narrow phone. */
+.lightbox-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .map-link-button {
   display: inline-flex;
   align-items: center;
@@ -3964,10 +3973,13 @@ body:has(.contact-overlay) {
 .cc-img.is-on { opacity: 1; transform: scale(1.1); }
 .cc-skel { width: 100%; height: 100%; border-radius: 8px; }
 .collection-card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 52%, rgba(0,0,0,.55)); }
+/* Set like every other heading on the site — Archivo, heavy, tight. These read
+   as titles on each card, so the wide-tracked uppercase label treatment made
+   them the one thing on the page in a different type system. */
 .cc-label {
   position: absolute; left: 16px; bottom: 14px; z-index: 1; color: var(--on-photo);
-  font-family: var(--font-mono);
-  font-weight: 400; font-size: 1.45rem; letter-spacing: .08em; text-transform: uppercase;
+  font-family: var(--font-sans);
+  font-weight: var(--head-weight); font-size: 1.5rem; letter-spacing: var(--head-track);
 }
 .cc-feat .cc-label { font-size: clamp(1.9rem, 3vw, 2.8rem); left: 22px; bottom: 18px; }
 
