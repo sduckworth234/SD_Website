@@ -1,0 +1,951 @@
+[
+{
+"name": "Narrabeen",
+"region": "Northern Beaches",
+"count": 7,
+"years": [
+2023,
+2023
+],
+"covers": [
+{
+"path": "approved/2023/narrabeen/11-7-23-northnarrabeen-3-4d53e51ece13.webp",
+"title": "Braids",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/narrabeen/11-7-23-northnarrabeen-6-29dbfb72ab1c.webp",
+"title": "The Point",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/narrabeen/11-7-23-northnarrabeen-7-cb310c5293bb.webp",
+"title": "Backwater",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/narrabeen/11-7-23-northnarrabeen-ea4cd0bb6c1f.webp",
+"title": "The Bridge",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/narrabeen/11-7-23-northnarrabeen-2-b2706274885b.webp",
+"title": "Tannin",
+"ratio": 1.7778,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Manly",
+"region": "Northern Beaches",
+"count": 91,
+"years": [
+2021,
+2025
+],
+"covers": [
+{
+"path": "approved/2023/manly/sd-14-2d8d80016dce.webp",
+"title": "South Steyne",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/manly/dji-20231130060558-0014-d-62b7642dfb1a.webp",
+"title": "The Pines",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/manly/9-7-23-manlybeach-7-7aec2d767315.webp",
+"title": "Tideline",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/manly/9-7-23-manlybeach-6-d7a7abd95f9f.webp",
+"title": "Beached",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/manly/9-7-23-manlybeach-8-8551f82b8a9d.webp",
+"title": "Cyan",
+"ratio": 1.7778,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Bayview",
+"region": "Northern Beaches",
+"count": 9,
+"years": [
+2023,
+2023
+],
+"covers": [
+{
+"path": "approved/2023/bayview/bayviewsunset-25-6-23-5-4017a6f640f2.webp",
+"title": "Shallows",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/bayview/bayviewsunset-25-6-23-8-fbe615034297.webp",
+"title": "The Narrows",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/bayview/bayviewsunset-25-6-23-4-e23cc90aebd5.webp",
+"title": "Amber",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/bayview/bayviewsunset-25-6-23-2-ad213e3f1e9e.webp",
+"title": "Moorings",
+"ratio": 1.7778,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Mona Vale",
+"region": "Northern Beaches",
+"count": 18,
+"years": [
+2023,
+2023
+],
+"covers": [
+{
+"path": "approved/2023/warriewood/dji-20231201091041-0052-d-6d828b01bd68.webp",
+"title": "The Hook",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/warriewood/dji-20231201085447-0017-d-25115dd35c0e.webp",
+"title": "Inkwell",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/mona-vale/12-12-23-mona-1f2bf5d846bc.webp",
+"title": "Marbled",
+"ratio": 1.6949,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/mona-vale/12-12-23-mona-for-web-8-205a6225dbdb.webp",
+"title": "The Fairway",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/mona-vale/12-12-23-mona-for-web-9-ec1c9bc2eb8b.webp",
+"title": "Banded",
+"ratio": 1.7778,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Warriewood",
+"region": "Northern Beaches",
+"count": 22,
+"years": [
+2023,
+2024
+],
+"covers": [
+{
+"path": "approved/2023/warriewood/13-7-23-warriewood-6-152708811ece.webp",
+"title": "Long Shadows",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/warriewood/13-7-23-warriewood-b02d7a676cc3.webp",
+"title": "The House",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/warriewood/13-7-23-warriewood-3-e63f85c94a4e.webp",
+"title": "Reef Shadows",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/warriewood/13-7-23-warriewood-5-64efd83a25e3.webp",
+"title": "Sea Glass",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/warriewood/dji-20231201093309-0070-d-0c4786b17923.webp",
+"title": "The Pocket",
+"ratio": 1.7778,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Freshwater",
+"region": "Northern Beaches",
+"count": 18,
+"years": [
+2021,
+2024
+],
+"covers": [
+{
+"path": "approved/2024/travels/tommysmall-666e66840b86.webp",
+"title": "The Promontory",
+"ratio": 1.4981,
+"aspect": "landscape"
+},
+{
+"path": "approved/2024/travels/tommysmall-2-79e62c2a0b83.webp",
+"title": "Saltwater",
+"ratio": 1.4981,
+"aspect": "landscape"
+},
+{
+"path": "approved/2021/freshwater/16x9-freshy-10-fe8513de50d4.webp",
+"title": "The Crescent",
+"ratio": 1.4981,
+"aspect": "landscape"
+},
+{
+"path": "approved/2021/freshwater/16x9-freshy-11-022597cbe7f5.webp",
+"title": "First Light",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2021/freshwater/16x9-freshy-12-4b715c95740b.webp",
+"title": "Headland Pool",
+"ratio": 1.7778,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Forty Baskets",
+"region": "Northern Beaches",
+"count": 7,
+"years": null,
+"covers": [
+{
+"path": "approved/unknown/manly/manly-15-484d28fb8699.webp",
+"title": "Manly",
+"ratio": 1.4981,
+"aspect": "landscape"
+},
+{
+"path": "approved/unknown/manly/manly-21-bfd47d27d385.webp",
+"title": "Mirror",
+"ratio": 1.4981,
+"aspect": "landscape"
+},
+{
+"path": "approved/unknown/manly/manly-22-46e717ef6cd8.webp",
+"title": "Stillness",
+"ratio": 1.4981,
+"aspect": "landscape"
+},
+{
+"path": "approved/unknown/manly/manly-23-d5330ac10aac.webp",
+"title": "Manly",
+"ratio": 1.4981,
+"aspect": "landscape"
+},
+{
+"path": "approved/unknown/unsorted/compressed-5-b097fd49d8ba.webp",
+"title": "The Fleet",
+"ratio": 1.4981,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Jindabyne",
+"region": "Northern Beaches",
+"count": 6,
+"years": null,
+"covers": [
+{
+"path": "approved/unknown/jindabyne/jindabyne-2-f7e6f24e0679.webp",
+"title": "Alpine Dusk",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/unknown/jindabyne/jindabyne-3-18041501a303.webp",
+"title": "Violet Hour",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/unknown/jindabyne/jindabyne-4-1774552e5d43.webp",
+"title": "Snowmelt",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/unknown/jindabyne/jindabyne-5-068b9a0880e4.webp",
+"title": "Last Light",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/unknown/jindabyne/jindabyne-aecc529eaf79.webp",
+"title": "Stillwater",
+"ratio": 1.7778,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "North Curl Curl",
+"region": "Northern Beaches",
+"count": 11,
+"years": [
+2021,
+2021
+],
+"covers": [
+{
+"path": "approved/2021/north-curl-curl/northcurly-17-11-2-2e293189c60b.webp",
+"title": "Cauldron",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2021/north-curl-curl/northcurly-17-11-4-cb9c458c5ccf.webp",
+"title": "Tidepool",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2021/north-curl-curl/northcurly-17-11-5-92bd09aa7510.webp",
+"title": "The Ledge",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2021/north-curl-curl/northcurly-17-11-0236dc13712d.webp",
+"title": "Shorebreak",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2021/north-curl-curl/quick-final-2-original-8e68536620e9.webp",
+"title": "Ironstone",
+"ratio": 1.7778,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "North Head",
+"region": "Northern Beaches",
+"count": 2,
+"years": [
+2021,
+2021
+],
+"covers": [
+{
+"path": "approved/2021/north-head/samsidnh-1-of-1-2-037f2e5c43d8.webp",
+"title": "The Edge",
+"ratio": 2.2727,
+"aspect": "wide"
+},
+{
+"path": "approved/unknown/north-head/samsidnh-1-of-1-2123af29a2fe.webp",
+"title": "Sandstone",
+"ratio": 2.5478,
+"aspect": "wide"
+}
+]
+},
+{
+"name": "Albania",
+"region": "Europe",
+"count": 64,
+"years": [
+2024,
+2024
+],
+"covers": [
+{
+"path": "approved/2024/albania/dronedumptbd-129-a5f6121dac75.webp",
+"title": "Ksamil Beach",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2024/albania/dronedumptbd-135-84a680740c84.webp",
+"title": "Ksamil",
+"ratio": 0.5626,
+"aspect": "portrait"
+},
+{
+"path": "approved/2024/albania/dronedumptbd-138-16ec44d859c4.webp",
+"title": "Ksamil Islands",
+"ratio": 0.5626,
+"aspect": "portrait"
+},
+{
+"path": "approved/2024/albania/dronedumptbd-144-ca29bbb558ff.webp",
+"title": "Blue Eye",
+"ratio": 0.5626,
+"aspect": "portrait"
+},
+{
+"path": "approved/2024/albania/dronedumptbd-74-dd768e6f4fbd.webp",
+"title": "Blue Eye",
+"ratio": 0.7505,
+"aspect": "portrait"
+}
+]
+},
+{
+"name": "Croatia",
+"region": "Europe",
+"count": 25,
+"years": [
+2024,
+2024
+],
+"covers": [
+{
+"path": "approved/2024/croatia/dronedumptbd-39-5244fc32a411.webp",
+"title": "Blue Lagoon",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2024/croatia/dronedumptbd-10-d8084730a09d.webp",
+"title": "City Walls",
+"ratio": 0.5626,
+"aspect": "portrait"
+},
+{
+"path": "approved/2024/croatia/dronedumptbd-11-ae37141ab73d.webp",
+"title": "Old Town Rooftops",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2024/croatia/dronedumptbd-12-d44f9aab274e.webp",
+"title": "Dubrovnik Old Town",
+"ratio": 0.5626,
+"aspect": "portrait"
+},
+{
+"path": "approved/2024/croatia/dronedumptbd-124-417cbd51ea3a.webp",
+"title": "Dubrovnik Old Town",
+"ratio": 1.7778,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Italy",
+"region": "Europe",
+"count": 135,
+"years": [
+2022,
+2026
+],
+"covers": [
+{
+"path": "approved/2024/italy/dronedumptbd-82-b82f86b51b53.webp",
+"title": "Amalfi Coast",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2024/italy/dronedumptbd-83-bb9a6362ca40.webp",
+"title": "Amalfi Coast",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2024/italy/dronedumptbd-89-19d471f483bd.webp",
+"title": "Positano",
+"ratio": 1.8868,
+"aspect": "wide"
+},
+{
+"path": "approved/2024/italy/dronedumptbd-29-2935b91518d6.webp",
+"title": "Positano",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2024/italy/dronedumptbd-104-a48aa1ce33e2.webp",
+"title": "Sorrento",
+"ratio": 1.7778,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Montenegro",
+"region": "Europe",
+"count": 10,
+"years": [
+2024,
+2024
+],
+"covers": [
+{
+"path": "approved/2024/montenegro/dronedumptbd-50-7592eef18235.webp",
+"title": "Budva Old Town",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2024/montenegro/dronedumptbd-125-1711c3e1bb2e.webp",
+"title": "Sveti Nikola Island",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2024/montenegro/dronedumptbd-42-ab9cd86bcc03.webp",
+"title": "Budva Old Town",
+"ratio": 0.5626,
+"aspect": "portrait"
+},
+{
+"path": "approved/2024/montenegro/dronedumptbd-43-fb9676e9124b.webp",
+"title": "Sveti Nikola Island",
+"ratio": 0.5626,
+"aspect": "portrait"
+},
+{
+"path": "approved/2024/montenegro/dronedumptbd-44-24df3cc6b8e7.webp",
+"title": "Budva Old Town",
+"ratio": 0.5626,
+"aspect": "portrait"
+}
+]
+},
+{
+"name": "Spain",
+"region": "Europe",
+"count": 3,
+"years": [
+2024,
+2024
+],
+"covers": [
+{
+"path": "approved/2024/spain/dronedumptbd-32-298e46fa8b82.webp",
+"title": "Costa Brava",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2024/spain/dronedumptbd-33-d7c15b612fa2.webp",
+"title": "Cala Pi",
+"ratio": 0.5626,
+"aspect": "portrait"
+},
+{
+"path": "approved/2024/spain/dronedumptbd-121-9491d2f1a87f.webp",
+"title": "Cala Llombards",
+"ratio": 0.5626,
+"aspect": "portrait"
+}
+]
+},
+{
+"name": "Freemans Waterhole",
+"region": "Australia",
+"count": 4,
+"years": [
+2024,
+2024
+],
+"covers": [
+{
+"path": "approved/2024/travels/29-3-24-ned-farm-3-b6f160fd1654.webp",
+"title": "The Green",
+"ratio": 0.5626,
+"aspect": "portrait"
+},
+{
+"path": "approved/2024/travels/29-3-24-ned-farm-1-cf68adf42b7b.webp",
+"title": "Bunkers",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2024/travels/29-3-24-ned-farm-2-f3b46da9a5ea.webp",
+"title": "Water Hazard",
+"ratio": 0.5626,
+"aspect": "portrait"
+},
+{
+"path": "approved/2024/travels/29-3-24-ned-farm-4-5261342326f3.webp",
+"title": "The Clubhouse",
+"ratio": 1.7778,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Denhams Beach",
+"region": "Australia",
+"count": 4,
+"years": null,
+"covers": [
+{
+"path": "approved/unknown/unsorted/bb-6-47eabbec4d60.webp",
+"title": "Travels",
+"ratio": 0.8547,
+"aspect": "landscape"
+},
+{
+"path": "approved/unknown/unsorted/bb-95504dcbeb64.webp",
+"title": "Travels",
+"ratio": 1.4981,
+"aspect": "landscape"
+},
+{
+"path": "approved/unknown/unsorted/compressed-14-bcf2e2b519de.webp",
+"title": "Daybreak",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/unknown/unsorted/compressed-15-a6871167ff05.webp",
+"title": "Ember",
+"ratio": 1.5038,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Malua Bay",
+"region": "Australia",
+"count": 4,
+"years": [
+2021,
+2021
+],
+"covers": [
+{
+"path": "approved/unknown/unsorted/compressed-16-b0af37ae28da.webp",
+"title": "Surfing Malua Bay",
+"ratio": 0.5626,
+"aspect": "portrait"
+},
+{
+"path": "approved/unknown/unsorted/compressed-17-eb77d1add144.webp",
+"title": "The Bay",
+"ratio": 1.4981,
+"aspect": "landscape"
+},
+{
+"path": "approved/unknown/unsorted/compressed-18-2ca21d37c2b1.webp",
+"title": "Outcrop",
+"ratio": 1.0283,
+"aspect": "square"
+},
+{
+"path": "approved/unknown/unsorted/compressed-19-6a6d857f7b3f.webp",
+"title": "The Cove",
+"ratio": 1.4981,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Pie in the Sky",
+"region": "Northern Beaches",
+"count": 3,
+"years": [
+2023,
+2023
+],
+"covers": [
+{
+"path": "approved/2023/travels/21-7-23-pieinthesky-681773e88e38.webp",
+"title": "Misty Ridge",
+"ratio": 0.6667,
+"aspect": "portrait"
+},
+{
+"path": "approved/2023/travels/21-7-23-pieinthesky-2-7f64a025eb66.webp",
+"title": "The Cut",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/travels/21-7-23-pieinthesky-3-d4df8065945a.webp",
+"title": "Layers",
+"ratio": 2.3529,
+"aspect": "wide"
+}
+]
+},
+{
+"name": "Hunter Valley",
+"region": "Northern Beaches",
+"count": 3,
+"years": [
+2023,
+2023
+],
+"covers": [
+{
+"path": "approved/2023/travels/20-7-23-huntervalley-7baf84f07fe8.webp",
+"title": "Vineyard Light",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/travels/20-7-23-huntervalley-3-97e6a5cc03e9.webp",
+"title": "Golden Haze",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "approved/2023/travels/20-7-23-huntervalley-2-aa2bd2b85161.webp",
+"title": "Vine Rows",
+"ratio": 1.7778,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Sydney",
+"region": "Northern Beaches",
+"count": 3,
+"years": [
+2023,
+2023
+],
+"covers": [
+{
+"path": "092023_Sydney/20230917-dji-0811-c58714a4c179.webp",
+"title": "Dark Water",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "092023_Sydney/20230917-dji-0808-3a5f3ed93f2a.webp",
+"title": "Wake",
+"ratio": 1.7778,
+"aspect": "landscape"
+},
+{
+"path": "092023_Sydney/20230917-dji-0805-725f481bbf84.webp",
+"title": "The Turn",
+"ratio": 1.7778,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Middle Harbour",
+"region": "Northern Beaches",
+"count": 2,
+"years": [
+2023,
+2023
+],
+"covers": [
+{
+"path": "062023_MiddleHarbour/dji-0358-fe9fbd3b862e.webp",
+"title": "The Wake",
+"ratio": 1.7793,
+"aspect": "landscape"
+},
+{
+"path": "062023_MiddleHarbour/dji-0381-3bee076ab2bd.webp",
+"title": "The Moorings",
+"ratio": 1.7793,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Greece",
+"region": "Europe",
+"count": 74,
+"years": [
+2022,
+2026
+],
+"covers": [
+{
+"path": "072022_Greece/greece-10-a4f35e572f80.webp",
+"title": "Oia",
+"ratio": 1.4938,
+"aspect": "landscape"
+},
+{
+"path": "072026_Greece/greece-10-08ba3f66c278.webp",
+"title": "Cliff Anchorage",
+"ratio": 0.5625,
+"aspect": "portrait"
+},
+{
+"path": "072022_Greece/greece-11-3c23787d057d.webp",
+"title": "The Shallows",
+"ratio": 0.6665,
+"aspect": "portrait"
+},
+{
+"path": "072026_Greece/greece-11-77b881f142ec.webp",
+"title": "Wake Across the Bay",
+"ratio": 0.5625,
+"aspect": "portrait"
+},
+{
+"path": "072022_Greece/greece-12-9c8745762b6b.webp",
+"title": "The Bathers",
+"ratio": 1.5004,
+"aspect": "landscape"
+}
+]
+},
+{
+"name": "Monaco",
+"region": "Europe",
+"count": 19,
+"years": [
+2022,
+2022
+],
+"covers": [
+{
+"path": "062022_Monaco/monaco-10-0e4546fc795f.webp",
+"title": "Place du Casino",
+"ratio": 0.7056,
+"aspect": "portrait"
+},
+{
+"path": "062022_Monaco/monaco-11-665db2d375d0.webp",
+"title": "Millionaires\u2019 Row",
+"ratio": 0.6665,
+"aspect": "portrait"
+},
+{
+"path": "062022_Monaco/monaco-13-de5aeaf02c66.webp",
+"title": "La Condamine",
+"ratio": 0.6665,
+"aspect": "portrait"
+},
+{
+"path": "062022_Monaco/monaco-14-362e5df38bfa.webp",
+"title": "Le Rocher",
+"ratio": 0.6665,
+"aspect": "portrait"
+},
+{
+"path": "062022_Monaco/monaco-15-d74a86c03a58.webp",
+"title": "Concrete Canyon",
+"ratio": 0.6665,
+"aspect": "portrait"
+}
+]
+},
+{
+"name": "Portugal",
+"region": "Europe",
+"count": 18,
+"years": [
+2026,
+2026
+],
+"covers": [
+{
+"path": "072026_Portugal/coelha-10-151def3bbf06.webp",
+"title": "Cliffside Sand",
+"ratio": 0.5625,
+"aspect": "portrait"
+},
+{
+"path": "072026_Portugal/coelha-11-f0b83b2f4ce0.webp",
+"title": "Drifting Paddlers",
+"ratio": 0.5625,
+"aspect": "portrait"
+},
+{
+"path": "072026_Portugal/coelha-12-57b5ffba5e5b.webp",
+"title": "Carved Paths",
+"ratio": 0.5625,
+"aspect": "portrait"
+},
+{
+"path": "072026_Portugal/coelha-13-e35b3a37a580.webp",
+"title": "Half-Lit Sand",
+"ratio": 0.5625,
+"aspect": "portrait"
+},
+{
+"path": "072026_Portugal/coelha-14-e21c9b06a482.webp",
+"title": "Trails to the Sand",
+"ratio": 0.5625,
+"aspect": "portrait"
+}
+]
+},
+{
+"name": "Denmark",
+"region": "Europe",
+"count": 27,
+"years": [
+2026,
+2026
+],
+"covers": [
+{
+"path": "062026_Denmark/denmark-10-97b290354281.webp",
+"title": "Narrow Row",
+"ratio": 0.6667,
+"aspect": "portrait"
+},
+{
+"path": "062026_Denmark/denmark-11-dda974311a8f.webp",
+"title": "Avenue of Limes",
+"ratio": 0.6667,
+"aspect": "portrait"
+},
+{
+"path": "062026_Denmark/denmark-12-43b65bdc96a2.webp",
+"title": "Summer Roses",
+"ratio": 0.6667,
+"aspect": "portrait"
+},
+{
+"path": "062026_Denmark/denmark-13-ee02d6075f68.webp",
+"title": "Gabled Street",
+"ratio": 0.6667,
+"aspect": "portrait"
+},
+{
+"path": "062026_Denmark/denmark-14-d6de80849edc.webp",
+"title": "Painted Row",
+"ratio": 1.5,
+"aspect": "landscape"
+}
+]
+}
+]

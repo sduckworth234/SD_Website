@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Location cards — six treatments</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Uses the type system now live on the site: Archivo for headings,
+         Space Grotesk for labels and metadata. */
+      :root {
+        --paper: #f4efe6;
+        --ink: #1b1916;
+        --muted: #786d5d;
+        --line: rgba(27, 25, 22, 0.15);
+        --sea: #3f6366;
+        --sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+        --mono: "Space Grotesk", ui-monospace, Menlo, monospace;
+        --sp: clamp(18px, 4vw, 56px);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+      img { display: block; width: 100%; height: 100%; object-fit: cover; }
+      figure { margin: 0; }
+      a { color: inherit; text-decoration: none; }
+      button { font: inherit; }
+
+      /* ── page chrome ─────────────────────────────────────────────────────── */
+      .head { padding: clamp(48px, 9vh, 100px) var(--sp) 22px; max-width: 1240px; }
+      .head .k { font-family: var(--mono); font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
+      .head h1 { font-size: clamp(2.2rem, 6vw, 4.2rem); font-weight: 600; letter-spacing: -0.04em; line-height: 1; margin: 0; }
+      .head p { font-family: var(--mono); font-weight: 300; font-size: clamp(0.95rem, 1.5vw, 1.12rem); line-height: 1.65; color: #52493d; max-width: 62ch; margin: 20px 0 0; }
+      .head p b { font-weight: 500; color: var(--ink); }
+
+      .toolbar {
+        position: sticky; top: 0; z-index: 50;
+        display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+        padding: 12px var(--sp);
+        background: rgba(244, 239, 230, 0.9);
+        -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+        border-bottom: 1px solid var(--line);
+        margin-top: 26px;
+      }
+      .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+      .seg button {
+        border: 0; background: none; cursor: pointer; padding: 8px 18px;
+        font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; color: var(--muted);
+        transition: background 200ms, color 200ms;
+      }
+      .seg button.on { background: var(--ink); color: var(--paper); }
+      .toolbar .note { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
+
+      /* ── each treatment ──────────────────────────────────────────────────── */
+      .case { padding: clamp(52px, 8vh, 96px) var(--sp) 0; }
+      .case-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; max-width: 1240px; }
+      .case-head .n { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+      .case-head h2 { font-size: clamp(1.5rem, 3.2vw, 2.4rem); font-weight: 600; letter-spacing: -0.035em; margin: 0; }
+      .case-head .tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; color: var(--muted); }
+      .why { font-family: var(--mono); font-weight: 300; font-size: 0.95rem; line-height: 1.65; color: #52493d; max-width: 60ch; margin: 12px 0 26px; }
+      .why b { font-weight: 500; color: var(--ink); }
+
+      /* The stage: swaps between a phone frame and full width. */
+      .stage { margin: 0 auto; transition: max-width 420ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+      body[data-view="phone"] .stage {
+        max-width: 390px;
+        border: 10px solid #171614;
+        border-radius: 40px;
+        overflow: hidden;
+        box-shadow: 0 30px 70px rgba(27, 25, 22, 0.22);
+        background: var(--paper);
+      }
+      body[data-view="desktop"] .stage { max-width: 1240px; }
+      /* Treatments read their own width from the stage, not the viewport, so the
+         phone preview is honest rather than just a narrow crop of desktop. */
+
+      /* ── 1 · editorial rows ──────────────────────────────────────────────── */
+      .rows { display: grid; gap: 2px; }
+      .row {
+        position: relative; display: grid; align-items: center;
+        grid-template-columns: 1fr 1fr; gap: 0;
+        background: var(--ink); overflow: hidden; cursor: pointer;
+      }
+      .row:nth-child(even) .row-img { order: 2; }
+      .row-img { position: relative; aspect-ratio: 4 / 3; overflow: hidden; }
+      .row-img img { transition: transform 1100ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+      .row:hover .row-img img { transform: scale(1.06); }
+      .row-copy { padding: clamp(18px, 3vw, 42px); color: var(--paper); }
+      .row-copy .nm { font-size: clamp(1.5rem, 3.4vw, 2.9rem); font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
+      .row-copy .meta { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(244, 239, 230, 0.6); margin-top: 10px; }
+      .row-copy .go { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; margin-top: 16px; display: inline-flex; gap: 8px; border-bottom: 1px solid rgba(244,239,230,.4); padding-bottom: 3px; }
+      .stage[data-narrow] .row { grid-template-columns: 1fr; }
+      .stage[data-narrow] .row:nth-child(even) .row-img { order: 0; }
+      .stage[data-narrow] .row-img { aspect-ratio: 16 / 10; }
+
+      /* ── 2 · peek rail ───────────────────────────────────────────────────── */
+      .rail-wrap { position: relative; }
+      .rail {
+        display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
+        padding: 4px 0 16px; scrollbar-width: none;
+        /* the right-hand inset is what makes the next card peek */
+        padding-right: 22%;
+      }
+      .rail::-webkit-scrollbar { display: none; }
+      .rail-card {
+        flex: none; width: 78%; scroll-snap-align: start; cursor: pointer;
+      }
+      .stage[data-wide] .rail { padding-right: 12%; }
+      .stage[data-wide] .rail-card { width: 30%; }
+      .rail-card .shot { position: relative; aspect-ratio: 3 / 4; overflow: hidden; border-radius: 10px; background: #e3dccf; }
+      .rail-card .shot img { transition: transform 1000ms cubic-bezier(0.2,0.8,0.2,1); }
+      .rail-card:hover .shot img { transform: scale(1.05); }
+      .rail-card .shot::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 46%, rgba(10,9,8,.72)); }
+      .rail-card .lbl { position: absolute; left: 14px; right: 14px; bottom: 12px; z-index: 2; color: #fff; }
+      .rail-card .lbl .nm { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.03em; }
+      .rail-card .lbl .meta { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.82; margin-top: 3px; }
+      .rail-progress { display: flex; gap: 5px; padding: 0 0 4px; }
+      .rail-progress i { height: 2px; flex: 1; background: var(--line); transition: background 260ms; }
+      .rail-progress i.on { background: var(--ink); }
+
+      /* ── 3 · stacked deck ────────────────────────────────────────────────── */
+      .deck { display: grid; gap: clamp(10px, 1.6vw, 20px); grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+      .stage[data-narrow] .deck { grid-template-columns: 1fr; }
+      .card-stack { position: relative; aspect-ratio: 4 / 5; cursor: pointer; }
+      .card-stack .sheet {
+        position: absolute; inset: 0; border-radius: 6px; overflow: hidden;
+        background: #e3dccf; box-shadow: 0 10px 30px rgba(27, 25, 22, 0.18);
+        transition: transform 620ms cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      .card-stack .sheet:nth-child(1) { transform: rotate(-4deg) translate(-5px, 5px); }
+      .card-stack .sheet:nth-child(2) { transform: rotate(3deg) translate(5px, 2px); }
+      .card-stack .sheet:nth-child(3) { transform: none; }
+      .card-stack:hover .sheet:nth-child(1) { transform: rotate(-9deg) translate(-16px, 8px); }
+      .card-stack:hover .sheet:nth-child(2) { transform: rotate(7deg) translate(16px, 4px); }
+      .card-stack .cap { margin-top: 12px; }
+      .card-stack .cap .nm { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.02em; }
+      .card-stack .cap .meta { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+      .deck-item { display: grid; }
+
+      /* ── 4 · split curtain ───────────────────────────────────────────────── */
+      .curtain { display: grid; gap: 1px; background: var(--line); border-block: 1px solid var(--line); }
+      .curtain-row {
+        background: var(--paper); display: grid; grid-template-columns: 1fr auto;
+        align-items: center; gap: 16px; padding: 0 4px 0 0; cursor: pointer;
+      }
+      .curtain-row .txt { padding: clamp(14px, 2vw, 22px) 0 clamp(14px, 2vw, 22px) clamp(4px, 1vw, 10px); }
+      .curtain-row .nm { font-size: clamp(1.3rem, 2.6vw, 2rem); font-weight: 600; letter-spacing: -0.035em; line-height: 1.05; transition: color 240ms; }
+      .curtain-row .meta { font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-top: 5px; }
+      .curtain-row .peek {
+        width: clamp(74px, 16vw, 190px); aspect-ratio: 3 / 2; overflow: hidden; border-radius: 4px;
+        filter: grayscale(1) brightness(0.94);
+        transition: width 560ms cubic-bezier(0.2, 0.8, 0.2, 1), filter 460ms ease;
+      }
+      .curtain-row:hover .peek { width: clamp(150px, 34vw, 360px); filter: none; }
+      .curtain-row:hover .nm { color: var(--sea); }
+
+      /* ── 5 · contact sheet ───────────────────────────────────────────────── */
+      .sheet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 3px; }
+      .stage[data-narrow] .sheet-grid { grid-template-columns: repeat(3, 1fr); }
+      .neg { position: relative; aspect-ratio: 1; overflow: hidden; background: #e3dccf; cursor: pointer; }
+      .neg img { filter: grayscale(1) brightness(0.9) contrast(1.05); transition: filter 420ms, transform 800ms cubic-bezier(0.2,0.8,0.2,1); }
+      .neg:hover img { filter: none; transform: scale(1.07); }
+      .neg .n { position: absolute; left: 6px; top: 5px; font-family: var(--mono); font-size: 9px; color: rgba(255,255,255,.85); z-index: 2; text-shadow: 0 1px 4px rgba(0,0,0,.7); }
+      .neg .nm {
+        position: absolute; inset: auto 0 0 0; padding: 20px 7px 6px; z-index: 2;
+        background: linear-gradient(transparent, rgba(10,9,8,.8));
+        color: #fff; font-size: 0.78rem; font-weight: 600; letter-spacing: -0.01em;
+      }
+      .neg .nm span { display: block; font-family: var(--mono); font-weight: 400; font-size: 9px; letter-spacing: 0.1em; opacity: 0.8; }
+
+      /* ── 6 · chapter panels ──────────────────────────────────────────────── */
+      .chapters { display: grid; gap: 3px; }
+      .chapter { position: relative; height: clamp(230px, 46vh, 380px); overflow: hidden; cursor: pointer; }
+      .chapter img { transition: transform 1400ms cubic-bezier(0.2,0.8,0.2,1); }
+      .chapter:hover img { transform: scale(1.05); }
+      .chapter::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,9,8,.34), transparent 45%, rgba(10,9,8,.7)); }
+      .chapter .copy { position: absolute; inset: auto 0 0 0; z-index: 2; padding: clamp(16px, 3vw, 32px); color: #fff; display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
+      .chapter .nm { font-size: clamp(1.7rem, 5vw, 3.2rem); font-weight: 600; letter-spacing: -0.04em; line-height: 0.98; }
+      .chapter .meta { font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.8; margin-top: 5px; }
+      .chapter .cnt { font-family: var(--mono); font-size: clamp(1.6rem, 4vw, 2.6rem); font-weight: 300; opacity: 0.85; line-height: 1; }
+
+      footer { padding: clamp(60px, 10vh, 120px) var(--sp) 120px; border-top: 1px solid var(--line); margin-top: clamp(60px, 10vh, 110px); }
+      footer h3 { font-size: 1.3rem; font-weight: 600; letter-spacing: -0.03em; margin: 0 0 14px; }
+      footer ul { font-family: var(--mono); font-weight: 300; font-size: 0.95rem; line-height: 1.9; color: #52493d; max-width: 68ch; margin: 0; padding-left: 18px; }
+      footer ul b { font-weight: 500; color: var(--ink); }
+
+      @media (prefers-reduced-motion: reduce) {
+        * { animation: none !important; transition: none !important; }
+      }
+    </style>
+  </head>
+  <body data-view="phone">
+    <div class="head">
+      <p class="k">Sam Duckworth Photography — home page</p>
+      <h1>Six ways to<br />show the places</h1>
+      <p>
+        Six treatments for the location cards, all running on your real
+        locations, real photo counts and real capture years. The brief was
+        <b>minimal, professional-photography, not drone-themed</b> — and above
+        all, something that makes a first-time visitor swipe or scroll instead
+        of leaving. <b>Start in phone view</b>, since that's where the bounce
+        risk is.
+      </p>
+    </div>
+
+    <div class="toolbar">
+      <div class="seg">
+        <button data-view="phone" class="on">Phone</button>
+        <button data-view="desktop">Desktop</button>
+      </div>
+      <span class="note" id="tally">—</span>
+    </div>
+
+    <section class="case">
+      <div class="case-head"><span class="n">01</span><h2>Editorial rows</h2><span class="tag">Fewest, biggest</span></div>
+      <p class="why">
+        One place per row, name and count set beside the frame rather than on
+        top of it. <b>Why it holds attention:</b> a full-width row is unambiguously
+        content, not a thumbnail grid to skim past — and because each row is
+        large, the eye has to travel, which is what scroll depth actually is.
+        On a phone the image stacks above the copy and every row is a full
+        tap target.
+      </p>
+      <div class="stage"><div class="rows"></div></div>
+    </section>
+
+    <section class="case">
+      <div class="case-head"><span class="n">02</span><h2>Peek rail</h2><span class="tag">Best on mobile</span></div>
+      <p class="why">
+        A snap carousel where the next card is deliberately cut off at the right
+        edge. <b>Why it holds attention:</b> the partial card is the single
+        strongest "there's more here" signal on a touch screen — people swipe it
+        without being told to. The progress bar underneath shows how far in they
+        are, which pulls them to the end. Costs one screen of vertical space
+        instead of twenty-six.
+      </p>
+      <div class="stage"><div class="rail-wrap"><div class="rail"></div><div class="rail-progress"></div></div></div>
+    </section>
+
+    <section class="case">
+      <div class="case-head"><span class="n">03</span><h2>Print stack</h2><span class="tag">Most tactile</span></div>
+      <p class="why">
+        Each place is a small pile of prints; hovering or tapping fans them out.
+        <b>Why it holds attention:</b> it says "there are more photos inside"
+        with an object rather than a number, and it ties the home page to the
+        Framed Editions side of the business. The fan is a 600ms flourish, not a
+        page-blocking animation.
+      </p>
+      <div class="stage"><div class="deck"></div></div>
+    </section>
+
+    <section class="case">
+      <div class="case-head"><span class="n">04</span><h2>Split curtain</h2><span class="tag">Most minimal</span></div>
+      <p class="why">
+        A typographic index where each row carries a small greyscale sliver that
+        widens and turns colour on hover. <b>Why it holds attention:</b> it reads
+        as a contents page, so a visitor scans the whole list rather than
+        stopping at the first tile — and the reveal rewards curiosity. This is
+        the most restrained option and the fastest to load.
+      </p>
+      <div class="stage"><div class="curtain"></div></div>
+    </section>
+
+    <section class="case">
+      <div class="case-head"><span class="n">05</span><h2>Contact sheet</h2><span class="tag">Most archival</span></div>
+      <p class="why">
+        A tight numbered grid that develops from greyscale on hover.
+        <b>Why it holds attention:</b> density reads as depth of work — twenty-six
+        places look like a real body of work rather than a thin new site. The
+        trade-off is that individual photos get small, so it suits a secondary
+        "all places" block more than the main event.
+      </p>
+      <div class="stage"><div class="sheet-grid"></div></div>
+    </section>
+
+    <section class="case">
+      <div class="case-head"><span class="n">06</span><h2>Chapter panels</h2><span class="tag">Most immersive</span></div>
+      <p class="why">
+        Full-bleed bands, one per place, with the count set large in the corner.
+        <b>Why it holds attention:</b> nothing competes inside a band, so each
+        scroll lands on a single photograph — closest to the feeling of the
+        lightbox, and the strongest showcase for the photography itself. Best
+        paired with a short curated list rather than all twenty-six.
+      </p>
+      <div class="stage"><div class="chapters"></div></div>
+    </section>
+
+    <footer>
+      <h3>One thing worth deciding first</h3>
+      <ul id="findings"></ul>
+    </footer>
+
+    <script type="module">
+      const BASE =
+        "https://krixuiimabosiorzxzju.supabase.co/storage/v1/render/image/public/photos/";
+      const img = (c, w, q = 74) => `${BASE}${c.path}?width=${w}&resize=contain&quality=${q}`;
+
+      const locs = await fetch("./locations.json").then((r) => r.json());
+      const withPhotos = locs.filter((l) => l.covers.length);
+      const total = withPhotos.reduce((n, l) => n + l.count, 0);
+      const thin = withPhotos.filter((l) => l.count < 5);
+
+      document.querySelector("#tally").textContent =
+        `${withPhotos.length} places · ${total} photos · real data`;
+
+      const meta = (l) =>
+        `${l.count} ${l.count === 1 ? "frame" : "frames"}${l.years ? ` · ${l.years[0] === l.years[1] ? l.years[0] : l.years[0] + "–" + l.years[1]}` : ""}`;
+
+      // Treatments 1–4 and 6 read better with a curated subset; 5 shows the lot.
+      const top = [...withPhotos].sort((a, b) => b.count - a.count).slice(0, 6);
+
+      // 1 · editorial rows
+      document.querySelector(".rows").innerHTML = top
+        .map(
+          (l) => `<div class="row">
+            <div class="row-img"><img src="${img(l.covers[0], 900)}" alt="${l.name}" loading="lazy" /></div>
+            <div class="row-copy">
+              <div class="nm">${l.name}</div>
+              <div class="meta">${l.region} · ${meta(l)}</div>
+              <div class="go">View the gallery →</div>
+            </div>
+          </div>`,
+        )
+        .join("");
+
+      // 2 · peek rail
+      const rail = document.querySelector(".rail");
+      rail.innerHTML = top
+        .map(
+          (l) => `<div class="rail-card">
+            <div class="shot">
+              <img src="${img(l.covers[0], 700)}" alt="${l.name}" loading="lazy" />
+              <div class="lbl"><div class="nm">${l.name}</div><div class="meta">${meta(l)}</div></div>
+            </div>
+          </div>`,
+        )
+        .join("");
+      const prog = document.querySelector(".rail-progress");
+      prog.innerHTML = top.map((_, i) => `<i class="${i === 0 ? "on" : ""}"></i>`).join("");
+      rail.addEventListener(
+        "scroll",
+        () => {
+          const i = Math.round((rail.scrollLeft / (rail.scrollWidth - rail.clientWidth)) * (top.length - 1));
+          prog.querySelectorAll("i").forEach((el, n) => el.classList.toggle("on", n <= i));
+        },
+        { passive: true },
+      );
+
+      // 3 · print stack
+      document.querySelector(".deck").innerHTML = top
+        .map((l) => {
+          const s = [l.covers[2] ?? l.covers[0], l.covers[1] ?? l.covers[0], l.covers[0]];
+          return `<div class="deck-item"><div class="card-stack">
+            ${s.map((c) => `<div class="sheet"><img src="${img(c, 600)}" alt="" loading="lazy" /></div>`).join("")}
+          </div>
+          <div class="cap"><div class="nm">${l.name}</div><div class="meta">${meta(l)}</div></div></div>`;
+        })
+        .join("");
+
+      // 4 · split curtain — this one can carry the full list comfortably
+      document.querySelector(".curtain").innerHTML = withPhotos
+        .map(
+          (l) => `<div class="curtain-row">
+            <div class="txt"><div class="nm">${l.name}</div><div class="meta">${meta(l)}</div></div>
+            <div class="peek"><img src="${img(l.covers[0], 500)}" alt="" loading="lazy" /></div>
+          </div>`,
+        )
+        .join("");
+
+      // 5 · contact sheet — all of them
+      document.querySelector(".sheet-grid").innerHTML = withPhotos
+        .map(
+          (l, i) => `<div class="neg">
+            <span class="n">${String(i + 1).padStart(2, "0")}</span>
+            <img src="${img(l.covers[0], 380)}" alt="${l.name}" loading="lazy" />
+            <div class="nm">${l.name}<span>${l.count} frames</span></div>
+          </div>`,
+        )
+        .join("");
+
+      // 6 · chapter panels
+      document.querySelector(".chapters").innerHTML = top
+        .map(
+          (l) => `<div class="chapter">
+            <img src="${img(l.covers[0], 1400)}" alt="${l.name}" loading="lazy" />
+            <div class="copy">
+              <div><div class="nm">${l.name}</div><div class="meta">${l.region}${l.years ? " · " + (l.years[0] === l.years[1] ? l.years[0] : l.years[0] + "–" + l.years[1]) : ""}</div></div>
+              <div class="cnt">${l.count}</div>
+            </div>
+          </div>`,
+        )
+        .join("");
+
+      document.querySelector("#findings").innerHTML = `
+        <li>The home page currently renders <b>${withPhotos.length} location cards</b>. Every
+          treatment above gets better with fewer — 01, 02, 03 and 06 are shown with the
+          <b>top 6 by photo count</b>, which is the real decision hiding underneath the visual one.</li>
+        <li><b>${thin.length} of the ${withPhotos.length} places have fewer than 5 photos</b>
+          (${thin.slice(0, 5).map((l) => l.name + " " + l.count).join(", ")}${thin.length > 5 ? "…" : ""}).
+          A card that opens into three photos is the fastest way to lose a first-time visitor —
+          worth folding those into a "Travels" or "Elsewhere" card.</li>
+        <li>Every treatment shows a <b>frame count</b>. It costs nothing and gives a reason to
+          tap: "Manly, 91 frames" is a promise; "Manly" alone is not.</li>
+        <li>04 (split curtain) and 05 (contact sheet) are the two that scale to all
+          ${withPhotos.length} without feeling like filler, so they work as the
+          <b>"see all places"</b> block underneath a curated set.</li>`;
+
+      // Phone / desktop toggle. Treatments key off the stage width, not the
+      // viewport, so the phone preview is a real narrow layout.
+      const seg = document.querySelector(".seg");
+      const apply = (v) => {
+        document.body.dataset.view = v;
+        document.querySelectorAll(".stage").forEach((s) => {
+          s.toggleAttribute("data-narrow", v === "phone");
+          s.toggleAttribute("data-wide", v === "desktop");
+        });
+        seg.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.view === v));
+      };
+      seg.addEventListener("click", (e) => {
+        const b = e.target.closest("button");
+        if (b) apply(b.dataset.view);
+      });
+      apply("phone");
+    </script>
+  </body>
+</html>
