@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>03 Atlas — Sam Duckworth</title>
+    <link rel="stylesheet" href="./switch.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ── 03 ATLAS ───────────────────────────────────────────────────────────
+         The flight log as the interface. You already store altitude, GPS and
+         capture date on every row — nobody else's portfolio has that. So here
+         the metadata IS the navigation: scrub the altitude axis, plot the real
+         coordinates, read the archive as a contact sheet. Instrument panel
+         meets gallery. */
+      :root {
+        --bg: #0e0f10;
+        --panel: #16171a;
+        --grid: rgba(233, 231, 226, 0.07);
+        --fg: #e9e7e2;
+        --muted: #7d7c77;
+        --hot: #ff5c2b;   /* readout accent — used only for live values */
+        --cool: #63a6a9;  /* your sea, as the secondary data colour */
+        --sp: clamp(16px, 3.4vw, 48px);
+        --sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+        --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--sans);
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+        background-image:
+          linear-gradient(var(--grid) 1px, transparent 1px),
+          linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+        background-size: 64px 64px;
+      }
+      img { display: block; width: 100%; height: 100%; object-fit: cover; }
+      a { color: inherit; text-decoration: none; }
+      .mono { font-family: var(--mono); }
+
+      /* ── HUD header ──────────────────────────────────────────────────────── */
+      header {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px var(--sp);
+        background: rgba(14, 15, 16, 0.86);
+        -webkit-backdrop-filter: blur(14px);
+        backdrop-filter: blur(14px);
+        border-bottom: 1px solid var(--grid);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+      }
+      header .id { color: var(--fg); font-weight: 500; letter-spacing: 0.2em; }
+      header .hud { display: flex; gap: 22px; color: var(--muted); }
+      header .hud b { color: var(--cool); font-weight: 400; }
+      @media (max-width: 780px) { header .hud span:nth-child(n + 3) { display: none; } }
+
+      /* ── stage: big frame + live instrument readout ──────────────────────── */
+      .stage {
+        display: grid;
+        grid-template-columns: 1fr minmax(240px, 21vw);
+        min-height: 100svh;
+        padding-top: 42px;
+      }
+      @media (max-width: 900px) { .stage { grid-template-columns: 1fr; } }
+
+      .viewer { position: relative; overflow: hidden; background: #000; }
+      .viewer .shot { position: absolute; inset: 0; opacity: 0; transition: opacity 700ms ease; }
+      .viewer .shot.on { opacity: 1; }
+      .viewer .shot img { filter: brightness(0.94); }
+      /* crosshair + framing marks, drawn not imported */
+      .marks { position: absolute; inset: 0; pointer-events: none; z-index: 4; }
+      .marks::before, .marks::after {
+        content: "";
+        position: absolute;
+        background: rgba(233, 231, 226, 0.3);
+      }
+      .marks::before { left: 50%; top: 24px; bottom: 24px; width: 1px; opacity: 0.18; }
+      .marks::after { top: 50%; left: 24px; right: 24px; height: 1px; opacity: 0.18; }
+      .corner { position: absolute; width: 18px; height: 18px; border: 1px solid rgba(233,231,226,.5); }
+      .corner.tl { top: 18px; left: 18px; border-right: 0; border-bottom: 0; }
+      .corner.tr { top: 18px; right: 18px; border-left: 0; border-bottom: 0; }
+      .corner.bl { bottom: 18px; left: 18px; border-right: 0; border-top: 0; }
+      .corner.br { bottom: 18px; right: 18px; border-left: 0; border-top: 0; }
+
+      .title-plate { position: absolute; z-index: 5; left: 28px; bottom: 26px; }
+      .title-plate h1 {
+        font-size: clamp(2rem, 5.6vw, 4.6rem);
+        font-weight: 600;
+        letter-spacing: -0.045em;
+        line-height: 0.94;
+        margin: 0;
+        text-shadow: 0 2px 30px rgba(0, 0, 0, 0.6);
+      }
+      .title-plate .sub { font-family: var(--mono); font-size: 12px; color: rgba(233,231,226,.72); margin-top: 10px; letter-spacing: 0.1em; text-transform: uppercase; }
+
+      /* ── the instrument panel ────────────────────────────────────────────── */
+      .panel {
+        background: var(--panel);
+        border-left: 1px solid var(--grid);
+        padding: 22px var(--sp) 100px;
+        font-family: var(--mono);
+        font-size: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 26px;
+      }
+      @media (max-width: 900px) { .panel { border-left: 0; border-top: 1px solid var(--grid); } }
+      .panel .lbl { color: var(--muted); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 8px; }
+      .read { font-size: 30px; font-weight: 300; letter-spacing: -0.03em; color: var(--hot); font-variant-numeric: tabular-nums; }
+      .read small { font-size: 13px; color: var(--muted); margin-left: 5px; }
+      .kv { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; color: var(--muted); }
+      .kv b { color: var(--fg); font-weight: 400; text-align: right; }
+
+      /* the altitude ladder — click a rung to jump to that frame */
+      .ladder { position: relative; flex: 1; min-height: 200px; border-left: 1px solid var(--grid); margin-left: 6px; }
+      .rung {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: var(--grid);
+        cursor: pointer;
+      }
+      .rung::after {
+        content: attr(data-t);
+        position: absolute;
+        left: 10px;
+        top: -7px;
+        font-size: 10px;
+        color: var(--muted);
+        white-space: nowrap;
+        transition: color 200ms;
+      }
+      .rung i {
+        position: absolute;
+        left: -4px;
+        top: -3px;
+        width: 7px;
+        height: 7px;
+        background: var(--muted);
+        border-radius: 50%;
+        transition: all 260ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .rung:hover::after, .rung.on::after { color: var(--fg); }
+      .rung:hover i, .rung.on i { background: var(--hot); transform: scale(1.7); box-shadow: 0 0 14px var(--hot); }
+
+      /* ── coordinate plot: real lat/lon, drawn to scale ───────────────────── */
+      .plot-sec { padding: clamp(70px, 11vh, 130px) var(--sp) 0; }
+      .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 26px; }
+      .sec-head h2 { font-size: clamp(1.5rem, 3.2vw, 2.5rem); font-weight: 600; letter-spacing: -0.04em; margin: 0; }
+      .sec-head .note { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+
+      .plots { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+      .plot { position: relative; aspect-ratio: 4 / 3; background: var(--panel); border: 1px solid var(--grid); overflow: hidden; }
+      .plot .cap { position: absolute; left: 14px; top: 12px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); z-index: 2; }
+      .plot .cap b { display: block; color: var(--fg); font-size: 14px; letter-spacing: 0; text-transform: none; margin-top: 3px; }
+      .dot {
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        margin: -3px 0 0 -3px;
+        border-radius: 50%;
+        background: var(--cool);
+        cursor: pointer;
+        transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .dot:hover { background: var(--hot); transform: scale(2.4); box-shadow: 0 0 16px var(--hot); z-index: 3; }
+      /* the thumbnail that pops from a plotted point */
+      .dot .pop {
+        position: absolute;
+        left: 50%;
+        bottom: 14px;
+        width: 132px;
+        aspect-ratio: 4 / 3;
+        transform: translate(-50%, 6px) scale(0.86);
+        opacity: 0;
+        pointer-events: none;
+        transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+        border: 1px solid rgba(233,231,226,.35);
+        box-shadow: 0 14px 40px rgba(0,0,0,.7);
+      }
+      .dot:hover .pop { opacity: 1; transform: translate(-50%, 0) scale(1); }
+
+      /* ── contact sheet ───────────────────────────────────────────────────── */
+      .sheet-sec { padding: clamp(70px, 11vh, 130px) var(--sp) clamp(90px, 14vh, 170px); }
+      .sheet { display: grid; grid-template-columns: repeat(auto-fill, minmax(126px, 1fr)); gap: 3px; }
+      .neg { position: relative; aspect-ratio: 1; overflow: hidden; background: var(--panel); cursor: pointer; }
+      .neg img { filter: grayscale(1) brightness(0.62) contrast(1.1); transition: filter 420ms ease, transform 700ms cubic-bezier(0.16,1,0.3,1); }
+      .neg:hover img { filter: none; transform: scale(1.09); }
+      .neg .n {
+        position: absolute;
+        left: 5px;
+        top: 4px;
+        font-family: var(--mono);
+        font-size: 9px;
+        color: rgba(233,231,226,.55);
+        z-index: 2;
+      }
+      .neg .info {
+        position: absolute;
+        inset: auto 0 0 0;
+        padding: 22px 6px 5px;
+        background: linear-gradient(transparent, rgba(0,0,0,.9));
+        font-family: var(--mono);
+        font-size: 9px;
+        line-height: 1.5;
+        opacity: 0;
+        transition: opacity 260ms;
+      }
+      .neg:hover .info { opacity: 1; }
+      .neg .info b { color: var(--hot); font-weight: 400; }
+
+      footer { border-top: 1px solid var(--grid); padding: 40px var(--sp) 120px; font-family: var(--mono); font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px; letter-spacing: 0.1em; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="id">S · DUCKWORTH — FLIGHT LOG</div>
+      <div class="hud">
+        <span>FRAMES <b class="h-n">—</b></span>
+        <span>SITES <b class="h-s">—</b></span>
+        <span>CEILING <b class="h-c">—</b></span>
+        <span>SPAN <b class="h-y">—</b></span>
+      </div>
+    </header>
+
+    <section class="stage">
+      <div class="viewer">
+        <div class="marks">
+          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+        </div>
+        <div class="title-plate"><h1>—</h1><div class="sub">—</div></div>
+      </div>
+      <aside class="panel">
+        <div>
+          <div class="lbl">Relative altitude</div>
+          <div class="read alt-read">—<small>m AGL</small></div>
+        </div>
+        <div>
+          <div class="lbl">Telemetry</div>
+          <div class="kv tele"></div>
+        </div>
+        <div style="flex: 1; display: flex; flex-direction: column">
+          <div class="lbl">Altitude index — click to jump</div>
+          <div class="ladder"></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="plot-sec">
+      <div class="sec-head">
+        <h2>Where the drone has been</h2>
+        <span class="note">Real capture coordinates, plotted to scale</span>
+      </div>
+      <div class="plots"></div>
+    </section>
+
+    <section class="sheet-sec">
+      <div class="sec-head">
+        <h2>Contact sheet</h2>
+        <span class="note">The full archive · hover to develop</span>
+      </div>
+      <div class="sheet"></div>
+    </section>
+
+    <footer><span>SAM DUCKWORTH — AERIAL &amp; LANDSCAPE</span><span>SYDNEY · AU</span><span>HELLO@SAMDUCKWORTH.COM</span></footer>
+
+    <script type="module">
+      import { img, srcset, photos, switcher } from "./mock.js";
+
+      const rows = await photos();
+      const alts = rows.filter((p) => p.alt != null).sort((a, b) => b.alt - a.alt);
+      // Sample evenly down the altitude range rather than taking the top N —
+      // the top frames cluster within a few metres of each other and the
+      // ladder collapses into an unreadable stack.
+      const N = 12;
+      const feature = Array.from({ length: N }, (_, i) =>
+        alts[Math.round((i * (alts.length - 1)) / (N - 1))],
+      ).filter((p, i, a) => a.indexOf(p) === i);
+
+      // HUD totals — all read off the real catalogue.
+      const years = rows.map((p) => p.year).filter(Boolean);
+      document.querySelector(".h-n").textContent = rows.length;
+      document.querySelector(".h-s").textContent = new Set(rows.map((p) => p.location)).size;
+      document.querySelector(".h-c").textContent = Math.round(alts[0].alt) + "m";
+      document.querySelector(".h-y").textContent = `${Math.min(...years)}–${Math.max(...years)}`;
+
+      // Viewer stack.
+      const viewer = document.querySelector(".viewer");
+      viewer.insertAdjacentHTML(
+        "afterbegin",
+        feature
+          .map((p, i) => `<div class="shot${i === 0 ? " on" : ""}"><img src="${img(p, 1800, 78)}" srcset="${srcset(p, [800, 1200, 1800, 2400])}" sizes="80vw" alt="${p.title}" ${i ? 'loading="lazy"' : ""} /></div>`)
+          .join(""),
+      );
+
+      // Altitude ladder — position each rung by its true altitude.
+      const hi = feature[0].alt, lo = feature[feature.length - 1].alt;
+      const ladder = document.querySelector(".ladder");
+      // True altitude position, then nudged down so no two labels can collide.
+      const MIN_GAP = 7;
+      let last = -Infinity;
+      const tops = feature.map((p) => {
+        const t = Math.max(((hi - p.alt) / (hi - lo || 1)) * 90 + 4, last + MIN_GAP);
+        last = t;
+        return t;
+      });
+      ladder.innerHTML = feature
+        .map(
+          (p, i) =>
+            `<div class="rung${i === 0 ? " on" : ""}" style="top:${tops[i].toFixed(1)}%" data-i="${i}" data-t="${Math.round(p.alt)}m · ${p.location}"><i></i></div>`,
+        )
+        .join("");
+
+      const show = (i) => {
+        const p = feature[i];
+        viewer.querySelectorAll(".shot").forEach((el, n) => el.classList.toggle("on", n === i));
+        ladder.querySelectorAll(".rung").forEach((el, n) => el.classList.toggle("on", n === i));
+        document.querySelector(".title-plate h1").textContent = p.title;
+        document.querySelector(".title-plate .sub").textContent = `${p.location} · ${p.region}`;
+        document.querySelector(".alt-read").innerHTML = `${Math.round(p.alt)}<small>m AGL</small>`;
+        document.querySelector(".tele").innerHTML = [
+          ["LAT", p.lat != null ? p.lat.toFixed(3) + "°" : "—"],
+          ["LON", p.lon != null ? p.lon.toFixed(3) + "°" : "—"],
+          ["YEAR", p.year ?? "—"],
+          ["RATIO", p.ratio],
+          ["FORMAT", p.aspect.toUpperCase()],
+        ]
+          .map(([k, v]) => `<span>${k}</span><b>${v}</b>`)
+          .join("");
+      };
+      let at = 0;
+      const goTo = (i) => { at = i; show(i); };
+      goTo(0);
+
+      // Cycles on its own until you take the controls, then stays where you put it.
+      let auto = setInterval(() => goTo((at + 1) % feature.length), 4200);
+      const stop = () => { clearInterval(auto); auto = null; };
+      ladder.addEventListener("click", (e) => {
+        const r = e.target.closest(".rung");
+        if (!r) return;
+        stop();
+        goTo(+r.dataset.i);
+      });
+      viewer.addEventListener("pointerenter", stop);
+
+      // Coordinate plots — one panel per region, points at true relative position.
+      const geo = rows.filter((p) => p.lat != null && p.lon != null);
+      const regions = [...new Set(geo.map((p) => p.region))];
+      document.querySelector(".plots").innerHTML = regions
+        .map((region) => {
+          const pts = geo.filter((p) => p.region === region);
+          const lats = pts.map((p) => p.lat), lons = pts.map((p) => p.lon);
+          const [y0, y1] = [Math.min(...lats), Math.max(...lats)];
+          const [x0, x1] = [Math.min(...lons), Math.max(...lons)];
+          const dots = pts
+            .map((p) => {
+              const x = ((p.lon - x0) / (x1 - x0 || 1)) * 84 + 8;
+              const y = (1 - (p.lat - y0) / (y1 - y0 || 1)) * 76 + 14;
+              return `<span class="dot" style="left:${x}%;top:${y}%"><img class="pop" src="${img(p, 300)}" alt="${p.title}" loading="lazy" /></span>`;
+            })
+            .join("");
+          return `<div class="plot"><div class="cap">${pts.length} frames<b>${region}</b></div>${dots}</div>`;
+        })
+        .join("");
+
+      // Contact sheet.
+      document.querySelector(".sheet").innerHTML = rows
+        .map(
+          (p, i) => `<div class="neg">
+            <span class="n">${String(i + 1).padStart(3, "0")}</span>
+            <img src="${img(p, 300, 68)}" alt="${p.title}" loading="lazy" />
+            <div class="info">${p.title}<br /><b>${p.location}${p.alt ? " · " + Math.round(p.alt) + "m" : ""}</b></div>
+          </div>`,
+        )
+        .join("");
+
+      switcher("atlas");
+    </script>
+  </body>
+</html>

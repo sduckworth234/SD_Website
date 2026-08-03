@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>05 Prism — Sam Duckworth</title>
+    <link rel="stylesheet" href="./switch.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,200..400&family=Archivo:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ── 05 PRISM ───────────────────────────────────────────────────────────
+         The one that shows off. A single WebGL surface renders the hero: the
+         image is displaced by a flow-field around the cursor, so moving the
+         mouse feels like dragging a hand through water — and switching places
+         dissolves one frame into the next through the same noise field.
+         Everything below is a magnetic grid that reacts to the pointer.
+         Falls back to a plain image if WebGL is unavailable. */
+      :root {
+        --ink: #08090a;
+        --paper: #f2eee7;
+        --warm: #d09a63;
+        --sp: clamp(20px, 5vw, 78px);
+        --display: "Bebas Neue", Impact, sans-serif;
+        --serif: "Fraunces", Georgia, serif;
+        --sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--ink);
+        color: var(--paper);
+        font-family: var(--sans);
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+      img { display: block; width: 100%; height: 100%; object-fit: cover; }
+      a { color: inherit; text-decoration: none; }
+      figure { margin: 0; } /* UA default is 1em 40px — it insets every card */
+
+      /* custom cursor — a ring that swells over interactive things */
+      .cur {
+        position: fixed;
+        z-index: 200;
+        left: 0; top: 0;
+        width: 26px; height: 26px;
+        margin: -13px 0 0 -13px;
+        border: 1px solid rgba(242, 238, 231, 0.75);
+        border-radius: 50%;
+        pointer-events: none;
+        transition: width 320ms cubic-bezier(0.16,1,0.3,1), height 320ms cubic-bezier(0.16,1,0.3,1), margin 320ms cubic-bezier(0.16,1,0.3,1), background 320ms, border-color 320ms;
+        mix-blend-mode: difference;
+      }
+      .cur.big { width: 74px; height: 74px; margin: -37px 0 0 -37px; background: rgba(242,238,231,.14); }
+      @media (hover: none) { .cur { display: none; } }
+
+      header {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 90;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px var(--sp);
+        mix-blend-mode: difference;
+      }
+      .mark { font-family: var(--display); font-size: 19px; letter-spacing: 0.24em; }
+      header nav { display: flex; gap: 24px; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; }
+      @media (max-width: 760px) {
+        .mark { font-size: 15px; letter-spacing: 0.16em; }
+        header nav { gap: 14px; font-size: 10px; letter-spacing: 0.1em; }
+        header nav a:nth-child(n + 3) { display: none; }
+      }
+
+      /* ── the WebGL stage ─────────────────────────────────────────────────── */
+      .stage { position: relative; height: 100svh; min-height: 580px; overflow: hidden; background: #000; }
+      .stage canvas, .stage .fallback { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+      .stage .fallback { display: none; }
+      .stage.no-gl canvas { display: none; }
+      .stage.no-gl .fallback { display: block; }
+      .stage::after {
+        content: "";
+        position: absolute; inset: 0;
+        background: linear-gradient(180deg, rgba(8,9,10,.55), transparent 34%, rgba(8,9,10,.86));
+        pointer-events: none;
+      }
+
+      /* the place list that drives the shader */
+      .picker {
+        position: absolute;
+        z-index: 6;
+        left: var(--sp);
+        top: 50%;
+        transform: translateY(-50%);
+        display: grid;
+        gap: 2px;
+      }
+      .picker button {
+        background: none; border: 0; padding: 2px 0; cursor: pointer;
+        font-family: var(--display);
+        font-size: clamp(1.5rem, 3.6vw, 3.1rem);
+        line-height: 1.04;
+        letter-spacing: 0.02em;
+        color: rgba(242, 238, 231, 0.34);
+        text-align: left;
+        transition: color 420ms cubic-bezier(0.16,1,0.3,1), transform 420ms cubic-bezier(0.16,1,0.3,1);
+      }
+      .picker button:hover { color: rgba(242,238,231,.72); transform: translateX(10px); }
+      .picker button.on { color: var(--paper); transform: translateX(16px); }
+      .picker button.on::after { content: ""; display: inline-block; width: 34px; height: 1px; background: var(--warm); vertical-align: middle; margin-left: 14px; }
+      /* Narrow screens: the vertical stack would run straight into the readout,
+         so it becomes a horizontal strip you swipe instead. */
+      @media (max-width: 860px) {
+        .picker {
+          top: auto;
+          bottom: 148px;
+          left: 0;
+          right: 0;
+          transform: none;
+          display: flex;
+          gap: 20px;
+          overflow-x: auto;
+          padding: 0 var(--sp);
+          scrollbar-width: none;
+        }
+        .picker::-webkit-scrollbar { display: none; }
+        .picker button { flex: none; font-size: 1.5rem; }
+        .picker button:hover, .picker button.on { transform: none; }
+        .picker button.on::after { display: block; width: 100%; margin: 4px 0 0; }
+      }
+
+      .readout {
+        position: absolute;
+        z-index: 6;
+        right: var(--sp);
+        bottom: clamp(56px, 10vh, 100px);
+        text-align: right;
+      }
+      .readout h1 {
+        font-family: var(--serif);
+        font-weight: 300;
+        font-style: italic;
+        font-size: clamp(1.6rem, 4vw, 3.2rem);
+        letter-spacing: -0.02em;
+        margin: 0;
+      }
+      .readout .m { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; opacity: 0.7; margin-top: 10px; }
+      .readout .m b { color: var(--warm); font-weight: 400; }
+      @media (max-width: 860px) { .readout { left: var(--sp); text-align: left; bottom: 76px; } }
+
+      .hint { position: absolute; z-index: 6; left: 50%; bottom: 26px; transform: translateX(-50%); font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase; opacity: 0.44; }
+
+      /* ── magnetic grid ───────────────────────────────────────────────────── */
+      .sec {
+        padding: clamp(80px, 14vh, 170px) var(--sp) 0;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+      .sec h2 { font-family: var(--display); font-size: clamp(2rem, 5.4vw, 4.4rem); margin: 0; letter-spacing: 0.02em; }
+      .sec span { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.5; }
+
+      .mag { padding: 40px var(--sp) clamp(90px, 14vh, 170px); display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: clamp(8px, 1.2vw, 18px); }
+      .mag .card {
+        position: relative;
+        aspect-ratio: 3 / 4;
+        overflow: hidden;
+        background: #131416;
+        will-change: transform;
+        transition: transform 620ms cubic-bezier(0.16, 1, 0.3, 1), z-index 0s;
+      }
+      .mag .card img { transition: transform 900ms cubic-bezier(0.16,1,0.3,1), filter 600ms ease; filter: brightness(.82) saturate(.94); }
+      .mag .card:hover { z-index: 5; }
+      .mag .card:hover img { transform: scale(1.08); filter: none; }
+      .mag .card figcaption {
+        position: absolute; inset: auto 0 0 0;
+        padding: 34px 13px 12px;
+        background: linear-gradient(transparent, rgba(0,0,0,.78));
+        opacity: 0; transform: translateY(8px);
+        transition: all 340ms cubic-bezier(0.16,1,0.3,1);
+      }
+      .mag .card:hover figcaption { opacity: 1; transform: none; }
+      .mag .card figcaption b { display: block; font-family: var(--serif); font-weight: 300; font-size: 17px; }
+      .mag .card figcaption i { font-style: normal; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.72; }
+
+      /* ── marquee ─────────────────────────────────────────────────────────── */
+      .marq { border-block: 1px solid rgba(242,238,231,.13); overflow: hidden; padding: 22px 0; }
+      .marq div { display: flex; gap: 44px; width: max-content; animation: slide 38s linear infinite; }
+      .marq span { font-family: var(--display); font-size: clamp(1.6rem, 3.6vw, 3rem); letter-spacing: 0.06em; opacity: 0.5; white-space: nowrap; }
+      .marq span::after { content: "◆"; font-size: 0.4em; vertical-align: middle; margin-left: 44px; color: var(--warm); }
+      @keyframes slide { to { transform: translateX(-50%); } }
+
+      footer { padding: clamp(70px, 11vh, 140px) var(--sp) 130px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 30px; align-items: flex-end; }
+      footer h3 { font-family: var(--display); font-size: clamp(2.6rem, 10vw, 9rem); line-height: 0.86; margin: 0; }
+      footer .l { display: grid; gap: 8px; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.66; }
+
+      @media (prefers-reduced-motion: reduce) { .marq div { animation: none; } }
+    </style>
+  </head>
+  <body>
+    <div class="cur"></div>
+    <header>
+      <div class="mark">SAM DUCKWORTH</div>
+      <nav><a href="#">Work</a><a href="#">Prints</a><a href="#">Map</a><a href="#">About</a></nav>
+    </header>
+
+    <section class="stage">
+      <canvas></canvas>
+      <img class="fallback" alt="" />
+      <nav class="picker"></nav>
+      <div class="readout"><h1>—</h1><div class="m">—</div></div>
+      <div class="hint">Move the cursor · click a place</div>
+    </section>
+
+    <div class="marq"><div></div></div>
+
+    <div class="sec"><h2>The archive</h2><span>Hover — the grid moves with you</span></div>
+    <section class="mag"></section>
+
+    <footer>
+      <h3>WORK<br />WITH ME</h3>
+      <div class="l"><a href="#">hello@samduckworth.com</a><a href="#">@sam.duckworth</a><a href="#">Framed Editions →</a></div>
+    </footer>
+
+    <script type="module">
+      import { img, photos, switcher } from "./mock.js";
+
+      const rows = await photos();
+
+      /* ── the shader ───────────────────────────────────────────────────────
+         Two textures, mixed by a value-noise field that's warped by cursor
+         velocity. Same field drives the displacement, so the "water" you push
+         around and the dissolve between photos are literally the same maths. */
+      const VERT = `attribute vec2 p; varying vec2 uv;
+        void main(){ uv = p * 0.5 + 0.5; gl_Position = vec4(p, 0.0, 1.0); }`;
+
+      const FRAG = `precision highp float;
+        varying vec2 uv;
+        uniform sampler2D texA, texB;
+        uniform vec2  res, aspA, aspB, mouse;
+        uniform float mix_, time, power;
+
+        float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float noise(vec2 p){
+          vec2 i = floor(p), f = fract(p);
+          vec2 u = f * f * (3.0 - 2.0 * f);
+          return mix(mix(hash(i), hash(i + vec2(1,0)), u.x),
+                     mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), u.x), u.y);
+        }
+        float fbm(vec2 p){
+          float v = 0.0, a = 0.5;
+          for(int i = 0; i < 4; i++){ v += a * noise(p); p *= 2.03; a *= 0.5; }
+          return v;
+        }
+        // cover-fit so photos never distort, whatever the window shape
+        vec2 cover(vec2 uv, vec2 asp){
+          float r = (res.x / res.y) / (asp.x / asp.y);
+          vec2 s = r > 1.0 ? vec2(1.0, 1.0 / r) : vec2(r, 1.0);
+          return (uv - 0.5) * s + 0.5;
+        }
+        void main(){
+          vec2 m = mouse;
+          float d = distance(uv * vec2(res.x / res.y, 1.0), m * vec2(res.x / res.y, 1.0));
+          float ring = smoothstep(0.42, 0.0, d);            // cursor influence
+          float f = fbm(uv * 3.4 + vec2(time * 0.045, time * 0.03));
+          vec2 flow = vec2(f - 0.5, fbm(uv * 3.4 + 7.3) - 0.5);
+
+          // displacement: strongest at the cursor, plus a constant slow drift
+          vec2 disp = flow * (ring * 0.055 * power + 0.006);
+
+          float edge = fbm(uv * 2.6 + 3.1);                  // dissolve mask
+          float m2 = smoothstep(edge - 0.34, edge + 0.34, mix_);
+
+          vec3 a = texture2D(texA, cover(uv + disp * (1.0 - m2 * 0.6), aspA)).rgb;
+          vec3 b = texture2D(texB, cover(uv - disp * (0.4 + m2 * 0.6), aspB)).rgb;
+          vec3 col = mix(a, b, m2);
+
+          // a whisper of chromatic split right under the cursor
+          float ca = ring * 0.0035 * power;
+          col.r = mix(texture2D(texA, cover(uv + disp + vec2(ca, 0.0), aspA)).r,
+                      texture2D(texB, cover(uv - disp + vec2(ca, 0.0), aspB)).r, m2);
+          col.b = mix(texture2D(texA, cover(uv + disp - vec2(ca, 0.0), aspA)).b,
+                      texture2D(texB, cover(uv - disp - vec2(ca, 0.0), aspB)).b, m2);
+
+          // a soft bloom in the dissolve seam so the change reads as light
+          col += vec3(0.82, 0.62, 0.39) * smoothstep(0.42, 0.5, 1.0 - abs(m2 - 0.5) * 2.0) * 0.16;
+          gl_FragColor = vec4(col, 1.0);
+        }`;
+
+      // One strong frame per place — these drive the picker.
+      const order = ["Manly", "Italy", "Greece", "Albania", "Narrabeen", "Denmark", "Portugal"];
+      const picks = order
+        .map((loc) => rows.find((p) => p.location === loc && p.aspect !== "portrait") ?? rows.find((p) => p.location === loc))
+        .filter(Boolean);
+
+      const stage = document.querySelector(".stage");
+      const canvas = stage.querySelector("canvas");
+      const gl = canvas.getContext("webgl", { antialias: false, alpha: false });
+
+      const readout = (p) => {
+        document.querySelector(".readout h1").textContent = p.title;
+        document.querySelector(".readout .m").innerHTML =
+          `${p.location} · ${p.region}${p.alt ? ` · <b>${Math.round(p.alt)} m</b>` : ""}${p.year ? " · " + p.year : ""}`;
+      };
+
+      // Picker markup is shared by both the GL and fallback paths.
+      const picker = document.querySelector(".picker");
+      picker.innerHTML = picks
+        .map((p, i) => `<button data-i="${i}" class="${i === 0 ? "on" : ""}">${p.location.toUpperCase()}</button>`)
+        .join("");
+      readout(picks[0]);
+
+      if (!gl) {
+        stage.classList.add("no-gl");
+        const fb = stage.querySelector(".fallback");
+        fb.src = img(picks[0], 2000, 78);
+        picker.addEventListener("click", (e) => {
+          const b = e.target.closest("button");
+          if (!b) return;
+          picker.querySelectorAll("button").forEach((x, n) => x.classList.toggle("on", n === +b.dataset.i));
+          fb.src = img(picks[+b.dataset.i], 2000, 78);
+          readout(picks[+b.dataset.i]);
+        });
+      } else {
+        const sh = (type, src) => {
+          const s = gl.createShader(type);
+          gl.shaderSource(s, src);
+          gl.compileShader(s);
+          if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+          return s;
+        };
+        const prog = gl.createProgram();
+        gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT));
+        gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
+        gl.linkProgram(prog);
+        gl.useProgram(prog);
+
+        const buf = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+        const loc = gl.getAttribLocation(prog, "p");
+        gl.enableVertexAttribArray(loc);
+        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+        const U = (n) => gl.getUniformLocation(prog, n);
+        const u = { texA: U("texA"), texB: U("texB"), res: U("res"), aspA: U("aspA"), aspB: U("aspB"), mouse: U("mouse"), mix: U("mix_"), time: U("time"), power: U("power") };
+        gl.uniform1i(u.texA, 0);
+        gl.uniform1i(u.texB, 1);
+
+        const mkTex = () => {
+          const t = gl.createTexture();
+          gl.bindTexture(gl.TEXTURE_2D, t);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, new Uint8Array([12, 13, 14]));
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          return t;
+        };
+        const texA = mkTex(), texB = mkTex();
+        const aspect = { A: [3, 2], B: [3, 2] };
+
+        // Decoded images are cached by id, so a place you've already visited
+        // dissolves instantly instead of waiting on the network a second time.
+        const cache = new Map();
+        const load = (photo) => {
+          if (cache.has(photo.id)) return cache.get(photo.id);
+          const p = new Promise((res, rej) => {
+            const im = new Image();
+            im.crossOrigin = "anonymous";
+            im.onload = () => res(im);
+            im.onerror = rej;
+            im.src = img(photo, 1800, 78);
+          });
+          cache.set(photo.id, p);
+          return p;
+        };
+
+        const upload = (tex, im, slot) => {
+          gl.activeTexture(gl.TEXTURE0 + slot);
+          gl.bindTexture(gl.TEXTURE_2D, tex);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, im);
+        };
+
+        let cur = 0, mixT = 0, mixV = 0, power = 0, powerT = 0;
+        const mouse = { x: 0.5, y: 0.5, tx: 0.5, ty: 0.5 };
+
+        try {
+          const first = await load(picks[0]);
+          upload(texA, first, 0);
+          upload(texB, first, 1);
+          aspect.A = aspect.B = [first.naturalWidth, first.naturalHeight];
+        } catch {
+          // Storage refused the cross-origin read — degrade rather than show black.
+          stage.classList.add("no-gl");
+          stage.querySelector(".fallback").src = img(picks[0], 2000, 78);
+        }
+
+        let seq = 0;
+        const go = async (i) => {
+          if (i === cur) return;
+          const mine = ++seq;
+          cur = i;
+          readout(picks[i]); // label leads the image — no dead click
+          try {
+            const im = await load(picks[i]);
+            if (mine !== seq) return; // a later click already won
+            upload(texB, im, 1);
+            aspect.B = [im.naturalWidth, im.naturalHeight];
+            mixV = 0; mixT = 1;
+            // once the dissolve completes, B becomes the new A
+            setTimeout(() => {
+              if (mine !== seq) return;
+              upload(texA, im, 0);
+              aspect.A = aspect.B;
+              mixT = 0; mixV = 0;
+            }, 1250);
+          } catch {}
+        };
+
+        // Warm the rest in the background so every switch after the first is instant.
+        const warm = () => picks.slice(1).forEach((p) => load(p).catch(() => {}));
+        "requestIdleCallback" in window ? requestIdleCallback(warm) : setTimeout(warm, 1200);
+        picker.addEventListener("click", (e) => {
+          const b = e.target.closest("button");
+          if (!b) return;
+          picker.querySelectorAll("button").forEach((x, n) => x.classList.toggle("on", n === +b.dataset.i));
+          go(+b.dataset.i);
+        });
+
+        const resize = () => {
+          const dpr = Math.min(devicePixelRatio || 1, 2);
+          canvas.width = stage.clientWidth * dpr;
+          canvas.height = stage.clientHeight * dpr;
+          gl.viewport(0, 0, canvas.width, canvas.height);
+        };
+        addEventListener("resize", resize);
+        resize();
+
+        stage.addEventListener("pointermove", (e) => {
+          const r = stage.getBoundingClientRect();
+          mouse.tx = (e.clientX - r.left) / r.width;
+          mouse.ty = 1 - (e.clientY - r.top) / r.height;
+          powerT = 1;
+        });
+        stage.addEventListener("pointerleave", () => (powerT = 0));
+
+        const t0 = performance.now();
+        const loop = () => {
+          mouse.x += (mouse.tx - mouse.x) * 0.07;
+          mouse.y += (mouse.ty - mouse.y) * 0.07;
+          mixV += (mixT - mixV) * 0.045;
+          power += (powerT - power) * 0.05;
+          gl.uniform2f(u.res, canvas.width, canvas.height);
+          gl.uniform2f(u.aspA, aspect.A[0], aspect.A[1]);
+          gl.uniform2f(u.aspB, aspect.B[0], aspect.B[1]);
+          gl.uniform2f(u.mouse, mouse.x, mouse.y);
+          gl.uniform1f(u.mix, mixV);
+          gl.uniform1f(u.power, power);
+          gl.uniform1f(u.time, (performance.now() - t0) / 1000);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+          requestAnimationFrame(loop);
+        };
+        loop();
+      }
+
+      /* ── marquee ─────────────────────────────────────────────────────────── */
+      const places = [...new Set(rows.map((p) => p.location))];
+      document.querySelector(".marq div").innerHTML = [...places, ...places]
+        .map((n) => `<span>${n.toUpperCase()}</span>`)
+        .join("");
+
+      /* ── magnetic grid ───────────────────────────────────────────────────── */
+      const mag = document.querySelector(".mag");
+      mag.innerHTML = rows
+        .slice(0, 32)
+        .map(
+          (p) => `<figure class="card">
+            <img src="${img(p, 520)}" alt="${p.title}" loading="lazy" />
+            <figcaption><b>${p.title}</b><i>${p.location}${p.alt ? " · " + Math.round(p.alt) + "m" : ""}</i></figcaption>
+          </figure>`,
+        )
+        .join("");
+
+      // Cards lean toward the pointer — the pull falls off with distance.
+      if (matchMedia("(hover: hover)").matches && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        const cards = [...mag.querySelectorAll(".card")];
+        let raf = false;
+        addEventListener(
+          "pointermove",
+          (e) => {
+            if (raf) return;
+            raf = true;
+            requestAnimationFrame(() => {
+              for (const c of cards) {
+                const r = c.getBoundingClientRect();
+                if (r.bottom < -100 || r.top > innerHeight + 100) continue;
+                const dx = e.clientX - (r.left + r.width / 2);
+                const dy = e.clientY - (r.top + r.height / 2);
+                const dist = Math.hypot(dx, dy);
+                const pull = Math.max(0, 1 - dist / 340);
+                c.style.transform = `translate3d(${(dx * pull * 0.11).toFixed(2)}px, ${(dy * pull * 0.11).toFixed(2)}px, 0) scale(${(1 + pull * 0.045).toFixed(3)})`;
+              }
+              raf = false;
+            });
+          },
+          { passive: true },
+        );
+      }
+
+      /* ── cursor ──────────────────────────────────────────────────────────── */
+      const cur = document.querySelector(".cur");
+      let cx = innerWidth / 2, cy = innerHeight / 2, tx = cx, ty = cy;
+      addEventListener("pointermove", (e) => { tx = e.clientX; ty = e.clientY; }, { passive: true });
+      (function ring() {
+        cx += (tx - cx) * 0.18;
+        cy += (ty - cy) * 0.18;
+        cur.style.transform = `translate(${cx}px, ${cy}px)`;
+        requestAnimationFrame(ring);
+      })();
+      document.addEventListener("pointerover", (e) => {
+        cur.classList.toggle("big", !!e.target.closest("a, button, .card"));
+      });
+
+      switcher("prism");
+    </script>
+  </body>
+</html>

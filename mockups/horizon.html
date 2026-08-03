@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>04 Horizon — Sam Duckworth</title>
+    <link rel="stylesheet" href="./switch.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,200..400&family=Archivo:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ── 04 HORIZON ─────────────────────────────────────────────────────────
+         One frame at a time, full bleed, scroll as the shutter. Each place is a
+         chapter: the photo parallaxes, the place name wipes in on a clip-path,
+         and a progress rail tracks where you are in the sequence. Built on
+         scroll-driven animation + scroll-snap, so it costs almost nothing. */
+      :root {
+        --ink: #0a0a0b;
+        --paper: #f4efe6;
+        --warm: #c8945f;
+        --sp: clamp(20px, 5vw, 76px);
+        --display: "Bebas Neue", Impact, sans-serif;
+        --serif: "Fraunces", Georgia, serif;
+        --sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      html {
+        scroll-snap-type: y proximity;
+        scrollbar-width: none;
+      }
+      html::-webkit-scrollbar { display: none; }
+      body {
+        margin: 0;
+        background: var(--ink);
+        color: var(--paper);
+        font-family: var(--sans);
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+      img { display: block; width: 100%; height: 100%; object-fit: cover; }
+      a { color: inherit; text-decoration: none; }
+
+      /* ── fixed chrome ────────────────────────────────────────────────────── */
+      .brand {
+        position: fixed;
+        z-index: 60;
+        top: 22px;
+        left: var(--sp);
+        font-family: var(--display);
+        font-size: 19px;
+        letter-spacing: 0.24em;
+        mix-blend-mode: difference;
+      }
+      .menu {
+        position: fixed;
+        z-index: 60;
+        top: 22px;
+        right: var(--sp);
+        display: flex;
+        gap: 22px;
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        mix-blend-mode: difference;
+      }
+      /* Below this the wordmark and the links would sit on top of each other. */
+      @media (max-width: 760px) {
+        .brand { font-size: 15px; letter-spacing: 0.16em; }
+        .menu { gap: 14px; font-size: 10px; letter-spacing: 0.1em; }
+        .menu a:nth-child(n + 3) { display: none; }
+      }
+
+      /* the chapter rail — where you are in the sequence */
+      .rail {
+        position: fixed;
+        z-index: 60;
+        right: var(--sp);
+        top: 50%;
+        transform: translateY(-50%);
+        display: grid;
+        gap: 13px;
+        justify-items: end;
+      }
+      @media (max-width: 860px) { .rail { display: none; } }
+      .rail button {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        color: rgba(244, 239, 230, 0.45);
+        font-family: var(--sans);
+        font-size: 10px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        transition: color 300ms;
+      }
+      .rail button span.t { opacity: 0; transform: translateX(6px); transition: all 340ms cubic-bezier(0.16, 1, 0.3, 1); }
+      .rail button:hover span.t, .rail button.on span.t { opacity: 1; transform: none; }
+      .rail button i { display: block; width: 22px; height: 1px; background: currentColor; transition: width 340ms cubic-bezier(0.16, 1, 0.3, 1); }
+      .rail button.on { color: var(--paper); }
+      .rail button.on i { width: 40px; background: var(--warm); }
+
+      /* the scroll progress line across the top */
+      .prog { position: fixed; z-index: 61; inset: 0 auto auto 0; height: 2px; background: var(--warm); width: 0; }
+
+      /* ── chapters ────────────────────────────────────────────────────────── */
+      .chapter {
+        position: relative;
+        height: 100svh;
+        scroll-snap-align: start;
+        overflow: hidden;
+        display: grid;
+        place-items: center;
+      }
+      /* parallax: the image is oversized and drifts against the scroll */
+      .chapter .bg { position: absolute; inset: -12% 0; will-change: transform; }
+      .chapter .bg img { filter: brightness(0.76) saturate(1.04); }
+      .chapter::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(10,10,11,.62) 0%, rgba(10,10,11,.16) 40%, rgba(10,10,11,.78) 100%);
+      }
+
+      .cap { position: relative; z-index: 3; text-align: center; padding: 0 var(--sp); width: 100%; }
+      .cap .idx {
+        font-family: var(--sans);
+        font-size: 11px;
+        letter-spacing: 0.4em;
+        opacity: 0.72;
+        margin-bottom: 20px;
+      }
+      /* the wipe: each place name is revealed by a clip-path sweep */
+      .cap h2 {
+        font-family: var(--display);
+        font-size: clamp(3.2rem, 15vw, 13rem);
+        line-height: 0.82;
+        letter-spacing: 0.005em;
+        margin: 0;
+        clip-path: inset(0 100% 0 0);
+        transition: clip-path 1100ms cubic-bezier(0.16, 1, 0.3, 1) 120ms;
+      }
+      .chapter.live .cap h2 { clip-path: inset(0 0 0 0); }
+      .cap .name {
+        font-family: var(--serif);
+        font-weight: 200;
+        font-style: italic;
+        font-size: clamp(1.1rem, 2.6vw, 2rem);
+        margin: 18px 0 0;
+        opacity: 0;
+        transform: translateY(14px);
+        transition: all 900ms cubic-bezier(0.16, 1, 0.3, 1) 420ms;
+      }
+      .chapter.live .cap .name { opacity: 1; transform: none; }
+      .cap .tele {
+        display: flex;
+        justify-content: center;
+        gap: 8px 26px;
+        flex-wrap: wrap;
+        margin-top: 26px;
+        font-size: 10px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        opacity: 0;
+        transition: opacity 900ms ease 640ms;
+      }
+      .chapter.live .cap .tele { opacity: 0.66; }
+      .cap .tele b { color: var(--warm); font-weight: 400; }
+
+      /* ── opening ─────────────────────────────────────────────────────────── */
+      .open .cap h2 { clip-path: none; font-size: clamp(3rem, 13vw, 12rem); }
+      .open .lede {
+        font-family: var(--serif);
+        font-weight: 200;
+        font-size: clamp(1rem, 2.1vw, 1.5rem);
+        line-height: 1.5;
+        max-width: 30ch;
+        margin: 26px auto 0;
+        opacity: 0.86;
+      }
+      .scroll-hint {
+        position: absolute;
+        z-index: 4;
+        bottom: 46px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 10px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        opacity: 0.6;
+        animation: bob 2.6s ease-in-out infinite;
+      }
+      @keyframes bob { 50% { transform: translate(-50%, 8px); opacity: 0.3; } }
+
+      /* ── closing grid: the whole archive, finally ────────────────────────── */
+      .outro { background: var(--paper); color: var(--ink); padding: clamp(70px, 12vh, 150px) var(--sp) 130px; scroll-snap-align: start; }
+      .outro h3 { font-family: var(--display); font-size: clamp(2.4rem, 8vw, 6.4rem); line-height: 0.9; margin: 0 0 8px; }
+      .outro p { font-family: var(--serif); font-weight: 300; font-size: 1.05rem; color: #6d6355; max-width: 44ch; margin: 0 0 44px; }
+      .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+      .tile { position: relative; aspect-ratio: 3 / 4; overflow: hidden; background: #e3dccf; }
+      .tile img { transition: transform 900ms cubic-bezier(0.16, 1, 0.3, 1); }
+      .tile:hover img { transform: scale(1.07); }
+      .tile b {
+        position: absolute;
+        left: 9px;
+        bottom: 8px;
+        font-family: var(--sans);
+        font-weight: 500;
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #fff;
+        opacity: 0;
+        transform: translateY(5px);
+        transition: all 280ms;
+        text-shadow: 0 1px 8px rgba(0,0,0,.8);
+      }
+      .tile:hover b { opacity: 1; transform: none; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .chapter .bg { transform: none !important; }
+        .cap h2 { clip-path: none; transition: none; }
+        .cap .name, .cap .tele { opacity: 1; transform: none; transition: none; }
+        .scroll-hint { animation: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="prog"></div>
+    <div class="brand">SAM DUCKWORTH</div>
+    <nav class="menu"><a href="#">Index</a><a href="#">Prints</a><a href="#">About</a></nav>
+    <nav class="rail"></nav>
+    <main></main>
+
+    <script type="module">
+      import { img, srcset, photos, switcher } from "./mock.js";
+
+      const rows = await photos();
+      // One chapter per place, using its strongest wide/landscape frame.
+      const order = ["Manly", "Narrabeen", "Italy", "Greece", "Albania", "Denmark", "Portugal", "Croatia"];
+      const chapters = order
+        .map((loc) => rows.find((p) => p.location === loc && p.aspect !== "portrait") ?? rows.find((p) => p.location === loc))
+        .filter(Boolean);
+
+      const main = document.querySelector("main");
+      const opener = rows.find((p) => p.title === "Blush") ?? rows[0];
+
+      main.innerHTML =
+        `<section class="chapter open live">
+           <div class="bg"><img src="${img(opener, 2200, 78)}" srcset="${srcset(opener, [1000, 1500, 2200, 2800])}" sizes="100vw" alt="${opener.title}" fetchpriority="high" /></div>
+           <div class="cap">
+             <p class="idx">AERIAL &amp; LANDSCAPE</p>
+             <h2>SAM DUCKWORTH</h2>
+             <p class="lede">Eight places, seen from above. Scroll to fly the sequence.</p>
+           </div>
+           <div class="scroll-hint">Scroll</div>
+         </section>` +
+        chapters
+          .map(
+            (p, i) => `<section class="chapter" data-i="${i}">
+              <div class="bg"><img src="${img(p, 2200, 76)}" srcset="${srcset(p, [1000, 1500, 2200, 2800])}" sizes="100vw" alt="${p.title}" loading="lazy" /></div>
+              <div class="cap">
+                <p class="idx">${String(i + 1).padStart(2, "0")} / ${String(chapters.length).padStart(2, "0")}</p>
+                <h2>${p.location.toUpperCase()}</h2>
+                <p class="name">${p.title}</p>
+                <div class="tele">
+                  <span>${p.region}</span>
+                  ${p.alt ? `<span><b>${Math.round(p.alt)} m</b> above ground</span>` : ""}
+                  ${p.year ? `<span>${p.year}</span>` : ""}
+                  ${p.lat != null ? `<span>${p.lat.toFixed(2)}°, ${p.lon.toFixed(2)}°</span>` : ""}
+                </div>
+              </div>
+            </section>`,
+          )
+          .join("") +
+        `<section class="outro">
+           <h3>THE FULL ARCHIVE</h3>
+           <p>Every frame, every place — ${rows.length} photographs across ${new Set(rows.map((r) => r.location)).size} locations.</p>
+           <div class="tiles">${rows
+             .slice(0, 40)
+             .map((p) => `<div class="tile"><img src="${img(p, 380)}" alt="${p.title}" loading="lazy" /><b>${p.location}</b></div>`)
+             .join("")}</div>
+         </section>`;
+
+      // Chapter rail.
+      const rail = document.querySelector(".rail");
+      rail.innerHTML = chapters
+        .map((p, i) => `<button data-i="${i}"><span class="t">${p.location}</span><i></i></button>`)
+        .join("");
+      rail.addEventListener("click", (e) => {
+        const b = e.target.closest("button");
+        if (b) document.querySelectorAll(".chapter[data-i]")[+b.dataset.i].scrollIntoView({ behavior: "smooth" });
+      });
+
+      // Live chapter → triggers the wipe, syncs the rail.
+      const io = new IntersectionObserver(
+        (es) =>
+          es.forEach((e) => {
+            e.target.classList.toggle("live", e.isIntersecting && e.intersectionRatio > 0.45);
+            if (e.isIntersecting && e.intersectionRatio > 0.45 && e.target.dataset.i != null) {
+              rail.querySelectorAll("button").forEach((b, n) => b.classList.toggle("on", n === +e.target.dataset.i));
+            }
+          }),
+        { threshold: [0, 0.45, 0.9] },
+      );
+      document.querySelectorAll(".chapter").forEach((c) => io.observe(c));
+
+      // Parallax + progress, on one rAF-throttled scroll handler.
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const prog = document.querySelector(".prog");
+      const bgs = [...document.querySelectorAll(".chapter")];
+      let ticking = false;
+      const frame = () => {
+        const max = document.documentElement.scrollHeight - innerHeight;
+        prog.style.width = (scrollY / max) * 100 + "%";
+        if (!reduced) {
+          for (const c of bgs) {
+            const r = c.getBoundingClientRect();
+            if (r.bottom < -200 || r.top > innerHeight + 200) continue;
+            const t = (r.top + r.height / 2 - innerHeight / 2) / innerHeight;
+            c.querySelector(".bg").style.transform = `translate3d(0, ${(-t * 9).toFixed(2)}%, 0)`;
+          }
+        }
+        ticking = false;
+      };
+      addEventListener(
+        "scroll",
+        () => {
+          if (!ticking) { ticking = true; requestAnimationFrame(frame); }
+        },
+        { passive: true },
+      );
+      frame();
+
+      switcher("horizon");
+    </script>
+  </body>
+</html>

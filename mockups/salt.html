@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>01 Salt — Sam Duckworth</title>
+    <link rel="stylesheet" href="./switch.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..500&family=Archivo:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ── 01 SALT ────────────────────────────────────────────────────────────
+         Your existing paper-and-ink identity, pushed into "exaggerated
+         minimalism": same warmth, far more air, type doing the heavy lifting.
+         Bebas stays as the voice; Fraunces adds an editorial serif for names. */
+      :root {
+        --paper: #f4efe6;
+        --paper-2: #ebe3d6;
+        --ink: #1b1916;
+        --muted: #786d5d;
+        --line: rgba(27, 25, 22, 0.14);
+        --timber: #b8895b;
+        --sea: #3f6366;
+        --sp: clamp(20px, 5vw, 72px);
+        --display: "Bebas Neue", Impact, sans-serif;
+        --serif: "Fraunces", Georgia, serif;
+        --sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+      img { display: block; width: 100%; height: 100%; object-fit: cover; }
+      a { color: inherit; text-decoration: none; }
+      figure { margin: 0; } /* UA default is 1em 40px — it insets every tile */
+
+      [data-reveal] {
+        opacity: 0;
+        transform: translateY(28px);
+        filter: blur(6px);
+        transition:
+          opacity 900ms cubic-bezier(0.2, 0.8, 0.2, 1),
+          transform 1000ms cubic-bezier(0.2, 0.8, 0.2, 1),
+          filter 900ms ease;
+        transition-delay: var(--d, 0ms);
+      }
+      [data-reveal].in { opacity: 1; transform: none; filter: none; }
+
+      /* ── nav ─────────────────────────────────────────────────────────────── */
+      header {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 40;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        padding: 20px var(--sp);
+        mix-blend-mode: difference;
+        color: #fff;
+        transition: background 320ms ease, color 320ms ease, border-color 320ms ease;
+        border-bottom: 1px solid transparent;
+      }
+      /* Difference-blend reads beautifully over the hero photo and turns to mud
+         over the paper sections — so past the hero it becomes a solid bar. */
+      header.solid {
+        mix-blend-mode: normal;
+        color: var(--ink);
+        background: rgba(244, 239, 230, 0.86);
+        -webkit-backdrop-filter: blur(16px);
+        backdrop-filter: blur(16px);
+        border-bottom-color: var(--line);
+      }
+      .mark {
+        font-family: var(--display);
+        font-size: 20px;
+        letter-spacing: 0.22em;
+      }
+      nav.top { display: flex; gap: 26px; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; }
+      nav.top a { opacity: 0.72; transition: opacity 200ms; }
+      nav.top a:hover { opacity: 1; }
+      @media (max-width: 760px) {
+        .mark { font-size: 15px; letter-spacing: 0.14em; }
+        nav.top { gap: 13px; font-size: 10px; letter-spacing: 0.08em; }
+        nav.top a:nth-child(n + 3) { display: none; }
+      }
+
+      /* ── hero ────────────────────────────────────────────────────────────── */
+      .hero { position: relative; height: 100svh; min-height: 560px; overflow: hidden; }
+      .hero img { position: absolute; inset: 0; transform: scale(1.06); animation: drift 22s ease-in-out infinite alternate; }
+      @keyframes drift { to { transform: scale(1.14) translate3d(-1.5%, -1%, 0); } }
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(15, 14, 12, 0.5) 0%, rgba(15, 14, 12, 0.08) 42%, rgba(15, 14, 12, 0.72) 100%);
+      }
+      .hero-copy {
+        position: absolute;
+        z-index: 2;
+        left: var(--sp);
+        right: var(--sp);
+        bottom: clamp(48px, 9vh, 110px);
+        color: #f7f4ee;
+      }
+      .kicker {
+        font-size: 11px;
+        letter-spacing: 0.34em;
+        text-transform: uppercase;
+        opacity: 0.78;
+        margin: 0 0 18px;
+      }
+      .hero h1 {
+        font-family: var(--display);
+        font-size: clamp(3.6rem, 16vw, 15rem);
+        line-height: 0.82;
+        letter-spacing: -0.005em;
+        margin: 0;
+      }
+      .hero-foot {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 28px;
+        align-items: baseline;
+        margin-top: 22px;
+        border-top: 1px solid rgba(247, 244, 238, 0.28);
+        padding-top: 14px;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        opacity: 0.82;
+      }
+      .hero-foot .place { font-family: var(--serif); font-size: 17px; letter-spacing: 0; text-transform: none; opacity: 1; }
+
+      /* ── statement ───────────────────────────────────────────────────────── */
+      .statement { padding: clamp(80px, 14vh, 190px) var(--sp) clamp(60px, 10vh, 130px); max-width: 1500px; }
+      .statement p {
+        font-family: var(--serif);
+        font-optical-sizing: auto;
+        font-weight: 300;
+        font-size: clamp(1.5rem, 3.5vw, 3.1rem);
+        line-height: 1.24;
+        letter-spacing: -0.015em;
+        margin: 0;
+        max-width: 22ch;
+        text-wrap: balance;
+      }
+      .statement p em { font-style: italic; color: var(--sea); }
+      .statement .sub {
+        font-family: var(--sans);
+        font-size: 15px;
+        line-height: 1.66;
+        color: var(--muted);
+        max-width: 46ch;
+        margin-top: 34px;
+        letter-spacing: 0;
+      }
+
+      /* ── the index: oversized numbered place list ────────────────────────── */
+      .idx { border-top: 1px solid var(--line); }
+      .idx-row {
+        display: grid;
+        grid-template-columns: 4.5rem 1fr auto;
+        gap: clamp(14px, 3vw, 44px);
+        align-items: center;
+        padding: clamp(16px, 2.4vw, 30px) var(--sp);
+        border-bottom: 1px solid var(--line);
+        position: relative;
+        cursor: pointer;
+        transition: background 260ms ease, color 260ms ease;
+      }
+      .idx-row:hover { background: var(--ink); color: var(--paper); }
+      .idx-row .n { font-family: ui-monospace, Menlo, monospace; font-size: 11px; opacity: 0.5; }
+      .idx-row .nm {
+        font-family: var(--display);
+        font-size: clamp(2rem, 6.4vw, 5.6rem);
+        line-height: 0.94;
+        letter-spacing: 0.005em;
+      }
+      .idx-row .meta { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.55; text-align: right; white-space: nowrap; }
+      /* Region + count won't fit beside a big place name on narrow screens —
+         drop the region, keep the number. */
+      @media (max-width: 900px) {
+        .idx-row { grid-template-columns: 2.4rem 1fr auto; }
+        .idx-row .meta .region { display: none; }
+      }
+      /* the peek image that slides in on hover — desktop only */
+      .idx-row .peek {
+        position: absolute;
+        right: clamp(120px, 18vw, 320px);
+        top: 50%;
+        width: clamp(150px, 15vw, 250px);
+        aspect-ratio: 4 / 3;
+        transform: translateY(-50%) scale(0.9) rotate(-2deg);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 320ms ease, transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+        z-index: 3;
+      }
+      @media (hover: hover) and (min-width: 900px) {
+        .idx-row:hover .peek { opacity: 1; transform: translateY(-50%) scale(1) rotate(-2deg); }
+      }
+
+      /* ── editorial mosaic ────────────────────────────────────────────────── */
+      .sec-head {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 20px;
+        padding: clamp(70px, 12vh, 150px) var(--sp) 30px;
+        flex-wrap: wrap;
+      }
+      .sec-head h2 { font-family: var(--display); font-size: clamp(2.2rem, 5vw, 4.4rem); margin: 6px 0 0; letter-spacing: 0.01em; }
+      .sec-head .eyebrow { font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); margin: 0; }
+      .sec-head .link { font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; border-bottom: 1px solid currentColor; padding-bottom: 3px; }
+
+      .mosaic {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: clamp(10px, 1.6vw, 26px);
+        padding: 0 var(--sp) clamp(70px, 12vh, 150px);
+      }
+      .cell { position: relative; overflow: hidden; background: var(--paper-2); }
+      .cell img { transition: transform 1200ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+      .cell:hover img { transform: scale(1.05); }
+      .cell figcaption {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 40px 16px 14px;
+        color: #fff;
+        background: linear-gradient(transparent, rgba(10, 9, 8, 0.66));
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 300ms ease, transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      .cell:hover figcaption { opacity: 1; transform: none; }
+      .cell figcaption b { display: block; font-family: var(--serif); font-weight: 400; font-size: 18px; }
+      .cell figcaption span { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.8; }
+      /* asymmetric rhythm — a big anchor, then offset pairs */
+      .c-a { grid-column: span 7; aspect-ratio: 3 / 2; }
+      .c-b { grid-column: span 5; aspect-ratio: 3 / 4; align-self: end; }
+      .c-c { grid-column: 3 / span 4; aspect-ratio: 3 / 4; }
+      .c-d { grid-column: span 6; aspect-ratio: 3 / 2; align-self: center; }
+      .c-e { grid-column: span 12; aspect-ratio: 21 / 9; }
+      .c-f { grid-column: span 4; aspect-ratio: 1; }
+      .c-g { grid-column: span 4; aspect-ratio: 1; margin-top: clamp(20px, 5vw, 70px); }
+      .c-h { grid-column: span 4; aspect-ratio: 1; }
+      /* Two tracks on a phone, not twelve — twelve leaves nothing but gutters. */
+      @media (max-width: 780px) {
+        .mosaic { grid-template-columns: repeat(2, 1fr); }
+        .c-a, .c-b, .c-c, .c-d, .c-e { grid-column: span 2; align-self: auto; }
+        .c-f, .c-g, .c-h { grid-column: span 1; }
+        .c-g { margin-top: 0; }
+      }
+
+      /* ── altitude strip: makes the drone data part of the design ─────────── */
+      .strip { background: var(--ink); color: var(--paper); padding: clamp(56px, 9vh, 110px) var(--sp); }
+      .strip-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 34px 20px; }
+      .stat .v { font-family: var(--display); font-size: clamp(2.6rem, 6vw, 4.6rem); line-height: 0.9; color: var(--timber); }
+      .stat .k { font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; opacity: 0.6; margin-top: 12px; }
+
+      /* ── prints ──────────────────────────────────────────────────────────── */
+      .prints { padding: 0 var(--sp) clamp(80px, 12vh, 150px); display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: clamp(16px, 2.4vw, 40px); }
+      .print .frame { background: var(--paper-2); padding: clamp(14px, 1.6vw, 26px); box-shadow: 0 1px 0 var(--line); }
+      .print .frame > div { aspect-ratio: 3 / 4; overflow: hidden; }
+      .print h3 { font-family: var(--serif); font-weight: 400; font-size: 19px; margin: 16px 0 2px; }
+      .print p { margin: 0; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+
+      footer { border-top: 1px solid var(--line); padding: clamp(50px, 8vh, 90px) var(--sp) 120px; }
+      footer .big { font-family: var(--display); font-size: clamp(2.4rem, 9vw, 8rem); line-height: 0.88; }
+      footer .row { display: flex; flex-wrap: wrap; gap: 12px 34px; margin-top: 30px; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="mark">SAM DUCKWORTH</div>
+      <nav class="top">
+        <a href="#work">Work</a><a href="#places">Places</a><a href="#prints">Prints</a><a href="#">Map</a>
+      </nav>
+    </header>
+
+    <section class="hero" id="hero"></section>
+
+    <section class="statement">
+      <p data-reveal>Two hundred metres up, the coast stops being a place and becomes a <em>drawing</em>.</p>
+      <p class="sub" data-reveal style="--d: 140ms">
+        Aerial and landscape work from the Northern Beaches of Sydney, and from
+        wherever the drone case ends up next. Every frame here is a print.
+      </p>
+    </section>
+
+    <section class="idx" id="places"></section>
+
+    <div class="sec-head" id="work">
+      <div><p class="eyebrow">Selected</p><h2>Recent Work</h2></div>
+      <a class="link" href="#">All galleries</a>
+    </div>
+    <section class="mosaic"></section>
+
+    <section class="strip">
+      <div class="strip-grid"></div>
+    </section>
+
+    <div class="sec-head" id="prints">
+      <div><p class="eyebrow">Framed Editions</p><h2>Prints in oak</h2></div>
+      <a class="link" href="#">Shop the collection</a>
+    </div>
+    <section class="prints"></section>
+
+    <footer>
+      <div class="big">LET'S<br />MAKE<br />SOMETHING</div>
+      <div class="row"><span>hello@samduckworth.com</span><span>@sam.duckworth</span><span>Sydney, AU</span></div>
+    </footer>
+
+    <script type="module">
+      import { img, srcset, photos, reveal, switcher } from "./mock.js";
+
+      const rows = await photos();
+      const find = (t) => rows.find((p) => p.title === t);
+      const land = rows.filter((p) => p.aspect === "landscape" || p.aspect === "wide");
+      const port = rows.filter((p) => p.aspect === "portrait");
+
+      // Hero — Sam's own chosen hero frame.
+      const hero = find("Blush") ?? land[0];
+      document.querySelector(".hero").insertAdjacentHTML(
+        "afterbegin",
+        `<img src="${img(hero, 2000, 78)}" srcset="${srcset(hero, [900, 1400, 2000, 2600])}" sizes="100vw" alt="${hero.title}" fetchpriority="high" />
+         <div class="hero-copy">
+           <p class="kicker">Aerial &amp; Landscape · Northern Beaches</p>
+           <h1>SAM<br />DUCKWORTH</h1>
+           <div class="hero-foot">
+             <span class="place">${hero.title}, ${hero.location}</span>
+             <span>${hero.alt ? Math.round(hero.alt) + " m" : "—"}</span>
+             <span>${hero.year ?? ""}</span>
+           </div>
+         </div>`,
+      );
+
+      // Place index — top places by volume, each with a hover peek.
+      const places = [...new Map(rows.map((p) => [p.location, p])).values()];
+      const counts = rows.reduce((a, p) => ((a[p.location] = (a[p.location] ?? 0) + 1), a), {});
+      const idx = places
+        .sort((a, b) => counts[b.location] - counts[a.location])
+        .slice(0, 9);
+      document.querySelector(".idx").innerHTML = idx
+        .map((p, i) => {
+          const cover = rows.find((r) => r.location === p.location && r.aspect !== "portrait") ?? p;
+          return `<div class="idx-row" data-reveal style="--d:${i * 40}ms">
+            <span class="n">${String(i + 1).padStart(2, "0")}</span>
+            <span class="nm">${p.location.toUpperCase()}</span>
+            <span class="meta"><span class="region">${p.region} · </span>${counts[p.location]} frames</span>
+            <img class="peek" src="${img(cover, 500)}" alt="" loading="lazy" />
+          </div>`;
+        })
+        .join("");
+
+      // Mosaic — asymmetric editorial rhythm across landscape/portrait/wide.
+      const wide = rows.filter((p) => p.aspect === "wide");
+      const pick = [land[1], port[0], port[1], land[2], wide[0] ?? land[3], land[4], port[2], land[5]];
+      const classes = ["c-a", "c-b", "c-c", "c-d", "c-e", "c-f", "c-g", "c-h"];
+      document.querySelector(".mosaic").innerHTML = pick
+        .map((p, i) =>
+          !p ? "" :
+          `<figure class="cell ${classes[i]}" data-reveal style="--d:${(i % 3) * 90}ms">
+             <img src="${img(p, 1100)}" srcset="${srcset(p, [500, 800, 1100, 1600])}" sizes="(max-width:780px) 100vw, 50vw" alt="${p.title}" loading="lazy" />
+             <figcaption><b>${p.title}</b><span>${p.location}${p.alt ? " · " + Math.round(p.alt) + "m" : ""}</span></figcaption>
+           </figure>`,
+        )
+        .join("");
+
+      // Stats pulled from the actual catalogue, not invented.
+      const alts = rows.map((p) => p.alt).filter(Boolean);
+      const stats = [
+        [rows.length, "Frames online"],
+        [new Set(rows.map((p) => p.location)).size, "Places flown"],
+        [Math.round(Math.max(...alts)) + "m", "Highest frame"],
+        [new Set(rows.map((p) => p.region)).size, "Regions"],
+      ];
+      document.querySelector(".strip-grid").innerHTML = stats
+        .map(([v, k], i) => `<div class="stat" data-reveal style="--d:${i * 80}ms"><div class="v">${v}</div><div class="k">${k}</div></div>`)
+        .join("");
+
+      // Prints — portrait crops sit best in a frame.
+      document.querySelector(".prints").innerHTML = port
+        .slice(3, 7)
+        .map((p, i) => `<div class="print" data-reveal style="--d:${i * 70}ms">
+            <div class="frame"><div><img src="${img(p, 700)}" alt="${p.title}" loading="lazy" /></div></div>
+            <h3>${p.title}</h3><p>${p.location}</p>
+          </div>`)
+        .join("");
+
+      // Header flips to a solid bar once the hero has scrolled past.
+      const head = document.querySelector("header");
+      const heroEl = document.querySelector(".hero");
+      new IntersectionObserver(
+        ([e]) => head.classList.toggle("solid", !e.isIntersecting),
+        { rootMargin: "-60px 0px 0px 0px", threshold: 0 },
+      ).observe(heroEl);
+
+      reveal();
+      switcher("salt");
+    </script>
+  </body>
+</html>

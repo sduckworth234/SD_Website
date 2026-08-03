@@ -1,0 +1,39 @@
+/* Shared chrome: the concept switcher that rides on every mockup. */
+.mock-switch {
+  position: fixed;
+  z-index: 999;
+  left: 50%;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(18, 17, 15, 0.82);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  max-width: calc(100vw - 24px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.mock-switch::-webkit-scrollbar { display: none; }
+.mock-switch a {
+  flex: none;
+  padding: 7px 13px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.62);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 180ms ease, color 180ms ease;
+}
+.mock-switch a:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+.mock-switch a.on { color: #12110f; background: #f3eee5; }
+.mock-switch .ms-home { color: rgba(255, 255, 255, 0.4); }
+
+@media print { .mock-switch { display: none; } }

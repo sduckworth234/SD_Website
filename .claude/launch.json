@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "vite-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--port", "5175", "--strictPort"],
+      "port": 5175,
+      "url": "http://localhost:5175"
+    },
+    {
+      "name": "mockups",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "mockups", "--port", "5199", "--strictPort"],
+      "port": 5199,
+      "url": "http://localhost:5199"
+    }
+  ]
+}

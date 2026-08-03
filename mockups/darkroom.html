@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>02 Darkroom — Sam Duckworth</title>
+    <link rel="stylesheet" href="./switch.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ── 02 DARKROOM ────────────────────────────────────────────────────────
+         The gallery at night. Near-black walls, zero UI chrome competing with
+         the work, images lit like they're hung under a spot. This is the
+         palette the skill's engine scored highest for "gallery" — pushed dark,
+         because aerial water and sunset skies gain a stop of depth on black. */
+      :root {
+        --bg: #0b0b0c;
+        --bg-2: #131315;
+        --fg: #f2f0ec;
+        --muted: #8b8880;
+        --line: rgba(242, 240, 236, 0.13);
+        --warm: #c8945f; /* your timber, kept as the single accent */
+        --sp: clamp(20px, 5vw, 80px);
+        --sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+        --mono: "Space Grotesk", ui-monospace, Menlo, monospace;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden;
+      }
+      img { display: block; width: 100%; height: 100%; object-fit: cover; }
+      a { color: inherit; text-decoration: none; }
+      figure { margin: 0; } /* UA default is 1em 40px — it insets every plate */
+      ::selection { background: var(--warm); color: #0b0b0c; }
+
+      [data-reveal] {
+        opacity: 0;
+        transform: translateY(24px) scale(0.985);
+        transition:
+          opacity 1100ms cubic-bezier(0.16, 1, 0.3, 1),
+          transform 1200ms cubic-bezier(0.16, 1, 0.3, 1);
+        transition-delay: var(--d, 0ms);
+      }
+      [data-reveal].in { opacity: 1; transform: none; }
+
+      /* ── nav ─────────────────────────────────────────────────────────────── */
+      header {
+        position: fixed;
+        inset: 0 0 auto;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px var(--sp);
+        background: linear-gradient(rgba(11, 11, 12, 0.9), transparent);
+      }
+      .mark { font-weight: 600; font-size: 13px; letter-spacing: 0.28em; }
+      nav.top { display: flex; gap: 24px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; }
+      nav.top a { color: var(--muted); transition: color 200ms; }
+      nav.top a:hover, nav.top a.on { color: var(--fg); }
+      @media (max-width: 760px) {
+        nav.top { gap: 13px; font-size: 10px; }
+        nav.top a:nth-child(n + 4) { display: none; }
+      }
+
+      /* ── hero: a slow crossfade between your best frames ─────────────────── */
+      .hero { position: relative; height: 100svh; min-height: 580px; overflow: hidden; background: #000; }
+      .hero .slide {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        transition: opacity 1600ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .hero .slide.on { opacity: 1; }
+      .hero .slide img { transform: scale(1.05); transition: transform 7000ms linear; }
+      .hero .slide.on img { transform: scale(1.12); }
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(120% 80% at 50% 40%, transparent 40%, rgba(11, 11, 12, 0.7) 100%),
+          linear-gradient(0deg, rgba(11, 11, 12, 0.92) 0%, transparent 46%);
+        pointer-events: none;
+      }
+      .hero-copy { position: absolute; z-index: 3; left: var(--sp); right: var(--sp); bottom: clamp(64px, 12vh, 120px); }
+      .hero h1 {
+        font-size: clamp(2.6rem, 7.4vw, 7rem);
+        font-weight: 600;
+        line-height: 0.98;
+        letter-spacing: -0.045em;
+        margin: 0;
+        max-width: 16ch;
+        text-wrap: balance;
+      }
+      .hero h1 i { font-style: normal; color: var(--warm); }
+      .hero .lede { font-family: var(--mono); font-weight: 300; color: rgba(242,240,236,.72); font-size: 15px; max-width: 44ch; margin: 22px 0 0; line-height: 1.6; }
+      /* the caption that tracks the current slide */
+      .hero-cap {
+        position: absolute;
+        z-index: 3;
+        right: var(--sp);
+        bottom: clamp(64px, 12vh, 120px);
+        text-align: right;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.9;
+      }
+      .hero-cap b { display: block; color: var(--fg); font-weight: 400; font-size: 16px; }
+      @media (max-width: 900px) { .hero-cap { display: none; } }
+
+      /* ── the wall: images float on black, generous gutters ───────────────── */
+      .sec-head {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+        padding: clamp(80px, 14vh, 170px) var(--sp) 34px;
+        border-top: 1px solid var(--line);
+        margin-top: clamp(60px, 10vh, 120px);
+      }
+      .sec-head h2 { font-size: clamp(1.6rem, 3.4vw, 2.7rem); font-weight: 500; letter-spacing: -0.03em; margin: 0; }
+      .sec-head .n { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+      .wall { padding: 0 var(--sp); display: grid; grid-template-columns: repeat(12, 1fr); gap: clamp(14px, 2.6vw, 52px); }
+      .plate { position: relative; overflow: hidden; background: var(--bg-2); }
+      .plate img {
+        transition: transform 1400ms cubic-bezier(0.16, 1, 0.3, 1), filter 700ms ease;
+        filter: brightness(0.9) saturate(0.96);
+      }
+      .plate:hover img { transform: scale(1.04); filter: brightness(1.04) saturate(1.06); }
+      .plate .cap {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 2px 0;
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .plate .cap b { color: var(--fg); font-weight: 400; font-size: 14px; }
+      .plate .cap .alt { color: var(--warm); }
+      .p-1 { grid-column: span 8; aspect-ratio: 16 / 10; }
+      .p-2 { grid-column: span 4; aspect-ratio: 2 / 3; align-self: end; }
+      .p-3 { grid-column: 2 / span 5; aspect-ratio: 3 / 4; }
+      .p-4 { grid-column: span 5; aspect-ratio: 4 / 5; align-self: center; }
+      .p-5 { grid-column: span 12; aspect-ratio: 21 / 9; }
+      .p-6 { grid-column: span 6; aspect-ratio: 3 / 2; }
+      .p-7 { grid-column: span 6; aspect-ratio: 3 / 2; margin-top: clamp(24px, 6vw, 90px); }
+      /* Collapse to one column outright — keeping 12 tracks and widening the
+         gutters overflows the viewport on a phone. */
+      @media (max-width: 820px) {
+        .wall { grid-template-columns: 1fr; gap: 34px; }
+        .p-1, .p-2, .p-3, .p-4, .p-5, .p-6, .p-7 { grid-column: auto; margin-top: 0; align-self: auto; }
+      }
+
+      /* ── filmstrip: a horizontal scroller of everything else ─────────────── */
+      .strip-wrap { padding: 0 0 clamp(70px, 11vh, 140px); }
+      .filmstrip {
+        display: flex;
+        gap: clamp(10px, 1.4vw, 20px);
+        overflow-x: auto;
+        padding: 0 var(--sp) 18px;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(242,240,236,.2) transparent;
+      }
+      .filmstrip::-webkit-scrollbar { height: 3px; }
+      .filmstrip::-webkit-scrollbar-thumb { background: rgba(242,240,236,.2); }
+      .frame-s {
+        flex: none;
+        width: clamp(190px, 22vw, 330px);
+        aspect-ratio: 3 / 4;
+        scroll-snap-align: start;
+        overflow: hidden;
+        position: relative;
+        background: var(--bg-2);
+      }
+      .frame-s img { filter: brightness(0.82) grayscale(0.25); transition: filter 600ms ease, transform 900ms cubic-bezier(0.16,1,0.3,1); }
+      .frame-s:hover img { filter: none; transform: scale(1.05); }
+      .frame-s span {
+        position: absolute;
+        left: 12px;
+        bottom: 12px;
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0;
+        transition: opacity 300ms;
+        text-shadow: 0 1px 8px rgba(0,0,0,.8);
+      }
+      .frame-s:hover span { opacity: 1; }
+
+      /* ── places, as a quiet tag cloud ────────────────────────────────────── */
+      .places { padding: 0 var(--sp) clamp(80px, 12vh, 160px); display: flex; flex-wrap: wrap; gap: 10px 8px; }
+      .chip {
+        font-family: var(--mono);
+        font-size: clamp(13px, 1.6vw, 19px);
+        padding: 9px 17px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        cursor: pointer;
+        transition: all 260ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .chip:hover { color: var(--bg); background: var(--fg); border-color: var(--fg); }
+      .chip sup { color: var(--warm); font-size: 0.66em; margin-left: 5px; }
+
+      footer { border-top: 1px solid var(--line); padding: clamp(56px, 9vh, 110px) var(--sp) 130px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 30px; }
+      footer h3 { font-size: clamp(1.8rem, 5vw, 3.6rem); font-weight: 500; letter-spacing: -0.04em; margin: 0; max-width: 14ch; }
+      footer .links { font-family: var(--mono); font-size: 13px; color: var(--muted); display: grid; gap: 9px; align-content: end; }
+      footer .links a:hover { color: var(--warm); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="mark">SD</div>
+      <nav class="top"><a class="on" href="#">Index</a><a href="#">Places</a><a href="#">Map</a><a href="#">Prints</a><a href="#">About</a></nav>
+    </header>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <h1>The coast, from <i>two hundred metres</i> up.</h1>
+        <p class="lede">Aerial and landscape photography — Sydney's Northern Beaches, and the Mediterranean coastline in between.</p>
+      </div>
+      <div class="hero-cap"></div>
+    </section>
+
+    <div class="sec-head"><h2>Selected work</h2><span class="n">01 — 07</span></div>
+    <section class="wall"></section>
+
+    <div class="sec-head"><h2>The archive</h2><span class="n">scroll →</span></div>
+    <div class="strip-wrap"><div class="filmstrip"></div></div>
+
+    <div class="sec-head"><h2>Where</h2><span class="n">by place</span></div>
+    <section class="places"></section>
+
+    <footer>
+      <h3>Prints, commissions, and the occasional roof.</h3>
+      <div class="links">
+        <a href="#">hello@samduckworth.com</a><a href="#">instagram / @sam.duckworth</a><a href="#">Framed Editions →</a>
+      </div>
+    </footer>
+
+    <script type="module">
+      import { img, srcset, photos, reveal, switcher } from "./mock.js";
+
+      const rows = await photos();
+      const land = rows.filter((p) => p.aspect === "landscape" || p.aspect === "wide");
+      const port = rows.filter((p) => p.aspect === "portrait");
+
+      // Hero — a slow crossfade through five frames, caption tracking along.
+      const slides = [land[0], land[3], port[1], land[6], port[4]].filter(Boolean);
+      const hero = document.querySelector(".hero");
+      hero.insertAdjacentHTML(
+        "afterbegin",
+        slides
+          .map(
+            (p, i) =>
+              `<div class="slide${i === 0 ? " on" : ""}"><img src="${img(p, 2000, 76)}" srcset="${srcset(p, [900, 1400, 2000, 2600])}" sizes="100vw" alt="${p.title}" ${i === 0 ? 'fetchpriority="high"' : 'loading="lazy"'} /></div>`,
+          )
+          .join(""),
+      );
+      const cap = document.querySelector(".hero-cap");
+      const paint = (i) => {
+        const p = slides[i];
+        cap.innerHTML = `<b>${p.title}</b>${p.location} · ${p.region}<br />${p.alt ? Math.round(p.alt) + " m AGL" : "ground level"}${p.year ? " · " + p.year : ""}`;
+      };
+      paint(0);
+      let i = 0;
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        setInterval(() => {
+          const els = hero.querySelectorAll(".slide");
+          els[i].classList.remove("on");
+          i = (i + 1) % slides.length;
+          els[i].classList.add("on");
+          paint(i);
+        }, 5200);
+      }
+
+      // The wall.
+      const wall = [land[1], port[0], port[2], land[2], rows.find((p) => p.aspect === "wide") ?? land[4], land[5], land[7]];
+      document.querySelector(".wall").innerHTML = wall
+        .map((p, n) =>
+          !p ? "" :
+          `<figure class="plate p-${n + 1}" data-reveal style="--d:${(n % 2) * 120}ms">
+             <img src="${img(p, 1300)}" srcset="${srcset(p, [600, 900, 1300, 1900])}" sizes="(max-width:820px) 100vw, 60vw" alt="${p.title}" loading="lazy" />
+             <figcaption class="cap"><b>${p.title}</b><span>${p.location}${p.alt ? ` <span class="alt">${Math.round(p.alt)}m</span>` : ""}</span></figcaption>
+           </figure>`,
+        )
+        .join("");
+
+      // Filmstrip — everything that didn't make the wall.
+      const used = new Set(wall.filter(Boolean).map((p) => p.id));
+      document.querySelector(".filmstrip").innerHTML = rows
+        .filter((p) => !used.has(p.id))
+        .slice(0, 26)
+        .map((p) => `<div class="frame-s"><img src="${img(p, 520)}" alt="${p.title}" loading="lazy" /><span>${p.title} · ${p.location}</span></div>`)
+        .join("");
+
+      // Places.
+      const counts = rows.reduce((a, p) => ((a[p.location] = (a[p.location] ?? 0) + 1), a), {});
+      document.querySelector(".places").innerHTML = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, n]) => `<button class="chip">${name}<sup>${n}</sup></button>`)
+        .join("");
+
+      reveal();
+      switcher("darkroom");
+    </script>
+  </body>
+</html>

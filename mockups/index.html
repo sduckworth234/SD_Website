@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Design directions — Sam Duckworth</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Fraunces:ital,opsz,wght@0,9..144,300;1,9..144,300&family=Archivo:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper: #f4efe6;
+        --ink: #1b1916;
+        --muted: #786d5d;
+        --line: rgba(27, 25, 22, 0.15);
+        --sp: clamp(20px, 5vw, 72px);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: "Archivo", ui-sans-serif, system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      a { color: inherit; text-decoration: none; }
+      img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+      .head { padding: clamp(60px, 12vh, 130px) var(--sp) clamp(30px, 5vh, 56px); }
+      .head p.k { font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--muted); margin: 0 0 16px; }
+      .head h1 { font-family: "Bebas Neue", Impact, sans-serif; font-size: clamp(2.8rem, 9vw, 7rem); line-height: 0.9; margin: 0; letter-spacing: 0.01em; }
+      .head .lede {
+        font-family: "Fraunces", Georgia, serif;
+        font-weight: 300;
+        font-size: clamp(1rem, 1.9vw, 1.3rem);
+        line-height: 1.55;
+        color: #524a3f;
+        max-width: 58ch;
+        margin: 26px 0 0;
+      }
+      .head .lede code { font-family: ui-monospace, Menlo, monospace; font-size: 0.86em; background: rgba(27,25,22,.07); padding: 2px 6px; }
+
+      .grid {
+        padding: 0 var(--sp) clamp(80px, 12vh, 150px);
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+        gap: clamp(18px, 2.4vw, 34px);
+      }
+      .card { border-top: 1px solid var(--line); padding-top: 18px; display: block; }
+      .card .shot {
+        aspect-ratio: 4 / 3;
+        overflow: hidden;
+        background: #e3dccf;
+        position: relative;
+      }
+      .card .shot img { transition: transform 900ms cubic-bezier(0.16, 1, 0.3, 1), filter 500ms; }
+      .card:hover .shot img { transform: scale(1.05); }
+      .card .shot .tag {
+        position: absolute;
+        left: 12px;
+        top: 12px;
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        padding: 5px 9px;
+        background: rgba(10, 10, 11, 0.76);
+        color: #f4efe6;
+        border-radius: 999px;
+      }
+      .card h2 { font-family: "Bebas Neue", Impact, sans-serif; font-size: clamp(1.7rem, 3vw, 2.4rem); margin: 16px 0 6px; letter-spacing: 0.02em; }
+      .card p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--muted); }
+      .card .meta { margin-top: 13px; display: flex; flex-wrap: wrap; gap: 6px; }
+      .card .meta span { font-size: 10px; letter-spacing: 0.13em; text-transform: uppercase; border: 1px solid var(--line); padding: 4px 9px; border-radius: 999px; color: #6a6153; }
+      .card .go { margin-top: 15px; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; border-bottom: 1px solid currentColor; display: inline-block; padding-bottom: 3px; }
+
+      footer { border-top: 1px solid var(--line); padding: 34px var(--sp) 80px; font-size: 12px; color: var(--muted); line-height: 1.8; }
+      footer b { color: var(--ink); font-weight: 500; }
+    </style>
+  </head>
+  <body>
+    <div class="head">
+      <p class="k">Sam Duckworth Photography — concept round</p>
+      <h1>FIVE DIRECTIONS</h1>
+      <p class="lede">
+        Five reimaginings of samduckworth.com, all running on your real work —
+        <b class="n-count">a curated set</b> pulled from your 589 published
+        frames, with the real titles, GPS and drone altitudes straight out of
+        Supabase, served off the same image CDN the live site uses. Same photos
+        in every concept, so the only thing that changes is the design. Open
+        one, then use the switcher pinned at the bottom to flick between them.
+      </p>
+    </div>
+
+    <div class="grid"></div>
+
+    <footer>
+      <b>How these were made.</b> Design system generated with the
+      <b>ui-ux-pro-max</b> skill (84 UI styles, 192 palettes, 74 font pairings,
+      98 UX rules) — it scored "Exaggerated Minimalism" + "Portfolio Grid" +
+      gallery-black palette highest for a fine-art photography portfolio, and
+      those recommendations are the backbone of 01 and 02. 03–05 push past the
+      database into interaction concepts.<br />
+      Nothing here touches the live site.
+    </footer>
+
+    <script type="module">
+      import { img, photos } from "./mock.js";
+
+      const rows = await photos();
+      document.querySelector(".n-count").textContent = `${rows.length} frames across ${new Set(rows.map((p) => p.location)).size} places`;
+      const pick = (t) => rows.find((p) => p.title === t);
+      const land = rows.filter((p) => p.aspect === "landscape" || p.aspect === "wide");
+
+      const CONCEPTS = [
+        {
+          slug: "salt",
+          tag: "01",
+          name: "SALT",
+          cover: pick("Blush") ?? land[0],
+          blurb:
+            "Your paper-and-ink identity, evolved. Same warmth and Bebas voice, far more air — a full-bleed hero, an oversized numbered index of places that previews on hover, and an asymmetric editorial mosaic.",
+          tags: ["Closest to today", "Warm paper", "Editorial", "Safest ship"],
+        },
+        {
+          slug: "darkroom",
+          tag: "02",
+          name: "DARKROOM",
+          cover: land[3] ?? land[1],
+          blurb:
+            "The gallery at night. Near-black walls, no chrome competing with the work, photos lit like they're hung under a spot. Slow hero crossfade, floating plates, a filmstrip archive that develops from grey on hover.",
+          tags: ["Dark", "Museum", "Print-shop ready", "High contrast"],
+        },
+        {
+          slug: "atlas",
+          tag: "03",
+          name: "ATLAS",
+          cover: land[6] ?? land[2],
+          blurb:
+            "The flight log as the interface. Your altitude, GPS and capture dates become the navigation — scrub the altitude ladder, read live telemetry, see every frame plotted at its true coordinates. Nobody else's portfolio can do this.",
+          tags: ["Data-led", "Uses your GPS", "Most distinctive", "Instrument panel"],
+        },
+        {
+          slug: "horizon",
+          tag: "04",
+          name: "HORIZON",
+          cover: land[4] ?? land[1],
+          blurb:
+            "One frame at a time, scroll as the shutter. Each place is a full-screen chapter: the photo parallaxes, the place name wipes in on a clip-path, and a rail tracks the sequence. Ends by dropping you into the whole archive.",
+          tags: ["Immersive", "Scroll cinema", "Storytelling", "Big impact"],
+        },
+        {
+          slug: "prism",
+          tag: "05",
+          name: "PRISM",
+          cover: land[5] ?? land[2],
+          blurb:
+            "The show-off. A live WebGL surface renders the hero — the image is displaced by a flow field around your cursor, and switching place dissolves one photo into the next through that same field. Magnetic grid, custom cursor.",
+          tags: ["WebGL", "Cursor-reactive", "Award-site energy", "Most ambitious"],
+        },
+      ];
+
+      document.querySelector(".grid").innerHTML = CONCEPTS.map(
+        (c) => `<a class="card" href="./${c.slug}.html">
+          <div class="shot">
+            <span class="tag">${c.tag}</span>
+            <img src="${img(c.cover, 900)}" alt="${c.name}" loading="lazy" />
+          </div>
+          <h2>${c.name}</h2>
+          <p>${c.blurb}</p>
+          <div class="meta">${c.tags.map((t) => `<span>${t}</span>`).join("")}</div>
+          <div class="go">Open ${c.name} →</div>
+        </a>`,
+      ).join("");
+    </script>
+  </body>
+</html>
