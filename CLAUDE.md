@@ -216,6 +216,26 @@ Publish/unpublish, delete (row + storage file), feature/Recent Work slots,
 send-to-top, bulk rename, bulk move-to-location, create location — from `/admin`
 and (edit/unpublish/send-to-top) inline on the live gallery when signed in.
 
+**Instagram feed (bottom of the home page).** A light strip of the latest posts
+from `@sam.duckworth`, cached in Supabase — **the browser never talks to
+Instagram**, so `vercel.json`'s CSP needs no loosening.
+- **Needs a Professional (Business/Creator) account.** Instagram killed the Basic
+  Display API on 2024-12-04; the replacement (*Instagram API with Instagram
+  Login*) has no personal-account path at all.
+- `api/instagram-sync.mjs` runs on a **Vercel Cron** (daily, `vercel.json`). It
+  fetches recent media, **mirrors each image into the photos bucket** (Instagram's
+  `media_url` values are signed and expire — linking them directly rots the feed),
+  upserts `public.instagram_posts`, prunes anything that fell out of the feed, and
+  **refreshes the 60-day token at ~50 days**.
+- The rotating token lives in **`public.integration_secrets`**, which has RLS on
+  and *no* anon/authenticated policy or grant — only the service-role key reads
+  it. **Never move it into `site_settings`: anon can read that table in full.**
+- Env on Vercel: `INSTAGRAM_TOKEN` (seed, adopted into the DB on first run),
+  `INSTAGRAM_APP_SECRET`, `CRON_SECRET` (required by the endpoint when set).
+  `scripts/instagram-token.mjs` does the one-time short→long token exchange.
+- `getInstagramPosts()` degrades to `[]` if the table is absent, and the section
+  doesn't render with zero posts. Hidden independently by the `instagram_feed` flag.
+
 **Collections — the galleries page's second filter axis (`/admin` → Collections).**
 Trips/bodies of work ("2024 Europe") shown as a rail ABOVE the location tabs;
 picking one narrows the places rail to only the places inside it. This exists

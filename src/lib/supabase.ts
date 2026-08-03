@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { fallbackLocations, photos as fallbackPhotos } from "../data/photos";
-import type { Collection, GalleryLocation, Photo, SiteSetting } from "../types";
+import type { Collection, GalleryLocation, InstagramPost, Photo, SiteSetting } from "../types";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabasePublishableKey =
@@ -931,6 +931,51 @@ export async function getCollectionMembership(): Promise<Map<string, string[]>> 
     return map;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Instagram feed (public.instagram_posts) — read-only for the site. Filled by
+// the api/instagram-sync cron; the browser never talks to Instagram.
+// ---------------------------------------------------------------------------
+export async function getInstagramPosts(): Promise<InstagramPost[]> {
+  // Bound once so the null-check narrows for the whole function (module-level
+  // `supabase` loses its narrowing across an await).
+  const client = supabase;
+  if (!client) return [];
+  try {
+    const { data, error } = await client
+      .from("instagram_posts")
+      .select("id, caption, permalink, media_type, posted_at, storage_path, like_count, comments_count, sort_order")
+      .order("sort_order", { ascending: true });
+    // Ships ahead of its migration, so a missing table degrades to "no feed"
+    // rather than taking the home page down.
+    if (error) return [];
+    return ((data ?? []) as InstagramRow[]).map((row) => ({
+      id: row.id,
+      caption: row.caption,
+      permalink: row.permalink,
+      mediaType: row.media_type,
+      postedAt: row.posted_at,
+      storagePath: row.storage_path,
+      likeCount: row.like_count,
+      commentsCount: row.comments_count,
+      sortOrder: row.sort_order,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+type InstagramRow = {
+  id: string;
+  caption: string | null;
+  permalink: string;
+  media_type: string | null;
+  posted_at: string | null;
+  storage_path: string | null;
+  like_count: number | null;
+  comments_count: number | null;
+  sort_order: number;
+};
 
 // Read every site_settings row (visibility flags + small key/value settings).
 // Public-safe: anon may read. Returns [] when Supabase isn't configured.

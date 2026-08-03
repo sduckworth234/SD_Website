@@ -14,7 +14,11 @@ import {
   LayoutGrid,
   Lock,
   LogOut,
+  Heart,
   MapPin,
+  MessageCircle,
+  ChevronLeft,
+  ChevronRight,
   LoaderCircle,
   Pencil,
   Plane,
@@ -41,6 +45,7 @@ import {
   getAdminPhotos,
   getCollectionMembership,
   getGalleryData,
+  getInstagramPosts,
   getRecentPhotos,
   getSiteSettings,
   getTransformedPublicUrl,
@@ -63,7 +68,7 @@ import {
   updatePhotoVisibility,
   uploadPhotoAsset,
 } from "./lib/supabase";
-import type { Collection, GalleryLocation, LocationBucket, Photo, SiteSetting } from "./types";
+import type { Collection, GalleryLocation, InstagramPost, LocationBucket, Photo, SiteSetting } from "./types";
 import { collectionTitle } from "./types";
 import { compressToWebp, extractPhotoMetadata } from "./lib/ingest";
 import type { ExtractedPhotoMeta } from "./lib/ingest";
@@ -297,6 +302,7 @@ function useSiteData() {
   const [recentPhotos, setRecentPhotos] = useState<Photo[]>([]);
   const [locations, setLocations] = useState<GalleryLocation[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
+  const [instagramPosts, setInstagramPosts] = useState<InstagramPost[]>([]);
   const [settings, setSettings] = useState<SiteSetting[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminChecked, setAdminChecked] = useState(false);
@@ -304,16 +310,18 @@ function useSiteData() {
   const [isLoading, setIsLoading] = useState(true);
 
   const loadGallery = useCallback(async () => {
-    const [data, recent, siteSettings] = await Promise.all([
+    const [data, recent, siteSettings, igPosts] = await Promise.all([
       getGalleryData(),
       getRecentPhotos(9),
       getSiteSettings(),
+      getInstagramPosts(),
     ]);
     setPhotos(data.photos);
     setLocations(data.locations);
     setCollections(data.collections ?? []);
     setRecentPhotos(recent);
     setSettings(siteSettings);
+    setInstagramPosts(igPosts);
   }, []);
 
   useEffect(() => {
@@ -413,7 +421,7 @@ function useSiteData() {
     return collections.filter((c) => (isAdmin ? true : c.isVisible && populated.has(c.id)));
   }, [collections, publicPhotos, isAdmin]);
 
-  return { photos, recentPhotos, locations, collections, visibleCollections, settings, flags, settingValue, publicPhotos, locationNames, isAdmin, adminChecked, isScrolled, isLoading, loadGallery };
+  return { photos, recentPhotos, locations, collections, visibleCollections, instagramPosts, settings, flags, settingValue, publicPhotos, locationNames, isAdmin, adminChecked, isScrolled, isLoading, loadGallery };
 }
 
 // A flag is "on" unless explicitly set to false (absent row = visible).
@@ -438,7 +446,7 @@ function AdminHideable({ visible, isAdmin, label, children }: { visible: boolean
 // The landing page: hero, recent work, the map teaser, location collection cards,
 // and (admin-only for now) the Framed Editions shop banner.
 function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
-  const { photos, recentPhotos, publicPhotos, locations, locationNames, collections, flags, settingValue, isAdmin, isScrolled, isLoading, loadGallery } = useSiteData();
+  const { photos, recentPhotos, publicPhotos, locations, locationNames, collections, instagramPosts, flags, settingValue, isAdmin, isScrolled, isLoading, loadGallery } = useSiteData();
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [recentSlot, setRecentSlot] = useState<number | null>(null);
@@ -581,6 +589,11 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "contact_prompt")} label="Contact">
             <ContactPrompt onOpen={() => setIsContactOpen(true)} />
           </AdminHideable>
+          {instagramPosts.length ? (
+            <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "instagram_feed")} label="Instagram feed">
+              <InstagramFeed posts={instagramPosts} />
+            </AdminHideable>
+          ) : null}
         </>
       )}
       <Footer />
@@ -1313,6 +1326,92 @@ function InstagramRail() {
       <Instagram size={16} aria-hidden="true" />
       <span>sam.duckworth</span>
     </a>
+  );
+}
+
+// The live Instagram strip that closes the home page. Reads the cached posts
+// from Supabase (filled by the api/instagram-sync cron) — the browser never
+// touches Instagram, so the site's CSP stays as tight as it is.
+//
+// Light to match the rest of the page, with the caption always readable under
+// each post rather than on hover — so it behaves identically on a phone.
+function InstagramFeed({ posts }: { posts: InstagramPost[] }) {
+  const isPhone = useMediaQuery("(max-width: 760px)");
+  const trackRef = useRef<HTMLDivElement | null>(null);
+
+  if (!posts.length) return null;
+
+  function nudge(direction: -1 | 1) {
+    const track = trackRef.current;
+    if (!track) return;
+    track.scrollBy({ left: direction * Math.round(track.clientWidth * 0.8), behavior: "smooth" });
+  }
+
+  return (
+    <section className="ig-feed scroll-reveal" aria-label="Latest on Instagram">
+      <div className="ig-feed-head">
+        <div className="ig-feed-id">
+          <span className="ig-feed-handle">
+            <Instagram size={14} aria-hidden="true" /> @sam.duckworth
+          </span>
+          <h2 className="ig-feed-title">Latest on Instagram</h2>
+        </div>
+        <div className="ig-feed-actions">
+          {!isPhone ? (
+            <div className="ig-feed-nav">
+              <button aria-label="Scroll back" onClick={() => nudge(-1)} type="button">
+                <ChevronLeft size={16} aria-hidden="true" />
+              </button>
+              <button aria-label="Scroll forward" onClick={() => nudge(1)} type="button">
+                <ChevronRight size={16} aria-hidden="true" />
+              </button>
+            </div>
+          ) : null}
+          <a
+            className="ig-feed-follow"
+            href="https://instagram.com/sam.duckworth"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            Follow
+          </a>
+        </div>
+      </div>
+
+      <div className="ig-feed-track" ref={trackRef}>
+        {posts.map((post) => {
+          const src = post.storagePath
+            ? getTransformedPublicUrl(photoBucket, post.storagePath, 620)
+            : "";
+          return (
+            <a
+              className="ig-tile"
+              href={post.permalink}
+              key={post.id}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <div className="ig-tile-img">
+                {src ? <SmartImage alt={post.caption ?? "Instagram post"} src={src} /> : null}
+              </div>
+              <div className="ig-tile-body">
+                {post.likeCount != null || post.commentsCount != null ? (
+                  <div className="ig-tile-meta">
+                    {post.likeCount != null ? (
+                      <span><Heart size={12} aria-hidden="true" />{post.likeCount.toLocaleString()}</span>
+                    ) : null}
+                    {post.commentsCount != null ? (
+                      <span><MessageCircle size={12} aria-hidden="true" />{post.commentsCount.toLocaleString()}</span>
+                    ) : null}
+                  </div>
+                ) : null}
+                {post.caption ? <p className="ig-tile-cap">{post.caption}</p> : null}
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -2700,6 +2799,7 @@ function CollectionCurator({
 // Everything about a collection is editable here — nothing is hardcoded.
 function CollectionsAdmin({ photos }: { photos: Photo[] }) {
   const [collections, setCollections] = useState<Collection[]>([]);
+  const [instagramPosts, setInstagramPosts] = useState<InstagramPost[]>([]);
   const [membership, setMembership] = useState<Map<string, string[]>>(new Map());
   const [curating, setCurating] = useState<Collection | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -2924,6 +3024,7 @@ const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
   { key: "collection_cards", label: "Home — Collection cards", hint: "The cycling location tiles on the home page." },
   { key: "framed_banner", label: "Home — Framed Editions banner", hint: "The print-shop banner near the bottom of the home page." },
   { key: "contact_prompt", label: "Home — Contact / Work with me", hint: "The “Let’s work together” prompt + contact popup." },
+  { key: "instagram_feed", label: "Home — Instagram feed", hint: "The live strip of your latest Instagram posts, above the footer." },
   { key: "shop_public", label: "Shop page — public", hint: "Open /shop to the public (otherwise it shows “Opening soon”)." },
 ];
 

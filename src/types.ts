@@ -70,6 +70,23 @@ export type Collection = {
   isVisible: boolean;
 };
 
+// One cached Instagram post (public.instagram_posts). The image is a path in
+// the photos bucket, not an Instagram URL — theirs expire, ours don't, and it
+// keeps every image on a domain the site's CSP already trusts.
+export type InstagramPost = {
+  id: string;
+  caption?: string | null;
+  permalink: string;
+  mediaType?: string | null;
+  postedAt?: string | null;
+  storagePath?: string | null;
+  // Engagement counts, when Instagram returns them. Null-safe: the strip simply
+  // omits the row rather than showing zeros.
+  likeCount?: number | null;
+  commentsCount?: number | null;
+  sortOrder: number;
+};
+
 // "2026 Europe" — the rail's big+small lines joined, and the gallery page title.
 export function collectionTitle(collection: Collection): string {
   return [collection.period, collection.name].filter(Boolean).join(" ");

@@ -1463,6 +1463,152 @@ body:has(.contact-overlay) {
   .hero-2026 { height: 54vh; min-height: 360px; margin-left: 14px; margin-right: 14px; }
 }
 
+/* --- Instagram feed: the strip that closes the home page -------------------
+   Light to match the rest of the page: paper ground, hairline card borders,
+   caption always readable beneath each post (no hover), so it reads the same
+   on a desktop and a phone. */
+.ig-feed {
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+  padding: clamp(34px, 5vw, 64px) 0 clamp(32px, 4vw, 56px);
+  --reveal-distance: 24px;
+}
+
+.ig-feed-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 0 clamp(18px, 4vw, 56px);
+  margin-bottom: clamp(16px, 2.4vw, 26px);
+}
+
+.ig-feed-id { display: grid; gap: 6px; }
+
+.ig-feed-handle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.ig-feed-title {
+  margin: 0;
+  font-family: "Bebas Neue", Impact, "Arial Narrow", sans-serif;
+  font-size: clamp(1.7rem, 4vw, 2.8rem);
+  line-height: 0.94;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+
+.ig-feed-actions { display: flex; align-items: center; gap: 10px; }
+.ig-feed-nav { display: flex; gap: 7px; }
+
+.ig-feed-nav button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.ig-feed-nav button:hover {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--foam);
+}
+
+.ig-feed-follow {
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 10px 16px;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.ig-feed-follow:hover {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--foam);
+}
+
+.ig-feed-track {
+  display: flex;
+  gap: clamp(10px, 1.4vw, 16px);
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding: 2px clamp(18px, 4vw, 56px) 4px;
+  scrollbar-width: none;
+}
+
+.ig-feed-track::-webkit-scrollbar { display: none; }
+
+.ig-tile {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  width: clamp(168px, 20vw, 232px);
+  scroll-snap-align: start;
+  border: 1px solid var(--line);
+  background: var(--foam);
+  cursor: var(--circle-cursor), pointer;
+  transition: border-color 200ms ease, transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ig-tile:hover { border-color: var(--ink); transform: translateY(-2px); }
+
+.ig-tile-img {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1;
+  background: var(--paper-deep);
+}
+
+.ig-tile-img .smart-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ig-tile:hover .smart-img { transform: scale(1.05); }
+
+.ig-tile-body { display: grid; gap: 7px; padding: 11px 12px 13px; }
+
+.ig-tile-meta {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ig-tile-meta span { display: inline-flex; align-items: center; gap: 5px; }
+
+.ig-tile-cap {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ig-tile:focus-visible { outline: 2px solid var(--sea); outline-offset: 3px; }
+
 /* "Recent Work" — editorial mosaic of the latest photos above the gallery */
 .recent-work {
   padding: clamp(36px, 7vw, 84px) clamp(18px, 4vw, 56px) clamp(18px, 2.6vw, 34px);
