@@ -1,5 +1,7 @@
-/* Self-hosted so the heading font is guaranteed available (no Google Fonts round
-   trips) — the loading-state "Recent Work" renders in Bebas Neue, not a fallback. */
+/* All fonts self-hosted — the CSP is `font-src 'self'`, and it keeps the first
+   paint free of third-party round trips. Bebas Neue is now nav-only (the "SD"
+   wordmark); Archivo + Space Grotesk carry the rest of the site. Both are
+   variable fonts, so one file per family covers every weight we use. */
 @font-face {
   font-family: "Bebas Neue";
   font-style: normal;
@@ -7,25 +9,145 @@
   font-display: swap;
   src: url("/fonts/bebas-neue.woff2") format("woff2");
 }
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 400 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/fonts/archivo-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 400 700;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url("/fonts/archivo-var-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 300 500;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Space Grotesk";
+  font-style: normal;
+  font-weight: 300 500;
+  font-display: swap;
+  src: url("/fonts/space-grotesk-var-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 
 :root {
-  color: #201d19;
-  background: #f3eee5;
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  color-scheme: light;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--font-sans);
   font-synthesis: none;
   text-rendering: geometricPrecision;
-  --paper: #f3eee5;
-  --paper-deep: #e3d2bc;
-  --ink: #201d19;
+
+  /* ── type ──────────────────────────────────────────────────────────────
+     The Darkroom system: Archivo carries every heading and every run of body
+     copy; Space Grotesk handles labels, captions, metadata and leads. Bebas
+     survives only in the nav wordmark. */
+  --font-sans: "Archivo", ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Space Grotesk", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-nav: "Bebas Neue", Impact, "Arial Narrow", sans-serif;
+  /* The nav bar is deliberately left on the old UI stack — it keeps the header
+     reading exactly as it did before the type change. */
+  --font-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  /* Headings are set tight and heavy, the way Darkroom sets them. */
+  --head-weight: 600;
+  --head-track: -0.035em;
+
+  /* ── colour ────────────────────────────────────────────────────────────
+     Everything is expressed as an RGB *channel triplet* rather than a finished
+     colour, because the stylesheet uses ~90 different alphas of the same few
+     base colours (scrims, hairlines, frosted panels). Tokenising the channels
+     means the dark theme only has to redefine these six lines and every alpha
+     variant inverts with them — see [data-theme="dark"] below. */
+  --ink-rgb: 32, 29, 25; /* text + anything drawn on the paper */
+  --paper-rgb: 243, 238, 229; /* the page itself */
+  --paper-deep-rgb: 227, 210, 188; /* recessed bands */
+  --foam-rgb: 248, 246, 240; /* raised panels, cards, frosted bars */
+  --sea-rgb: 73, 109, 112;
+  --mint-rgb: 159, 198, 194; /* the light sea used on dark surfaces */
+  --shade-rgb: 15, 19, 18; /* near-black scrims over photography */
+
+  /* These two deliberately do NOT invert. Anything drawn on top of a
+     photograph has to stay legible against the photo, not against the page —
+     a caption over a sunset is white in both themes, and the pill behind an
+     altitude badge is dark in both. Flipping them was the one thing that
+     genuinely broke when the rest of the palette inverted. */
+  --on-photo-rgb: 248, 246, 240; /* type + hairlines over imagery */
+  --on-photo: rgb(var(--on-photo-rgb));
+  --scrim-rgb: 32, 29, 25; /* pills, badges and modal backdrops over imagery */
+  /* A dark scrim over a dark page separates less than over a light one, so
+     the dark theme leans on it harder. */
+  --backdrop-alpha: 0.62;
+
+  --paper: rgb(var(--paper-rgb));
+  --paper-deep: rgb(var(--paper-deep-rgb));
+  --ink: rgb(var(--ink-rgb));
+  --ink-soft: rgba(var(--ink-rgb), 0.66);
   --muted: #756b5c;
-  --line: rgba(32, 29, 25, 0.16);
+  --line: rgba(var(--ink-rgb), 0.16);
   --timber: #b8895b;
-  --sea: #496d70;
-  --foam: #f8f6f0;
+  --sea: rgb(var(--sea-rgb));
+  --foam: rgb(var(--foam-rgb));
+  --shade: #15130f;
+  --danger: #b3402f;
+  --danger-deep: #8f2f21;
+  --danger-soft: #d8a39a;
+  --success: #2f7a4f;
+  --success-rgb: 40, 90, 60;
+  /* Cursor rings are drawn in the ink colour, so they need a per-theme copy. */
   --circle-cursor: url("data:image/svg+xml,%3Csvg width='34' height='34' viewBox='0 0 34 34' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='17' cy='17' r='13' fill='none' stroke='%23201d19' stroke-width='1.6'/%3E%3Ccircle cx='17' cy='17' r='2.4' fill='%23201d19'/%3E%3C/svg%3E") 17 17;
   --circle-cursor-light: url("data:image/svg+xml,%3Csvg width='34' height='34' viewBox='0 0 34 34' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='17' cy='17' r='13' fill='none' stroke='%23f8f6f0' stroke-width='1.6'/%3E%3Ccircle cx='17' cy='17' r='2.4' fill='%23f8f6f0'/%3E%3C/svg%3E") 17 17;
+}
+
+/* ── dark theme ──────────────────────────────────────────────────────────
+   The Darkroom palette. Ink and paper swap ends of the scale, so every
+   rgba(var(--ink-rgb), α) hairline and every rgba(var(--foam-rgb), α) panel
+   inverts on its own. Accents are lifted, not inverted: the same hue at a
+   higher luminance so it still reads against a near-black page. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --ink-rgb: 242, 240, 236;
+  --paper-rgb: 11, 11, 12;
+  --paper-deep-rgb: 22, 23, 26;
+  --foam-rgb: 19, 19, 21;
+  --sea-rgb: 127, 176, 179;
+  --mint-rgb: 94, 138, 140;
+  --shade-rgb: 4, 4, 5;
+  --backdrop-alpha: 0.8;
+
+  --muted: #8b8880;
+  --timber: #c8945f;
+  --shade: #050506;
+  --danger: #e2705c;
+  --danger-deep: #f0917f;
+  --danger-soft: #7a3529;
+  --success: #5fbd88;
+  --success-rgb: 64, 132, 94;
+
+  --circle-cursor: url("data:image/svg+xml,%3Csvg width='34' height='34' viewBox='0 0 34 34' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='17' cy='17' r='13' fill='none' stroke='%23f2f0ec' stroke-width='1.6'/%3E%3Ccircle cx='17' cy='17' r='2.4' fill='%23f2f0ec'/%3E%3C/svg%3E") 17 17;
 }
 
 * {
@@ -45,7 +167,7 @@ body {
   min-height: 100svh;
   overflow-x: hidden;
   background:
-    linear-gradient(90deg, rgba(32, 29, 25, 0.04) 1px, transparent 1px) 0 0 /
+    linear-gradient(90deg, rgba(var(--ink-rgb), 0.04) 1px, transparent 1px) 0 0 /
       76px 76px,
     var(--paper);
 }
@@ -65,7 +187,7 @@ select,
 textarea {
   border: 1px solid var(--line);
   border-radius: 0;
-  background: rgba(248, 246, 240, 0.76);
+  background: rgba(var(--foam-rgb), 0.76);
   color: var(--ink);
   font: inherit;
   padding: 12px 13px;
@@ -112,13 +234,14 @@ main {
   left: 0;
   right: 0;
   z-index: 20;
+  font-family: var(--font-ui);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: max(18px, env(safe-area-inset-top)) max(clamp(18px, 4vw, 56px), env(safe-area-inset-right))
     18px max(clamp(18px, 4vw, 56px), env(safe-area-inset-left));
   border-bottom: 1px solid var(--line);
-  background: rgba(243, 238, 229, 0.82);
+  background: rgba(var(--paper-rgb), 0.82);
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
   transform: translateY(-100%);
@@ -182,6 +305,33 @@ nav a:hover,
   color: var(--ink);
 }
 
+/* Light/dark switch — same chip as .nav-icon, but it's a button, so it needs
+   the button reset undone and the icon swap given a little life. */
+.theme-toggle {
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.theme-toggle svg {
+  transition:
+    transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 220ms ease;
+}
+
+.theme-toggle:hover svg {
+  transform: rotate(-18deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle svg {
+    transition: none;
+  }
+  .theme-toggle:hover svg {
+    transform: none;
+  }
+}
+
 .nav-icon {
   display: inline-grid;
   place-items: center;
@@ -220,7 +370,7 @@ nav a:hover,
   padding: clamp(56px, 12vh, 140px) clamp(18px, 4vw, 56px);
   /* Transparent except a soft top glow, so the page's single paper
      background runs continuously through the hero — no seam below it. */
-  background: radial-gradient(circle at 50% 14%, rgba(255, 255, 255, 0.6), transparent 62%);
+  background: radial-gradient(circle at 50% 14%, rgba(var(--foam-rgb), 0.6), transparent 62%);
 }
 
 .landing-stage::after {
@@ -229,7 +379,7 @@ nav a:hover,
   z-index: 3;
   pointer-events: none;
   content: "";
-  background: #15130f;
+  background: var(--shade);
   /* The film-open fade from black — a touch longer + a gentle ease-out so the
      reveal is smoother than the old slow-hold-then-snap curve. */
   animation: dark-to-light 2900ms cubic-bezier(0.33, 0, 0.18, 1) 180ms both;
@@ -237,7 +387,7 @@ nav a:hover,
 
 /* --- Cinematic landing: a full-bleed hero photo behind the wordmark --- */
 .landing-stage.cinematic {
-  background: #15130f;
+  background: var(--shade);
 }
 
 .landing-photo {
@@ -261,27 +411,27 @@ nav a:hover,
   pointer-events: none;
   content: "";
   background:
-    linear-gradient(180deg, rgba(15, 19, 18, 0.34), rgba(15, 19, 18, 0.03) 30%, rgba(15, 19, 18, 0.07) 58%, rgba(15, 19, 18, 0.5)),
-    radial-gradient(circle at 50% 42%, rgba(15, 19, 18, 0), rgba(15, 19, 18, 0.15) 98%);
+    linear-gradient(180deg, rgba(var(--shade-rgb), 0.34), rgba(var(--shade-rgb), 0.03) 30%, rgba(var(--shade-rgb), 0.07) 58%, rgba(var(--shade-rgb), 0.5)),
+    radial-gradient(circle at 50% 42%, rgba(var(--shade-rgb), 0), rgba(var(--shade-rgb), 0.15) 98%);
 }
 
 .landing-stage.cinematic .landing-copy {
-  color: var(--foam);
+  color: var(--on-photo);
 }
 
 .landing-stage.cinematic .landing-copy .eyebrow {
-  color: rgba(248, 246, 240, 0.86);
+  color: rgba(var(--on-photo-rgb), 0.86);
 }
 
 .landing-stage.cinematic h1 {
-  color: var(--foam);
+  color: var(--on-photo);
   white-space: nowrap;
   font-size: clamp(2.6rem, 11vw, 7.4rem);
   text-shadow: 0 2px 44px rgba(0, 0, 0, 0.36);
 }
 
 .landing-stage.cinematic .hero-locations {
-  color: rgba(248, 246, 240, 0.9);
+  color: rgba(var(--on-photo-rgb), 0.9);
   text-shadow: 0 1px 18px rgba(0, 0, 0, 0.4);
   /* Anchor the wordmark: lift the ticker out of the centred flow and hang it just
      below the wordmark, so long location lines wrap + spill DOWNWARD instead of
@@ -297,15 +447,15 @@ nav a:hover,
 }
 
 .landing-stage.cinematic .loc-dot {
-  color: #9fc6c2;
+  color: rgb(var(--mint-rgb));
 }
 
 .landing-stage.cinematic .scroll-cue {
-  color: rgba(248, 246, 240, 0.86);
+  color: rgba(var(--on-photo-rgb), 0.86);
 }
 
 .landing-stage.cinematic .scroll-cue:hover {
-  color: var(--foam);
+  color: var(--on-photo);
 }
 
 /* The hero photo's place · title, small and minimal, bottom-left. */
@@ -316,7 +466,7 @@ nav a:hover,
   z-index: 2;
   display: grid;
   gap: 3px;
-  color: var(--foam);
+  color: var(--on-photo);
   text-align: left;
   text-shadow: 0 1px 20px rgba(0, 0, 0, 0.42);
   /* loc-in fades up + de-blurs with NO horizontal shift (cue-fade-in carries a
@@ -328,11 +478,13 @@ nav a:hover,
   font-size: 0.66rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: rgba(248, 246, 240, 0.82);
+  color: rgba(var(--on-photo-rgb), 0.82);
 }
 
 .hero-caption .ttl {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: -0.015em;
   font-size: clamp(1.05rem, 1.5vw, 1.5rem);
   line-height: 1;
 }
@@ -346,11 +498,11 @@ nav a:hover,
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border: 1px solid rgba(248, 246, 240, 0.5);
-  background: rgba(32, 29, 25, 0.42);
+  border: 1px solid rgba(var(--on-photo-rgb), 0.5);
+  background: rgba(var(--scrim-rgb), 0.42);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
-  color: var(--foam);
+  color: var(--on-photo);
   cursor: pointer;
   padding: 8px 12px;
   font-size: 0.66rem;
@@ -362,8 +514,8 @@ nav a:hover,
 }
 
 .hero-edit:hover {
-  background: rgba(32, 29, 25, 0.68);
-  border-color: var(--foam);
+  background: rgba(var(--scrim-rgb), 0.68);
+  border-color: var(--on-photo);
 }
 
 /* Mobile: optionally rotate a landscape hero 90°/270° so the whole image stands
@@ -415,7 +567,7 @@ nav a:hover,
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: #15130f;
+  background: var(--shade);
 }
 
 .hpv-frame img {
@@ -513,7 +665,7 @@ nav a:hover,
 }
 
 .landing-copy .eyebrow {
-  color: rgba(73, 109, 112, 0.92);
+  color: rgba(var(--sea-rgb), 0.92);
 }
 
 .landing-copy h1 {
@@ -595,10 +747,10 @@ p {
 h1 {
   max-width: 11ch;
   margin-bottom: 24px;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   font-size: clamp(3.3rem, 9vw, 8.6rem);
-  font-weight: 400;
-  letter-spacing: 0;
+  font-weight: 600;
+  letter-spacing: -0.045em;
   line-height: 0.86;
   overflow-wrap: break-word;
 }
@@ -701,7 +853,7 @@ h1 {
   display: flex;
   justify-content: space-between;
   gap: 14px;
-  color: var(--foam);
+  color: var(--on-photo);
   font-size: 0.76rem;
   text-transform: uppercase;
 }
@@ -732,9 +884,10 @@ h1 {
 
 .intro-panel h2 {
   max-width: 14ch;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   font-size: clamp(2.4rem, 5vw, 5.8rem);
-  font-weight: 400;
+  font-weight: var(--head-weight);
+  letter-spacing: var(--head-track);
   line-height: 0.96;
 }
 
@@ -746,7 +899,7 @@ h1 {
   gap: 8px;
   overflow-x: auto;
   border-block: 1px solid var(--line);
-  background: rgba(243, 238, 229, 0.9);
+  background: rgba(var(--paper-rgb), 0.9);
   padding: 12px clamp(18px, 4vw, 56px);
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
@@ -799,7 +952,8 @@ h1 {
 }
 
 .collection-rail .rail-period {
-  font-family: "Bebas Neue", Impact, "Arial Narrow", sans-serif;
+  font-family: var(--font-mono);
+  font-weight: 400;
   font-size: 1.05rem;
   line-height: 1;
   letter-spacing: 0.04em;
@@ -928,7 +1082,7 @@ h1 {
 .view-toggle {
   display: inline-flex;
   border: 1px solid var(--line);
-  background: rgba(248, 246, 240, 0.6);
+  background: rgba(var(--foam-rgb), 0.6);
 }
 
 .view-toggle button {
@@ -1029,7 +1183,7 @@ h1 {
   display: grid;
   gap: 2px;
   max-width: 60%;
-  color: var(--foam);
+  color: var(--on-photo);
   text-transform: uppercase;
   opacity: 0.72;
 }
@@ -1048,16 +1202,16 @@ h1 {
 }
 
 .photo-meta strong {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   font-size: clamp(0.66rem, 0.9vw, 0.85rem);
-  font-weight: 400;
-  letter-spacing: 0;
+  font-weight: 500;
+  letter-spacing: -0.015em;
   line-height: 1;
   text-transform: none;
 }
 
 .photo-meta small {
-  color: rgba(248, 246, 240, 0.82);
+  color: rgba(var(--on-photo-rgb), 0.82);
   font-size: 0.48rem;
   letter-spacing: 0.03em;
 }
@@ -1074,10 +1228,10 @@ h1 {
   gap: 3px;
   padding: 3px 7px 3px 6px;
   border-radius: 999px;
-  background: rgba(32, 29, 25, 0.42);
+  background: rgba(var(--scrim-rgb), 0.42);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
-  color: var(--foam);
+  color: var(--on-photo);
   font-size: 0.5rem;
   font-weight: 500;
   letter-spacing: 0.04em;
@@ -1148,7 +1302,7 @@ body:has(.contact-overlay) {
 .lightbox-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(32, 29, 25, 0.62);
+  background: rgba(var(--scrim-rgb), var(--backdrop-alpha));
   cursor: var(--circle-cursor-light), pointer;
 }
 
@@ -1159,8 +1313,8 @@ body:has(.contact-overlay) {
   width: min(980px, 90vw);
   max-height: calc(100dvh - 96px);
   grid-template-rows: minmax(0, 1fr) auto;
-  background: rgba(248, 246, 240, 0.9);
-  box-shadow: 0 24px 90px rgba(32, 29, 25, 0.28);
+  background: rgba(var(--foam-rgb), 0.9);
+  box-shadow: 0 24px 90px rgba(var(--ink-rgb), 0.28);
 }
 
 .lightbox-image {
@@ -1201,9 +1355,10 @@ body:has(.contact-overlay) {
 
 .lightbox-copy h2 {
   margin-bottom: 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   font-size: clamp(1.5rem, 2.2vw, 2.6rem);
-  font-weight: 400;
+  font-weight: var(--head-weight);
+  letter-spacing: var(--head-track);
   line-height: 0.98;
 }
 
@@ -1243,7 +1398,7 @@ body:has(.contact-overlay) {
   height: 42px;
   place-items: center;
   border: 1px solid var(--line);
-  background: rgba(248, 246, 240, 0.82);
+  background: rgba(var(--foam-rgb), 0.82);
   color: var(--ink);
   cursor: pointer;
 }
@@ -1270,7 +1425,7 @@ body:has(.contact-overlay) {
 .about-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(32, 29, 25, 0.62);
+  background: rgba(var(--scrim-rgb), var(--backdrop-alpha));
   cursor: var(--circle-cursor-light), pointer;
 }
 
@@ -1284,9 +1439,9 @@ body:has(.contact-overlay) {
   width: min(860px, 92vw);
   max-height: calc(100dvh - 96px);
   overflow: auto;
-  background: rgba(248, 246, 240, 0.94);
+  background: rgba(var(--foam-rgb), 0.94);
   padding: clamp(20px, 3vw, 40px);
-  box-shadow: 0 24px 90px rgba(32, 29, 25, 0.28);
+  box-shadow: 0 24px 90px rgba(var(--ink-rgb), 0.28);
 }
 
 .about-portrait {
@@ -1310,9 +1465,10 @@ body:has(.contact-overlay) {
 
 .about-copy h2 {
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   font-size: clamp(2rem, 3.4vw, 3.4rem);
-  font-weight: 400;
+  font-weight: var(--head-weight);
+  letter-spacing: var(--head-track);
   line-height: 0.96;
 }
 
@@ -1342,14 +1498,14 @@ body:has(.contact-overlay) {
   margin: clamp(36px, 7vw, 84px) clamp(18px, 4vw, 56px) 0;
   border: 0;
   border-radius: 8px;
-  background: #15130f;
+  background: var(--shade);
   cursor: var(--circle-cursor), pointer;
   --reveal-distance: 30px;
   --reveal-scale: 0.99;
 }
 
 .hero-2026:focus-visible {
-  outline: 2px solid var(--foam);
+  outline: 2px solid var(--on-photo);
   outline-offset: 3px;
 }
 
@@ -1366,8 +1522,8 @@ body:has(.contact-overlay) {
   content: "";
   transition: opacity 400ms ease;
   background:
-    linear-gradient(180deg, rgba(15, 19, 18, 0.5), rgba(15, 19, 18, 0.05) 30%, rgba(15, 19, 18, 0.1) 55%, rgba(15, 19, 18, 0.62)),
-    radial-gradient(circle at 50% 42%, rgba(15, 19, 18, 0), rgba(15, 19, 18, 0.2) 98%);
+    linear-gradient(180deg, rgba(var(--shade-rgb), 0.5), rgba(var(--shade-rgb), 0.05) 30%, rgba(var(--shade-rgb), 0.1) 55%, rgba(var(--shade-rgb), 0.62)),
+    radial-gradient(circle at 50% 42%, rgba(var(--shade-rgb), 0), rgba(var(--shade-rgb), 0.2) 98%);
 }
 
 .hero-2026:hover .hero-2026-photos::after,
@@ -1408,7 +1564,7 @@ body:has(.contact-overlay) {
   justify-content: center;
   gap: 14px;
   text-align: center;
-  color: var(--foam);
+  color: var(--on-photo);
   padding: 0 clamp(18px, 4vw, 56px);
 }
 
@@ -1417,10 +1573,11 @@ body:has(.contact-overlay) {
 .hero-2026-year {
   margin: 0;
   max-width: 94vw;
-  font-family: "Bebas Neue", Impact, "Arial Narrow", sans-serif;
+  font-family: var(--font-sans);
+  font-weight: 600;
   font-size: clamp(2.5rem, 8.4vw, 6rem);
   line-height: 0.92;
-  letter-spacing: 0.02em;
+  letter-spacing: -0.045em;
   white-space: nowrap;
   text-shadow: 0 2px 44px rgba(0, 0, 0, 0.36);
   font-variant-numeric: tabular-nums;
@@ -1430,20 +1587,20 @@ body:has(.contact-overlay) {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #9fc6c2;
+  color: rgb(var(--mint-rgb));
 }
 
 .hero-2026-route .dot {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #9fc6c2;
+  background: rgb(var(--mint-rgb));
 }
 
 .hero-2026-route .seg {
   width: 30px;
   height: 1px;
-  background: linear-gradient(90deg, rgba(159, 198, 194, 0.15), rgba(159, 198, 194, 0.7), rgba(159, 198, 194, 0.15));
+  background: linear-gradient(90deg, rgba(var(--mint-rgb), 0.15), rgba(var(--mint-rgb), 0.7), rgba(var(--mint-rgb), 0.15));
 }
 
 .hero-2026-locs {
@@ -1451,7 +1608,7 @@ body:has(.contact-overlay) {
   font-size: 0.72rem;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: rgba(248, 246, 240, 0.9);
+  color: rgba(var(--on-photo-rgb), 0.9);
   text-shadow: 0 1px 18px rgba(0, 0, 0, 0.4);
 }
 
@@ -1498,10 +1655,11 @@ body:has(.contact-overlay) {
 
 .ig-feed-title {
   margin: 0;
-  font-family: "Bebas Neue", Impact, "Arial Narrow", sans-serif;
+  font-family: var(--font-sans);
+  font-weight: var(--head-weight);
   font-size: clamp(1.7rem, 4vw, 2.8rem);
   line-height: 0.94;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--head-track);
   color: var(--ink);
 }
 
@@ -1618,14 +1776,13 @@ body:has(.contact-overlay) {
 
 .recent-heading {
   margin: 0 0 clamp(22px, 4vw, 44px);
-  font-family: "Bebas Neue", Impact, "Arial Narrow", sans-serif;
+  font-family: var(--font-sans);
   font-size: clamp(2.6rem, 6vw, 4.6rem);
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-weight: var(--head-weight);
+  letter-spacing: var(--head-track);
   line-height: 1;
   text-align: center;
-  text-transform: uppercase;
-  color: rgba(32, 29, 25, 0.6);
+  color: var(--ink-soft);
 }
 
 .recent-mosaic {
@@ -1752,7 +1909,7 @@ body:has(.contact-overlay) {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(248, 246, 240, 0.32) 50%,
+    rgba(var(--foam-rgb), 0.32) 50%,
     transparent 100%
   );
   transform: translateX(-100%);
@@ -1803,9 +1960,9 @@ body:has(.contact-overlay) {
   width: min(1000px, 94vw);
   max-height: calc(100dvh - 96px);
   overflow: auto;
-  background: rgba(248, 246, 240, 0.96);
+  background: rgba(var(--foam-rgb), 0.96);
   padding: clamp(20px, 3vw, 36px);
-  box-shadow: 0 24px 90px rgba(32, 29, 25, 0.28);
+  box-shadow: 0 24px 90px rgba(var(--ink-rgb), 0.28);
 }
 
 .picker-panel .eyebrow {
@@ -1865,7 +2022,7 @@ body:has(.contact-overlay) {
 }
 
 .photo-tile.is-admin:hover {
-  outline-color: rgba(73, 109, 112, 0.6);
+  outline-color: rgba(var(--sea-rgb), 0.6);
   outline-offset: -1px;
 }
 
@@ -1883,9 +2040,9 @@ body:has(.contact-overlay) {
   width: 30px;
   height: 30px;
   place-items: center;
-  border: 1px solid rgba(248, 246, 240, 0.7);
-  background: rgba(32, 29, 25, 0.66);
-  color: var(--foam);
+  border: 1px solid rgba(var(--on-photo-rgb), 0.7);
+  background: rgba(var(--scrim-rgb), 0.66);
+  color: var(--on-photo);
   cursor: pointer;
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
@@ -1895,7 +2052,7 @@ body:has(.contact-overlay) {
 /* Active state for the "feature in map feed" crosshair toggle. */
 .tile-admin-actions button.is-active {
   background: var(--sea);
-  border-color: var(--foam);
+  border-color: var(--on-photo);
 }
 
 /* ---- Admin: drone-feed curation panel ---- */
@@ -1903,7 +2060,7 @@ body:has(.contact-overlay) {
   margin: 8px 0 4px;
   padding: clamp(18px, 2.4vw, 28px);
   border: 1px solid var(--line);
-  background: rgba(248, 246, 240, 0.5);
+  background: rgba(var(--foam-rgb), 0.5);
 }
 
 .map-feed-head .eyebrow {
@@ -1912,9 +2069,10 @@ body:has(.contact-overlay) {
 
 .map-feed-head h2 {
   margin: 2px 0 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   font-size: 1.3rem;
-  font-weight: 400;
+  font-weight: var(--head-weight);
+  letter-spacing: var(--head-track);
 }
 
 .map-feed-note {
@@ -1961,7 +2119,7 @@ body:has(.contact-overlay) {
   height: 22px;
   border-radius: 50%;
   background: var(--sea);
-  color: var(--foam);
+  color: var(--on-photo);
   font-size: 0.66rem;
   font-weight: 700;
 }
@@ -2032,11 +2190,11 @@ body:has(.contact-overlay) {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  color: var(--foam);
+  color: var(--on-photo);
 }
 
 .map-feed-badge.add {
-  background: rgba(32, 29, 25, 0.55);
+  background: rgba(var(--scrim-rgb), 0.55);
 }
 
 .map-feed-badge.remove {
@@ -2054,7 +2212,7 @@ body:has(.contact-overlay) {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  color: var(--foam);
+  color: var(--on-photo);
 }
 
 .map-feed-warn {
@@ -2091,7 +2249,7 @@ body:has(.contact-overlay) {
 }
 
 .tile-admin-actions button:hover {
-  background: rgba(32, 29, 25, 0.9);
+  background: rgba(var(--scrim-rgb), 0.9);
 }
 
 /* Edit overlay (inline gallery editing) */
@@ -2103,8 +2261,8 @@ body:has(.contact-overlay) {
   width: min(900px, 92vw);
   max-height: calc(100dvh - 96px);
   overflow: auto;
-  background: rgba(248, 246, 240, 0.96);
-  box-shadow: 0 24px 90px rgba(32, 29, 25, 0.28);
+  background: rgba(var(--foam-rgb), 0.96);
+  box-shadow: 0 24px 90px rgba(var(--ink-rgb), 0.28);
 }
 
 .edit-overlay-preview {
@@ -2187,9 +2345,10 @@ body:has(.contact-overlay) {
 .admin-login h1,
 .admin-title h1 {
   max-width: 11ch;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   font-size: clamp(2.8rem, 6vw, 6.6rem);
-  font-weight: 400;
+  font-weight: var(--head-weight);
+  letter-spacing: var(--head-track);
   line-height: 0.9;
 }
 
@@ -2202,7 +2361,7 @@ body:has(.contact-overlay) {
   display: grid;
   gap: 18px;
   border: 1px solid var(--line);
-  background: rgba(248, 246, 240, 0.5);
+  background: rgba(var(--foam-rgb), 0.5);
   padding: clamp(18px, 3vw, 30px);
 }
 
@@ -2217,9 +2376,10 @@ body:has(.contact-overlay) {
 
 .admin-card h2 {
   margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   font-size: 2rem;
-  font-weight: 400;
+  font-weight: var(--head-weight);
+  letter-spacing: var(--head-track);
 }
 
 .form-note {
@@ -2241,7 +2401,7 @@ body:has(.contact-overlay) {
   padding: 13px 18px;
   border: 1px solid var(--ink);
   background: var(--ink);
-  color: #f8f6f0;
+  color: rgb(var(--foam-rgb));
   font-size: 0.85rem;
   line-height: 1.4;
   text-align: center;
@@ -2279,7 +2439,7 @@ body:has(.contact-overlay) {
   flex-wrap: wrap;
   gap: 10px;
   border-block: 1px solid var(--line);
-  background: rgba(243, 238, 229, 0.92);
+  background: rgba(var(--paper-rgb), 0.92);
   padding: 12px 0;
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
@@ -2336,11 +2496,11 @@ body:has(.contact-overlay) {
 }
 
 .text-button.danger {
-  color: #b3402f;
+  color: var(--danger);
 }
 
 .text-button.danger:hover {
-  color: #8f2f21;
+  color: var(--danger-deep);
 }
 
 .upload-panel {
@@ -2373,7 +2533,7 @@ body:has(.contact-overlay) {
   display: grid;
   gap: 16px;
   border: 1px solid var(--line);
-  background: rgba(248, 246, 240, 0.5);
+  background: rgba(var(--foam-rgb), 0.5);
   padding: clamp(16px, 3vw, 28px);
 }
 
@@ -2387,9 +2547,10 @@ body:has(.contact-overlay) {
 
 .batch-head-text h2 {
   margin: 0 0 4px;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   font-size: 1.6rem;
-  font-weight: 400;
+  font-weight: var(--head-weight);
+  letter-spacing: var(--head-track);
 }
 
 .batch-head-text p {
@@ -2459,12 +2620,12 @@ body:has(.contact-overlay) {
   grid-template-columns: 84px minmax(0, 1fr);
   gap: 14px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.45);
+  background: rgba(var(--foam-rgb), 0.45);
   padding: 12px;
 }
 
 .batch-row.status-error {
-  border-color: #d8a39a;
+  border-color: var(--danger-soft);
 }
 
 .batch-row.status-done {
@@ -2501,7 +2662,7 @@ body:has(.contact-overlay) {
 }
 
 .batch-tick {
-  background: rgba(40, 90, 60, 0.5);
+  background: rgba(var(--success-rgb), 0.5);
 }
 
 @keyframes batch-spin {
@@ -2562,11 +2723,11 @@ body:has(.contact-overlay) {
 }
 
 .batch-field.needs > span {
-  color: #b3402f;
+  color: var(--danger);
 }
 
 .batch-field.needs select {
-  border-color: #d8a39a;
+  border-color: var(--danger-soft);
 }
 
 .batch-field input,
@@ -2576,7 +2737,7 @@ body:has(.contact-overlay) {
   /* 16px keeps iOS Safari from zooming the page when a field is focused. */
   font-size: 16px;
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--foam);
   color: var(--ink);
 }
 
@@ -2605,11 +2766,11 @@ body:has(.contact-overlay) {
 }
 
 .batch-note.error {
-  color: #b3402f;
+  color: var(--danger);
 }
 
 .batch-note.done {
-  color: #2f7a4f;
+  color: var(--success);
 }
 
 @media (min-width: 720px) {
@@ -2670,7 +2831,7 @@ body:has(.contact-overlay) {
   grid-template-rows: minmax(0, 1fr) auto;
   min-height: 320px;
   border: 1px solid var(--line);
-  background: rgba(248, 246, 240, 0.42);
+  background: rgba(var(--foam-rgb), 0.42);
 }
 
 .admin-curation-card.landscape {
@@ -2718,9 +2879,9 @@ body:has(.contact-overlay) {
   position: absolute;
   top: 12px;
   left: 12px;
-  border: 1px solid rgba(248, 246, 240, 0.72);
-  background: rgba(32, 29, 25, 0.62);
-  color: var(--foam);
+  border: 1px solid rgba(var(--on-photo-rgb), 0.72);
+  background: rgba(var(--scrim-rgb), var(--backdrop-alpha));
+  color: var(--on-photo);
   padding: 7px 9px;
   font-size: 0.66rem;
   text-transform: uppercase;
@@ -2748,9 +2909,10 @@ body:has(.contact-overlay) {
 }
 
 .admin-card-meta strong {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   font-size: clamp(1.25rem, 1.7vw, 2rem);
-  font-weight: 400;
+  font-weight: 500;
+  letter-spacing: -0.015em;
   line-height: 1;
 }
 
@@ -2943,7 +3105,7 @@ body:has(.contact-overlay) {
 }
 
 .slot-actions button {
-  background: rgba(248, 246, 240, 0.8);
+  background: rgba(var(--foam-rgb), 0.8);
   color: var(--ink);
   cursor: pointer;
   padding: 8px 6px;
@@ -3332,13 +3494,12 @@ body:has(.contact-overlay) {
 
 .map-intro h1 {
   margin: 4px 0 0;
-  font-family: "Bebas Neue", Impact, "Arial Narrow", sans-serif;
+  font-family: var(--font-sans);
   font-size: clamp(1.8rem, 4vw, 3.2rem);
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-weight: var(--head-weight);
+  letter-spacing: var(--head-track);
   line-height: 1;
-  text-transform: uppercase;
-  color: rgba(32, 29, 25, 0.72);
+  color: var(--ink-soft);
 }
 
 .map-hint {
@@ -3367,7 +3528,7 @@ body:has(.contact-overlay) {
 .map-stage .maplibregl-ctrl-group {
   border: 1px solid var(--line);
   border-radius: 0;
-  background: rgba(248, 246, 240, 0.85);
+  background: rgba(var(--foam-rgb), 0.85);
   box-shadow: none;
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
@@ -3383,7 +3544,7 @@ body:has(.contact-overlay) {
 }
 
 .map-stage .maplibregl-ctrl-attrib {
-  background: rgba(248, 246, 240, 0.7);
+  background: rgba(var(--foam-rgb), 0.7);
   font-size: 0.62rem;
 }
 
@@ -3392,8 +3553,8 @@ body:has(.contact-overlay) {
   padding: 0;
   border: 1px solid var(--line);
   border-radius: 0;
-  background: rgba(248, 246, 240, 0.97);
-  box-shadow: 0 16px 40px rgba(32, 29, 25, 0.22);
+  background: rgba(var(--foam-rgb), 0.97);
+  box-shadow: 0 16px 40px rgba(var(--ink-rgb), 0.22);
 }
 
 .maplibregl-popup.map-pop-wrap .maplibregl-popup-tip {
@@ -3432,9 +3593,10 @@ body:has(.contact-overlay) {
 }
 
 .map-pop-meta strong {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   font-size: 0.92rem;
-  font-weight: 400;
+  font-weight: 500;
+  letter-spacing: -0.015em;
   line-height: 1;
 }
 
@@ -3517,7 +3679,7 @@ body:has(.contact-overlay) {
   align-items: center;
   gap: 7px;
   border: 1px solid var(--line);
-  background: rgba(248, 246, 240, 0.6);
+  background: rgba(var(--foam-rgb), 0.6);
   color: var(--muted);
   cursor: var(--circle-cursor), pointer;
   padding: 9px 13px;
@@ -3561,9 +3723,10 @@ body:has(.contact-overlay) {
 }
 
 .map-promo-text strong {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-sans);
   font-size: clamp(1.1rem, 2.2vw, 1.7rem);
-  font-weight: 400;
+  font-weight: 500;
+  letter-spacing: -0.015em;
   line-height: 1.05;
   color: var(--ink);
 }
@@ -3616,7 +3779,7 @@ body:has(.contact-overlay) {
 
 .map-promo-mini:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(32, 29, 25, 0.16);
+  box-shadow: 0 12px 28px rgba(var(--ink-rgb), 0.16);
 }
 
 /* D4 "drone feed": cross-fading frames under an aerial HUD overlay. `cover` fills
@@ -3643,8 +3806,8 @@ body:has(.contact-overlay) {
   z-index: 1;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(32, 29, 25, 0.12), rgba(32, 29, 25, 0.5)),
-    repeating-linear-gradient(0deg, rgba(248, 246, 240, 0.06) 0 1px, transparent 1px 22px);
+    linear-gradient(180deg, rgba(var(--scrim-rgb), 0.12), rgba(var(--scrim-rgb), 0.5)),
+    repeating-linear-gradient(0deg, rgba(var(--on-photo-rgb), 0.06) 0 1px, transparent 1px 22px);
 }
 
 .map-promo-bracket {
@@ -3652,7 +3815,7 @@ body:has(.contact-overlay) {
   z-index: 2;
   width: 16px;
   height: 16px;
-  border: 2px solid var(--foam);
+  border: 2px solid var(--on-photo);
   opacity: 0.85;
 }
 .map-promo-bracket.tl { top: 9px; left: 9px; border-right: 0; border-bottom: 0; }
@@ -3667,7 +3830,7 @@ body:has(.contact-overlay) {
   z-index: 2;
   height: 26px;
   pointer-events: none;
-  background: linear-gradient(rgba(248, 246, 240, 0.22), transparent);
+  background: linear-gradient(rgba(var(--on-photo-rgb), 0.22), transparent);
   animation: promo-scan 3.4s linear infinite;
 }
 
@@ -3687,17 +3850,18 @@ body:has(.contact-overlay) {
 }
 
 .map-promo-read strong {
-  font-family: Georgia, "Times New Roman", serif;
-  font-weight: 400;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: -0.015em;
   font-size: 1.02rem;
   line-height: 1;
-  color: var(--foam);
+  color: var(--on-photo);
 }
 
 .map-promo-read small {
   font: 0.58rem/1 ui-monospace, Menlo, monospace;
   letter-spacing: 0.04em;
-  color: rgba(248, 246, 240, 0.82);
+  color: rgba(var(--on-photo-rgb), 0.82);
 }
 
 @keyframes promo-fade {
@@ -3712,8 +3876,8 @@ body:has(.contact-overlay) {
   bottom: 8px;
   padding: 3px 8px;
   border-radius: 999px;
-  background: rgba(32, 29, 25, 0.52);
-  color: var(--foam);
+  background: rgba(var(--scrim-rgb), 0.52);
+  color: var(--on-photo);
   font-size: 0.56rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -3801,8 +3965,9 @@ body:has(.contact-overlay) {
 .cc-skel { width: 100%; height: 100%; border-radius: 8px; }
 .collection-card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 52%, rgba(0,0,0,.55)); }
 .cc-label {
-  position: absolute; left: 16px; bottom: 14px; z-index: 1; color: var(--foam);
-  font-family: "Bebas Neue", Impact, sans-serif; font-size: 1.45rem; letter-spacing: .08em; text-transform: uppercase;
+  position: absolute; left: 16px; bottom: 14px; z-index: 1; color: var(--on-photo);
+  font-family: var(--font-mono);
+  font-weight: 400; font-size: 1.45rem; letter-spacing: .08em; text-transform: uppercase;
 }
 .cc-feat .cc-label { font-size: clamp(1.9rem, 3vw, 2.8rem); left: 22px; bottom: 18px; }
 
@@ -3826,18 +3991,20 @@ body:has(.contact-overlay) {
   display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px, 5vw, 72px); align-items: center;
   max-width: 80vw; margin: 0 auto; padding: clamp(34px, 5vw, 76px) clamp(12px, 2vw, 28px) clamp(48px, 6vw, 90px);
 }
-.framed-hero h2 { font-family: "Bebas Neue", Impact, sans-serif; font-size: clamp(2.4rem, 5vw, 4rem); letter-spacing: .06em; margin: .12em 0 0; color: var(--ink); }
+.framed-hero h2 { font-family: var(--font-sans);
+  font-weight: var(--head-weight); font-size: clamp(2.4rem, 5vw, 4rem); letter-spacing: var(--head-track); margin: .12em 0 0; color: var(--ink); }
 /* Column so the button and the "Coming soon" pill each sit on their own line
    (both are inline-flex, which otherwise flows them onto the same row). */
 .fh-copy { display: flex; flex-direction: column; align-items: flex-start; }
-.fh-lead { font-family: Georgia, "Times New Roman", serif; color: var(--muted); font-size: 1.05rem; line-height: 1.5; max-width: 40ch; margin: 14px 0 22px; }
+.fh-lead { font-family: var(--font-mono);
+  font-weight: 300; color: var(--muted); font-size: 1.05rem; line-height: 1.5; max-width: 40ch; margin: 14px 0 22px; }
 .fh-stage { position: relative; display: flex; justify-content: center; align-items: flex-end; min-height: 320px; }
 .fh-main { width: min(300px, 62%); z-index: 2; }
 .fh-back { position: absolute; right: 0; bottom: 6%; width: min(260px, 52%); z-index: 1; opacity: .97; }
 .fh-flag {
   display: inline-flex; align-items: center; gap: 9px; margin: clamp(16px, 2.4vh, 22px) 0 0;
   padding: 8px 16px 8px 13px; border: 1px solid var(--line); border-radius: 999px;
-  background: rgba(248, 246, 240, .45);
+  background: rgba(var(--foam-rgb), .45);
   font-size: .62rem; letter-spacing: .22em; text-transform: uppercase; color: var(--muted);
 }
 .fh-flag-dot {
@@ -3845,9 +4012,9 @@ body:has(.contact-overlay) {
   animation: fhPulse 2.6s ease-out infinite;
 }
 @keyframes fhPulse {
-  0%   { box-shadow: 0 0 0 0 rgba(73, 109, 112, .5); }
-  70%  { box-shadow: 0 0 0 9px rgba(73, 109, 112, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(73, 109, 112, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(var(--sea-rgb), .5); }
+  70%  { box-shadow: 0 0 0 9px rgba(var(--sea-rgb), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--sea-rgb), 0); }
 }
 @media (prefers-reduced-motion: reduce) { .fh-flag-dot { animation: none; } }
 
@@ -3857,9 +4024,10 @@ body:has(.contact-overlay) {
 .gallery-page-head .eyebrow { font-size: .7rem; }
 .gallery-page-title {
   margin: 5px 0 0;
-  font-family: "Bebas Neue", Impact, sans-serif;
+  font-family: var(--font-sans);
+  font-weight: var(--head-weight);
   font-size: clamp(2.6rem, 7vw, 5rem);
-  letter-spacing: .03em; line-height: .94; color: var(--ink);
+  letter-spacing: var(--head-track); line-height: .94; color: var(--ink);
   /* Fill the width and wrap only between words (max two rows for names like
      "Freemans Waterhole") — overrides the global h1 max-width:11ch + break-word
      that otherwise crammed long names into three mid-word-broken rows. */
@@ -3871,29 +4039,34 @@ body:has(.contact-overlay) {
 /* ================= Shop page ================= */
 .shop { min-height: 100dvh; background: var(--paper); }
 .shop-nav {
+  font-family: var(--font-ui); /* nav bar keeps the old stack, like .site-header */
   position: sticky; top: 0; z-index: 50; display: flex; align-items: center; justify-content: space-between;
-  padding: 15px clamp(18px, 4vw, 56px); background: rgba(243, 238, 229, .85);
+  padding: 15px clamp(18px, 4vw, 56px); background: rgba(var(--paper-rgb), .85);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line);
 }
 .shop-logo { font-family: "Bebas Neue", Impact, sans-serif; font-size: 1.45rem; letter-spacing: .18em; background: none; border: 0; cursor: pointer; color: var(--ink); padding: 0; }
 .shop-nav-links { display: flex; gap: 22px; align-items: center; font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .shop-nav-links a:hover { color: var(--sea); }
 .shop-soon { display: grid; place-content: center; justify-items: center; gap: 16px; min-height: 70vh; text-align: center; }
-.shop-soon h1 { font-family: "Bebas Neue", Impact, sans-serif; font-size: clamp(2.6rem, 7vw, 4.6rem); letter-spacing: .08em; color: rgba(34,29,23,.7); margin: 0; }
+.shop-soon h1 { font-family: var(--font-sans);
+  font-weight: var(--head-weight); font-size: clamp(2.6rem, 7vw, 4.6rem); letter-spacing: var(--head-track); color: rgba(var(--ink-rgb), .7); margin: 0; }
 .shop-hero { display: grid; grid-template-columns: 1.05fr .95fr; gap: clamp(28px, 5vw, 72px); align-items: center; max-width: 1180px; margin: 0 auto; padding: clamp(40px, 6vw, 90px) clamp(18px, 4vw, 56px) clamp(20px, 3vw, 40px); }
-.shop-hero h1 { font-family: "Bebas Neue", Impact, sans-serif; font-size: clamp(3rem, 8vw, 6rem); letter-spacing: .05em; margin: .12em 0 0; }
-.sh-lead { font-family: Georgia, "Times New Roman", serif; color: #3a342c; font-size: 1.05rem; line-height: 1.5; max-width: 42ch; margin: 16px 0 24px; }
+.shop-hero h1 { font-family: var(--font-sans);
+  font-weight: var(--head-weight); font-size: clamp(3rem, 8vw, 6rem); letter-spacing: var(--head-track); margin: .12em 0 0; }
+.sh-lead { font-family: var(--font-mono);
+  font-weight: 300; color: var(--muted); font-size: 1.05rem; line-height: 1.5; max-width: 42ch; margin: 16px 0 24px; }
 .shop-strip { display: flex; flex-wrap: wrap; gap: 8px 28px; justify-content: center; padding: 16px clamp(18px,4vw,56px); border-block: 1px solid var(--line); background: var(--paper-deep); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .shop-strip b { color: var(--ink); font-weight: 600; }
 .shop-section { max-width: 1180px; margin: 0 auto; padding: clamp(40px, 6vw, 80px) clamp(18px, 4vw, 56px); }
 .shop-sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; }
-.shop-sec-head h2 { font-family: "Bebas Neue", Impact, sans-serif; font-size: clamp(1.8rem, 4vw, 2.8rem); letter-spacing: .08em; color: rgba(34,29,23,.7); margin: 2px 0 0; }
+.shop-sec-head h2 { font-family: var(--font-sans);
+  font-weight: var(--head-weight); font-size: clamp(1.8rem, 4vw, 2.8rem); letter-spacing: var(--head-track); color: rgba(var(--ink-rgb), .7); margin: 2px 0 0; }
 .sec-edit {
   flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 999px;
   border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer;
   transition: border-color 160ms ease, background 160ms ease;
 }
-.sec-edit:hover { border-color: var(--ink); background: rgba(32, 29, 25, .05); }
+.sec-edit:hover { border-color: var(--ink); background: rgba(var(--ink-rgb), .05); }
 .shop-filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 22px 0 28px; }
 .chip { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 8px 15px; font: inherit; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); cursor: pointer; }
 .chip.active { background: var(--ink); color: var(--foam); border-color: var(--ink); }
@@ -3901,7 +4074,9 @@ body:has(.contact-overlay) {
 .shop-card { display: flex; flex-direction: column; }
 .shop-card-frame { display: flex; align-items: flex-end; justify-content: center; }
 .shop-card-info { margin-top: 16px; }
-.sc-ttl { font-family: Georgia, "Times New Roman", serif; font-size: 1.05rem; }
+.sc-ttl { font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: -0.015em; font-size: 1.05rem; }
 .sc-loc { color: var(--muted); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; margin-top: 2px; }
 .sc-sizes { display: flex; gap: 6px; margin: 12px 0 10px; }
 .sc-size { border: 1px solid var(--line); border-radius: 7px; padding: 6px 9px; font: inherit; font-size: .66rem; cursor: pointer; background: transparent; color: var(--muted); }
@@ -3924,7 +4099,7 @@ body:has(.contact-overlay) {
   position: absolute; top: 10px; right: 10px; z-index: 2;
   display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px;
   border: 0; cursor: pointer; color: var(--ink);
-  background: rgba(248, 246, 240, .82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  background: rgba(var(--foam-rgb), .82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   opacity: 0; transition: opacity 160ms ease, transform 160ms ease;
 }
 .cc-wrap:hover .cc-edit, .cc-edit:focus-visible { opacity: 1; }
@@ -3943,7 +4118,7 @@ body:has(.contact-overlay) {
 /* Ordered photo picker (collections + shop curation) — extends .picker-*. */
 .picker-hint { color: var(--muted); font-size: .8rem; line-height: 1.45; margin: 4px 0 16px; max-width: 60ch; }
 /* Live preview block inside the picker (e.g. the glimpse-wall mockup) */
-.picker-preview { margin: 2px 0 18px; padding: clamp(14px, 2vw, 22px); background: rgba(227, 210, 188, .22); border: 1px solid var(--line); }
+.picker-preview { margin: 2px 0 18px; padding: clamp(14px, 2vw, 22px); background: rgba(var(--paper-deep-rgb), .22); border: 1px solid var(--line); }
 .picker-preview-empty { color: var(--muted); font-size: .82rem; margin: 0; }
 .picker-wall { padding: 4px 0; gap: clamp(10px, 2vw, 24px); }
 .picker-wall .sw-frame { position: relative; }
@@ -3982,10 +4157,11 @@ body:has(.contact-overlay) {
 /* Admin visibility + banner panel */
 .admin-visibility {
   margin: 8px 0 4px; padding: clamp(18px, 2.4vw, 28px);
-  border: 1px solid var(--line); background: rgba(248, 246, 240, .5);
+  border: 1px solid var(--line); background: rgba(var(--foam-rgb), .5);
 }
 .admin-sec-head { display: flex; align-items: center; gap: 9px; color: var(--ink); }
-.admin-sec-head h2 { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 1.3rem; font-weight: 400; }
+.admin-sec-head h2 { margin: 0; font-family: var(--font-sans); font-size: 1.3rem; font-weight: var(--head-weight);
+  letter-spacing: var(--head-track); }
 .admin-sec-hint { margin: 8px 0 16px; max-width: 64ch; color: var(--muted); font-size: .78rem; }
 .vis-banner-head { margin-top: 24px; }
 .vis-flags { display: grid; gap: 2px; }
@@ -4028,7 +4204,7 @@ body:has(.contact-overlay) {
 .hero2026-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .hero2026-thumb span {
   position: absolute; left: 4px; bottom: 4px; min-width: 16px; padding: 1px 4px; text-align: center;
-  background: rgba(21, 19, 15, 0.72); color: var(--foam); font-size: 0.62rem; letter-spacing: 0.04em;
+  background: rgba(var(--shade-rgb), 0.72); color: var(--on-photo); font-size: 0.62rem; letter-spacing: 0.04em;
 }
 .hero2026-target { display: grid; gap: 6px; margin-top: 16px; max-width: 420px; }
 .hero2026-target span { color: var(--muted); font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; }
@@ -4045,7 +4221,7 @@ body:has(.contact-overlay) {
 .coll-id span { color: var(--muted); font-size: .74rem; }
 .coll-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .coll-actions .icon-button { border: 1px solid var(--line); padding: 6px; }
-.coll-actions .text-button.danger { color: #9d3b2f; }
+.coll-actions .text-button.danger { color: var(--danger); }
 .coll-edit { display: grid; grid-template-columns: 120px 1fr; gap: 10px 14px; width: 100%; }
 .coll-edit label, .coll-new label { display: grid; gap: 5px; min-width: 0; }
 .coll-edit label span, .coll-new label span {
@@ -4055,7 +4231,7 @@ body:has(.contact-overlay) {
 .coll-edit-actions { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; }
 .coll-new { display: grid; grid-template-columns: 120px 1fr auto; gap: 12px; align-items: end; max-width: 620px; }
 .coll-new .solid-button { display: inline-flex; align-items: center; gap: 7px; }
-.coll-error { color: #9d3b2f; font-size: .8rem; margin: 12px 0 0; }
+.coll-error { color: var(--danger); font-size: .8rem; margin: 12px 0 0; }
 @media (max-width: 620px) {
   .coll-edit, .coll-new { grid-template-columns: 1fr; }
 }
@@ -4077,7 +4253,7 @@ body:has(.contact-overlay) {
 .curator-bulk { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .curator-matchcount { color: var(--muted); font-size: .74rem; margin-right: auto; }
 .picker-draft {
-  position: absolute; left: 5px; top: 5px; background: rgba(157, 59, 47, .88); color: var(--foam);
+  position: absolute; left: 5px; top: 5px; background: rgba(var(--danger-rgb), .88); color: var(--on-photo);
   font-size: .58rem; letter-spacing: .08em; text-transform: uppercase; padding: 2px 5px;
 }
 
@@ -4155,7 +4331,7 @@ body:has(.contact-overlay) {
   .picker-actions {
     position: sticky; bottom: 0; margin: 14px -16px calc(-16px - env(safe-area-inset-bottom));
     padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-    background: linear-gradient(180deg, rgba(248,246,240,0) 0%, rgba(248,246,240,0.96) 28%);
+    background: linear-gradient(180deg, rgba(var(--foam-rgb), 0) 0%, rgba(var(--foam-rgb), 0.96) 28%);
   }
 }
 
@@ -4175,18 +4351,21 @@ body:has(.contact-overlay) {
 }
 .contact-prompt .eyebrow { color: var(--muted); }
 .contact-prompt h2 {
-  font-family: "Bebas Neue", Impact, sans-serif; font-size: clamp(2rem, 5vw, 3.2rem);
-  letter-spacing: .05em; margin: .12em 0 0; color: var(--ink);
+  font-family: var(--font-sans);
+  font-weight: var(--head-weight); font-size: clamp(2rem, 5vw, 3.2rem);
+  letter-spacing: var(--head-track); margin: .12em 0 0; color: var(--ink);
 }
-.contact-lead { font-family: Georgia, "Times New Roman", serif; color: var(--muted); font-size: 1.02rem; line-height: 1.5; margin: 12px 0 22px; }
+.contact-lead { font-family: var(--font-mono);
+  font-weight: 300; color: var(--muted); font-size: 1.02rem; line-height: 1.5; margin: 12px 0 22px; }
 
 .contact-overlay { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: clamp(16px, 4vw, 48px); }
 .contact-panel {
   position: relative; z-index: 1; width: min(520px, 94vw); max-height: calc(100dvh - 80px); overflow: auto;
-  background: rgba(248, 246, 240, .97); padding: clamp(24px, 4vw, 40px); box-shadow: 0 24px 90px rgba(32, 29, 25, .28);
+  background: rgba(var(--foam-rgb), .97); padding: clamp(24px, 4vw, 40px); box-shadow: 0 24px 90px rgba(var(--ink-rgb), .28);
 }
 .contact-panel .eyebrow { color: var(--muted); }
-.contact-panel h2 { font-family: "Bebas Neue", Impact, sans-serif; font-size: clamp(1.9rem, 4.5vw, 2.8rem); letter-spacing: .05em; margin: .1em 0 0; }
+.contact-panel h2 { font-family: var(--font-sans);
+  font-weight: var(--head-weight); font-size: clamp(1.9rem, 4.5vw, 2.8rem); letter-spacing: var(--head-track); margin: .1em 0 0; }
 .contact-form { display: grid; gap: 14px; margin-top: 20px; }
 .contact-form label { display: grid; gap: 6px; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .contact-form input, .contact-form textarea { font-size: 16px; }
@@ -4202,12 +4381,14 @@ body:has(.contact-overlay) {
   min-height: 78dvh; padding: 0 clamp(18px, 5vw, 40px);
 }
 .error-body .eyebrow { color: var(--muted); }
-.error-body h1 { font-family: "Bebas Neue", Impact, sans-serif; font-size: clamp(2.6rem, 8vw, 5rem); letter-spacing: .04em; margin: 0; color: var(--ink); }
+.error-body h1 { font-family: var(--font-sans);
+  font-weight: var(--head-weight); font-size: clamp(2.6rem, 8vw, 5rem); letter-spacing: var(--head-track); margin: 0; color: var(--ink); }
 .error-body p { color: var(--muted); max-width: 42ch; margin: 0; }
 .error-body .solid-button { margin-top: 8px; }
 
 /* ================= Shop preview (teaser) ================= */
-.shop-wall-lead { text-align: center; color: var(--muted); font-family: Georgia, "Times New Roman", serif; font-size: 1rem; line-height: 1.5; max-width: 48ch; margin: 0 auto 6px; }
+.shop-wall-lead { text-align: center; color: var(--muted); font-family: var(--font-mono);
+  font-weight: 300; font-size: 1rem; line-height: 1.5; max-width: 48ch; margin: 0 auto 6px; }
 .shop-wall {
   display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end;
   gap: clamp(16px, 3.5vw, 48px);
@@ -4222,7 +4403,8 @@ body:has(.contact-overlay) {
 
 .shop-coming { text-align: center; max-width: 560px; margin: 0 auto; padding: clamp(34px, 5vw, 64px) clamp(18px, 4vw, 40px) clamp(56px, 8vw, 100px); }
 .shop-coming .eyebrow { color: var(--muted); }
-.shop-coming h2 { font-family: "Bebas Neue", Impact, sans-serif; font-size: clamp(2.4rem, 7vw, 4rem); letter-spacing: .05em; margin: .1em 0 0; color: var(--ink); }
+.shop-coming h2 { font-family: var(--font-sans);
+  font-weight: var(--head-weight); font-size: clamp(2.4rem, 7vw, 4rem); letter-spacing: var(--head-track); margin: .1em 0 0; color: var(--ink); }
 .shop-coming .sh-lead { margin: 14px auto 22px; }
 
 @media (max-width: 560px) {

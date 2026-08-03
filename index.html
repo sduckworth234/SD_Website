@@ -21,13 +21,46 @@
     />
     <meta name="theme-color" content="#f3eee5" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- Set the theme before the first paint, so a dark-mode visitor never sees
+         a flash of the light page. Must run inline and synchronously; its
+         sha256 is allow-listed in vercel.json's CSP, so if you edit this block
+         you must recompute that hash or the script will be blocked. Mirrors
+         src/lib/theme.ts — keep the "sd-theme" key in sync. -->
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem("sd-theme");
+          var t = s === "light" || s === "dark" ? s
+            : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          document.documentElement.dataset.theme = t;
+          if (t === "dark") {
+            document.querySelector('meta[name="theme-color"]').content = "#0b0b0c";
+          }
+        } catch (e) {}
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <!-- Warm the connection to Supabase Storage so the first gallery image
          (and the LCP hero) starts downloading sooner. -->
     <link rel="preconnect" href="https://krixuiimabosiorzxzju.supabase.co" crossorigin />
-    <!-- Self-hosted heading font, preloaded so it's ready before first paint
-         (the loading skeleton's "Recent Work" shows in Bebas Neue, not a fallback). -->
+    <!-- Self-hosted fonts, preloaded so they're ready before first paint (the
+         loading skeleton's "Recent Work" shows in Archivo, not a fallback).
+         Only the latin subsets are preloaded — latin-ext loads on demand. -->
+    <link
+      rel="preload"
+      href="/fonts/archivo-var.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/space-grotesk-var.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link
       rel="preload"
       href="/fonts/bebas-neue.woff2"

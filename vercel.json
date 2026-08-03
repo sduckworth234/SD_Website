@@ -13,7 +13,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://www.googletagmanager.com 'sha256-Z1o8VYPl88im94WzfPaBDlJx9t/ur3crIJsIRQmxgjY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://krixuiimabosiorzxzju.supabase.co https://www.googletagmanager.com https://www.google-analytics.com; connect-src 'self' https://krixuiimabosiorzxzju.supabase.co https://tiles.openfreemap.org https://www.googletagmanager.com https://*.google-analytics.com https://analytics.google.com; font-src 'self'; worker-src blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self' https://www.googletagmanager.com 'sha256-Z1o8VYPl88im94WzfPaBDlJx9t/ur3crIJsIRQmxgjY=' 'sha256-JqihKyl9bYn1D4DQJ3N0Kfcg6ZlRNHv8ZVrGiHw9q1A='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://krixuiimabosiorzxzju.supabase.co https://www.googletagmanager.com https://www.google-analytics.com; connect-src 'self' https://krixuiimabosiorzxzju.supabase.co https://tiles.openfreemap.org https://www.googletagmanager.com https://*.google-analytics.com https://analytics.google.com; font-src 'self'; worker-src blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
         },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "DENY" },
