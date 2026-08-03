@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Location cards — six treatments</title>
+    <title>Location cards — treatments v2</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -15,10 +15,12 @@
          Space Grotesk for labels and metadata. */
       :root {
         --paper: #f4efe6;
+        --paper-2: #e8e0d3;
         --ink: #1b1916;
         --muted: #786d5d;
         --line: rgba(27, 25, 22, 0.15);
         --sea: #3f6366;
+        --timber: #b8895b;
         --sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
         --mono: "Space Grotesk", ui-monospace, Menlo, monospace;
         --sp: clamp(18px, 4vw, 56px);
@@ -48,7 +50,7 @@
         position: sticky; top: 0; z-index: 50;
         display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
         padding: 12px var(--sp);
-        background: rgba(244, 239, 230, 0.9);
+        background: rgba(244, 239, 230, 0.92);
         -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
         border-bottom: 1px solid var(--line);
         margin-top: 26px;
@@ -68,10 +70,10 @@
       .case-head .n { font-family: var(--mono); font-size: 12px; color: var(--muted); }
       .case-head h2 { font-size: clamp(1.5rem, 3.2vw, 2.4rem); font-weight: 600; letter-spacing: -0.035em; margin: 0; }
       .case-head .tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; color: var(--muted); }
+      .case-head .tag.hot { border-color: var(--timber); color: #8d6234; }
       .why { font-family: var(--mono); font-weight: 300; font-size: 0.95rem; line-height: 1.65; color: #52493d; max-width: 60ch; margin: 12px 0 26px; }
       .why b { font-weight: 500; color: var(--ink); }
 
-      /* The stage: swaps between a phone frame and full width. */
       .stage { margin: 0 auto; transition: max-width 420ms cubic-bezier(0.2, 0.8, 0.2, 1); }
       body[data-view="phone"] .stage {
         max-width: 390px;
@@ -82,15 +84,57 @@
         background: var(--paper);
       }
       body[data-view="desktop"] .stage { max-width: 1240px; }
-      /* Treatments read their own width from the stage, not the viewport, so the
-         phone preview is honest rather than just a narrow crop of desktop. */
+      /* Treatments key off the stage, not the viewport, so the phone preview is
+         a real narrow layout rather than a crop of the desktop one. */
 
-      /* ── 1 · editorial rows ──────────────────────────────────────────────── */
+      /* ── 1 · editorial rail (the 01 + 02 merge) ──────────────────────────── */
+      .erail-wrap { padding: 4px 0 0; }
+      .erail {
+        display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
+        padding: 0 14px 14px; scrollbar-width: none;
+        scroll-padding-left: 14px;
+      }
+      .erail::-webkit-scrollbar { display: none; }
+      .erail > * { scroll-snap-align: start; }
+      .stage[data-wide] .erail { padding-inline: 0; }
+
+      /* The peek comes from the card width alone. Percentages on a flex item
+         resolve against the scroller's CONTENT box, so any large horizontal
+         padding here would silently shrink every card — hence the fixed 14px
+         gutter rather than a percentage inset. */
+      .ecard { flex: none; width: 74%; cursor: pointer; }
+      .stage[data-wide] .ecard { width: 23%; }
+      /* Image on top, type underneath on paper — the editorial part. Nothing is
+         written over the photograph. */
+      .ecard .shot { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border-radius: 8px; background: var(--paper-2); }
+      .ecard .shot img { transition: transform 1100ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+      .ecard:hover .shot img { transform: scale(1.05); }
+      .ecard .shot .cnt {
+        position: absolute; right: 10px; top: 10px; z-index: 2;
+        font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em;
+        background: rgba(27, 25, 22, 0.62); color: #fff;
+        padding: 4px 9px; border-radius: 999px;
+        -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+      }
+      .ecard .cap { padding: 12px 2px 0; }
+      .ecard .cap .nm { font-size: 1.32rem; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; }
+      .ecard .cap .meta { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+      /* A final card that opens the full index, so the rail has an end-point
+         rather than just running out. */
+      .ecard.more .shot { display: grid; place-items: center; background: var(--ink); }
+      .ecard.more .shot span { color: var(--paper); font-family: var(--mono); font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; }
+
+      .erail-foot { display: flex; align-items: center; gap: 12px; padding: 2px 14px 0; }
+      .stage[data-wide] .erail-foot { padding-inline: 0; }
+      .erail-bar { flex: 1; height: 2px; background: var(--line); position: relative; overflow: hidden; }
+      .erail-bar i { position: absolute; inset: 0 auto 0 0; background: var(--ink); width: 20%; transition: transform 160ms linear; }
+      .erail-foot .idx { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.1em; }
+
+      /* ── 2 · editorial rows ──────────────────────────────────────────────── */
       .rows { display: grid; gap: 2px; }
       .row {
         position: relative; display: grid; align-items: center;
-        grid-template-columns: 1fr 1fr; gap: 0;
-        background: var(--ink); overflow: hidden; cursor: pointer;
+        grid-template-columns: 1fr 1fr; background: var(--ink); overflow: hidden; cursor: pointer;
       }
       .row:nth-child(even) .row-img { order: 2; }
       .row-img { position: relative; aspect-ratio: 4 / 3; overflow: hidden; }
@@ -104,73 +148,63 @@
       .stage[data-narrow] .row:nth-child(even) .row-img { order: 0; }
       .stage[data-narrow] .row-img { aspect-ratio: 16 / 10; }
 
-      /* ── 2 · peek rail ───────────────────────────────────────────────────── */
-      .rail-wrap { position: relative; }
-      .rail {
-        display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
-        padding: 4px 0 16px; scrollbar-width: none;
-        /* the right-hand inset is what makes the next card peek */
-        padding-right: 22%;
-      }
-      .rail::-webkit-scrollbar { display: none; }
-      .rail-card {
-        flex: none; width: 78%; scroll-snap-align: start; cursor: pointer;
-      }
-      .stage[data-wide] .rail { padding-right: 12%; }
-      .stage[data-wide] .rail-card { width: 30%; }
-      .rail-card .shot { position: relative; aspect-ratio: 3 / 4; overflow: hidden; border-radius: 10px; background: #e3dccf; }
-      .rail-card .shot img { transition: transform 1000ms cubic-bezier(0.2,0.8,0.2,1); }
-      .rail-card:hover .shot img { transform: scale(1.05); }
-      .rail-card .shot::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 46%, rgba(10,9,8,.72)); }
-      .rail-card .lbl { position: absolute; left: 14px; right: 14px; bottom: 12px; z-index: 2; color: #fff; }
-      .rail-card .lbl .nm { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.03em; }
-      .rail-card .lbl .meta { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.82; margin-top: 3px; }
-      .rail-progress { display: flex; gap: 5px; padding: 0 0 4px; }
-      .rail-progress i { height: 2px; flex: 1; background: var(--line); transition: background 260ms; }
-      .rail-progress i.on { background: var(--ink); }
-
-      /* ── 3 · stacked deck ────────────────────────────────────────────────── */
+      /* ── 3 · print stack ─────────────────────────────────────────────────── */
       .deck { display: grid; gap: clamp(10px, 1.6vw, 20px); grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
-      .stage[data-narrow] .deck { grid-template-columns: 1fr; }
+      .stage[data-narrow] .deck { grid-template-columns: 1fr 1fr; }
       .card-stack { position: relative; aspect-ratio: 4 / 5; cursor: pointer; }
       .card-stack .sheet {
         position: absolute; inset: 0; border-radius: 6px; overflow: hidden;
-        background: #e3dccf; box-shadow: 0 10px 30px rgba(27, 25, 22, 0.18);
+        background: var(--paper-2); box-shadow: 0 10px 30px rgba(27, 25, 22, 0.18);
         transition: transform 620ms cubic-bezier(0.2, 0.8, 0.2, 1);
       }
       .card-stack .sheet:nth-child(1) { transform: rotate(-4deg) translate(-5px, 5px); }
       .card-stack .sheet:nth-child(2) { transform: rotate(3deg) translate(5px, 2px); }
       .card-stack .sheet:nth-child(3) { transform: none; }
-      .card-stack:hover .sheet:nth-child(1) { transform: rotate(-9deg) translate(-16px, 8px); }
-      .card-stack:hover .sheet:nth-child(2) { transform: rotate(7deg) translate(16px, 4px); }
+      .card-stack:hover .sheet:nth-child(1), .card-stack.fan .sheet:nth-child(1) { transform: rotate(-9deg) translate(-16px, 8px); }
+      .card-stack:hover .sheet:nth-child(2), .card-stack.fan .sheet:nth-child(2) { transform: rotate(7deg) translate(16px, 4px); }
       .card-stack .cap { margin-top: 12px; }
-      .card-stack .cap .nm { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.02em; }
+      .card-stack .cap .nm { font-size: 1.05rem; font-weight: 600; letter-spacing: -0.02em; }
       .card-stack .cap .meta { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
-      .deck-item { display: grid; }
 
-      /* ── 4 · split curtain ───────────────────────────────────────────────── */
+      /* ── 4 · split curtain — scroll-driven ───────────────────────────────── */
       .curtain { display: grid; gap: 1px; background: var(--line); border-block: 1px solid var(--line); }
       .curtain-row {
         background: var(--paper); display: grid; grid-template-columns: 1fr auto;
-        align-items: center; gap: 16px; padding: 0 4px 0 0; cursor: pointer;
+        align-items: center; gap: 16px; padding-right: 4px; cursor: pointer;
+        transition: background 420ms ease;
       }
-      .curtain-row .txt { padding: clamp(14px, 2vw, 22px) 0 clamp(14px, 2vw, 22px) clamp(4px, 1vw, 10px); }
-      .curtain-row .nm { font-size: clamp(1.3rem, 2.6vw, 2rem); font-weight: 600; letter-spacing: -0.035em; line-height: 1.05; transition: color 240ms; }
+      .curtain-row .txt { padding: clamp(14px, 2vw, 22px) 0 clamp(14px, 2vw, 22px) clamp(6px, 1vw, 12px); }
+      .curtain-row .nm {
+        font-size: clamp(1.3rem, 2.6vw, 2rem); font-weight: 600; letter-spacing: -0.035em; line-height: 1.05;
+        transition: color 420ms ease, transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
       .curtain-row .meta { font-family: var(--mono); font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-top: 5px; }
       .curtain-row .peek {
-        width: clamp(74px, 16vw, 190px); aspect-ratio: 3 / 2; overflow: hidden; border-radius: 4px;
-        filter: grayscale(1) brightness(0.94);
-        transition: width 560ms cubic-bezier(0.2, 0.8, 0.2, 1), filter 460ms ease;
+        width: clamp(74px, 17vw, 190px); aspect-ratio: 3 / 2; overflow: hidden; border-radius: 4px;
+        filter: grayscale(1) brightness(0.96); opacity: 0.72;
+        transition:
+          width 620ms cubic-bezier(0.2, 0.8, 0.2, 1),
+          filter 520ms ease,
+          opacity 420ms ease;
       }
-      .curtain-row:hover .peek { width: clamp(150px, 34vw, 360px); filter: none; }
-      .curtain-row:hover .nm { color: var(--sea); }
+      /* The active row is chosen by scroll position, not the pointer — on a
+         phone there is no hover, so without this the list never comes alive. */
+      .curtain-row.live { background: var(--paper-2); }
+      .curtain-row.live .peek { width: clamp(150px, 42vw, 360px); filter: none; opacity: 1; }
+      .curtain-row.live .nm { color: var(--sea); transform: translateX(6px); }
+      /* Desktop keeps hover as well, so a mouse still feels direct. */
+      @media (hover: hover) {
+        .curtain-row:hover { background: var(--paper-2); }
+        .curtain-row:hover .peek { width: clamp(150px, 42vw, 360px); filter: none; opacity: 1; }
+        .curtain-row:hover .nm { color: var(--sea); transform: translateX(6px); }
+      }
 
       /* ── 5 · contact sheet ───────────────────────────────────────────────── */
       .sheet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 3px; }
       .stage[data-narrow] .sheet-grid { grid-template-columns: repeat(3, 1fr); }
-      .neg { position: relative; aspect-ratio: 1; overflow: hidden; background: #e3dccf; cursor: pointer; }
+      .neg { position: relative; aspect-ratio: 1; overflow: hidden; background: var(--paper-2); cursor: pointer; }
       .neg img { filter: grayscale(1) brightness(0.9) contrast(1.05); transition: filter 420ms, transform 800ms cubic-bezier(0.2,0.8,0.2,1); }
-      .neg:hover img { filter: none; transform: scale(1.07); }
+      .neg:hover img, .neg.live img { filter: none; transform: scale(1.06); }
       .neg .n { position: absolute; left: 6px; top: 5px; font-family: var(--mono); font-size: 9px; color: rgba(255,255,255,.85); z-index: 2; text-shadow: 0 1px 4px rgba(0,0,0,.7); }
       .neg .nm {
         position: absolute; inset: auto 0 0 0; padding: 20px 7px 6px; z-index: 2;
@@ -197,20 +231,22 @@
 
       @media (prefers-reduced-motion: reduce) {
         * { animation: none !important; transition: none !important; }
+        /* With motion off, nothing should be hidden behind a scroll effect. */
+        .curtain-row .peek { filter: none; opacity: 1; }
+        .neg img { filter: none; }
       }
     </style>
   </head>
   <body data-view="phone">
     <div class="head">
-      <p class="k">Sam Duckworth Photography — home page</p>
+      <p class="k">Sam Duckworth Photography — home page · v2</p>
       <h1>Six ways to<br />show the places</h1>
       <p>
-        Six treatments for the location cards, all running on your real
-        locations, real photo counts and real capture years. The brief was
-        <b>minimal, professional-photography, not drone-themed</b> — and above
-        all, something that makes a first-time visitor swipe or scroll instead
-        of leaving. <b>Start in phone view</b>, since that's where the bounce
-        risk is.
+        Now showing the <b>top 10 places by photo count</b> (most recent year
+        breaking ties), rather than all 26. Treatment 01 is the merge you asked
+        for — editorial cards, image above type, in a rail that scrolls. 04 no
+        longer depends on hover: it picks its live row from
+        <b>scroll position</b>, so it works on a phone. <b>Start in phone view.</b>
       </p>
     </div>
 
@@ -223,51 +259,59 @@
     </div>
 
     <section class="case">
-      <div class="case-head"><span class="n">01</span><h2>Editorial rows</h2><span class="tag">Fewest, biggest</span></div>
+      <div class="case-head"><span class="n">01</span><h2>Editorial rail</h2><span class="tag hot">The merge</span></div>
       <p class="why">
-        One place per row, name and count set beside the frame rather than on
-        top of it. <b>Why it holds attention:</b> a full-width row is unambiguously
-        content, not a thumbnail grid to skim past — and because each row is
-        large, the eye has to travel, which is what scroll depth actually is.
-        On a phone the image stacks above the copy and every row is a full
-        tap target.
+        Editorial cards — <b>photo on top, name and count underneath on the
+        paper</b>, nothing written over the image — laid out in a horizontal
+        snap rail with the next card peeking. <b>Why it holds attention:</b> the
+        peek is the strongest "swipe me" cue on touch, while the type sitting
+        below the frame keeps it feeling like a printed portfolio rather than a
+        row of banners. Ten places cost one screen of height instead of ten.
+        The rail ends on an <b>"All 26 places"</b> card so it has a destination
+        rather than just running out.
+      </p>
+      <div class="stage">
+        <div class="erail-wrap">
+          <div class="erail"></div>
+          <div class="erail-foot"><div class="erail-bar"><i></i></div><span class="idx">01 / 10</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="case">
+      <div class="case-head"><span class="n">02</span><h2>Editorial rows</h2><span class="tag">Desktop-strong</span></div>
+      <p class="why">
+        The full-width version: one place per row, image and copy side by side,
+        alternating. <b>Why it holds attention:</b> unambiguously content rather
+        than a thumbnail grid, and each row is a large tap target. Stronger on
+        desktop than 01; on a phone it stacks and gets tall, which is the
+        trade-off the rail solves.
       </p>
       <div class="stage"><div class="rows"></div></div>
     </section>
 
     <section class="case">
-      <div class="case-head"><span class="n">02</span><h2>Peek rail</h2><span class="tag">Best on mobile</span></div>
-      <p class="why">
-        A snap carousel where the next card is deliberately cut off at the right
-        edge. <b>Why it holds attention:</b> the partial card is the single
-        strongest "there's more here" signal on a touch screen — people swipe it
-        without being told to. The progress bar underneath shows how far in they
-        are, which pulls them to the end. Costs one screen of vertical space
-        instead of twenty-six.
-      </p>
-      <div class="stage"><div class="rail-wrap"><div class="rail"></div><div class="rail-progress"></div></div></div>
-    </section>
-
-    <section class="case">
       <div class="case-head"><span class="n">03</span><h2>Print stack</h2><span class="tag">Most tactile</span></div>
       <p class="why">
-        Each place is a small pile of prints; hovering or tapping fans them out.
-        <b>Why it holds attention:</b> it says "there are more photos inside"
-        with an object rather than a number, and it ties the home page to the
-        Framed Editions side of the business. The fan is a 600ms flourish, not a
-        page-blocking animation.
+        Each place is a small pile of prints that fans open. <b>Why it holds
+        attention:</b> it says "more photos inside" with an object rather than a
+        number, and ties the home page to Framed Editions. On touch the fan is
+        driven by scroll rather than hover, same as 04.
       </p>
       <div class="stage"><div class="deck"></div></div>
     </section>
 
     <section class="case">
-      <div class="case-head"><span class="n">04</span><h2>Split curtain</h2><span class="tag">Most minimal</span></div>
+      <div class="case-head"><span class="n">04</span><h2>Split curtain</h2><span class="tag hot">Now scroll-driven</span></div>
       <p class="why">
-        A typographic index where each row carries a small greyscale sliver that
-        widens and turns colour on hover. <b>Why it holds attention:</b> it reads
-        as a contents page, so a visitor scans the whole list rather than
-        stopping at the first tile — and the reveal rewards curiosity. This is
-        the most restrained option and the fastest to load.
+        You were right that this was broken on mobile — hover doesn't exist on
+        touch, so the list would have stayed grey forever. The live row is now
+        chosen by <b>scroll position</b>: whichever row is crossing the middle of
+        the screen expands its sliver, comes to full colour and shifts its name.
+        Scrolling hands it to the next one. <b>Why it holds attention:</b> the
+        page appears to respond to you, so scrolling becomes the interaction —
+        and it still reads as a quiet contents page. Desktop keeps hover too, so
+        a mouse feels direct rather than laggy.
       </p>
       <div class="stage"><div class="curtain"></div></div>
     </section>
@@ -275,11 +319,10 @@
     <section class="case">
       <div class="case-head"><span class="n">05</span><h2>Contact sheet</h2><span class="tag">Most archival</span></div>
       <p class="why">
-        A tight numbered grid that develops from greyscale on hover.
-        <b>Why it holds attention:</b> density reads as depth of work — twenty-six
-        places look like a real body of work rather than a thin new site. The
-        trade-off is that individual photos get small, so it suits a secondary
-        "all places" block more than the main event.
+        A tight numbered grid that develops from greyscale — also scroll-driven
+        on touch. <b>Why it holds attention:</b> density reads as depth of work,
+        which matters while the site is new. Best as the "all places" block
+        underneath a curated set rather than the main event.
       </p>
       <div class="stage"><div class="sheet-grid"></div></div>
     </section>
@@ -287,17 +330,16 @@
     <section class="case">
       <div class="case-head"><span class="n">06</span><h2>Chapter panels</h2><span class="tag">Most immersive</span></div>
       <p class="why">
-        Full-bleed bands, one per place, with the count set large in the corner.
-        <b>Why it holds attention:</b> nothing competes inside a band, so each
-        scroll lands on a single photograph — closest to the feeling of the
-        lightbox, and the strongest showcase for the photography itself. Best
-        paired with a short curated list rather than all twenty-six.
+        Full-bleed bands, one per place, count set large. <b>Why it holds
+        attention:</b> nothing competes inside a band, so each scroll lands on a
+        single photograph. The strongest showcase for the work, and the most
+        vertical height per place.
       </p>
       <div class="stage"><div class="chapters"></div></div>
     </section>
 
     <footer>
-      <h3>One thing worth deciding first</h3>
+      <h3>Notes</h3>
       <ul id="findings"></ul>
     </footer>
 
@@ -306,21 +348,54 @@
         "https://krixuiimabosiorzxzju.supabase.co/storage/v1/render/image/public/photos/";
       const img = (c, w, q = 74) => `${BASE}${c.path}?width=${w}&resize=contain&quality=${q}`;
 
-      const locs = await fetch("./locations.json").then((r) => r.json());
-      const withPhotos = locs.filter((l) => l.covers.length);
-      const total = withPhotos.reduce((n, l) => n + l.count, 0);
-      const thin = withPhotos.filter((l) => l.count < 5);
+      const locs = (await fetch("./locations.json").then((r) => r.json())).filter((l) => l.covers.length);
+      const total = locs.reduce((n, l) => n + l.count, 0);
+      const thin = locs.filter((l) => l.count < 5);
+
+      // Top 10 by photo count; most recent year breaks ties.
+      const top = [...locs]
+        .sort((a, b) => b.count - a.count || (b.years?.[1] ?? 0) - (a.years?.[1] ?? 0))
+        .slice(0, 10);
 
       document.querySelector("#tally").textContent =
-        `${withPhotos.length} places · ${total} photos · real data`;
+        `top ${top.length} of ${locs.length} places · ${total} photos · real data`;
 
-      const meta = (l) =>
-        `${l.count} ${l.count === 1 ? "frame" : "frames"}${l.years ? ` · ${l.years[0] === l.years[1] ? l.years[0] : l.years[0] + "–" + l.years[1]}` : ""}`;
+      const yrs = (l) => (l.years ? (l.years[0] === l.years[1] ? l.years[0] : `${l.years[0]}–${l.years[1]}`) : "");
+      const meta = (l) => `${l.count} ${l.count === 1 ? "frame" : "frames"}${l.years ? " · " + yrs(l) : ""}`;
 
-      // Treatments 1–4 and 6 read better with a curated subset; 5 shows the lot.
-      const top = [...withPhotos].sort((a, b) => b.count - a.count).slice(0, 6);
+      // ── 1 · editorial rail ────────────────────────────────────────────────
+      const erail = document.querySelector(".erail");
+      erail.innerHTML =
+        top
+          .map(
+            (l) => `<div class="ecard">
+              <div class="shot">
+                <span class="cnt">${l.count}</span>
+                <img src="${img(l.covers[0], 700)}" alt="${l.name}" loading="lazy" />
+              </div>
+              <div class="cap"><div class="nm">${l.name}</div><div class="meta">${meta(l)}</div></div>
+            </div>`,
+          )
+          .join("") +
+        `<div class="ecard more">
+           <div class="shot"><span>All ${locs.length}<br />places →</span></div>
+           <div class="cap"><div class="nm">Everywhere</div><div class="meta">${total} frames</div></div>
+         </div>`;
 
-      // 1 · editorial rows
+      const bar = document.querySelector(".erail-bar i");
+      const idx = document.querySelector(".erail-foot .idx");
+      const cards = erail.children.length;
+      const syncRail = () => {
+        const max = erail.scrollWidth - erail.clientWidth;
+        const p = max > 0 ? erail.scrollLeft / max : 0;
+        bar.style.width = `${100 / cards}%`;
+        bar.style.transform = `translateX(${p * (cards - 1) * 100}%)`;
+        idx.textContent = `${String(Math.round(p * (cards - 1)) + 1).padStart(2, "0")} / ${String(cards).padStart(2, "0")}`;
+      };
+      erail.addEventListener("scroll", syncRail, { passive: true });
+      syncRail();
+
+      // ── 2 · editorial rows ────────────────────────────────────────────────
       document.querySelector(".rows").innerHTML = top
         .map(
           (l) => `<div class="row">
@@ -334,52 +409,29 @@
         )
         .join("");
 
-      // 2 · peek rail
-      const rail = document.querySelector(".rail");
-      rail.innerHTML = top
-        .map(
-          (l) => `<div class="rail-card">
-            <div class="shot">
-              <img src="${img(l.covers[0], 700)}" alt="${l.name}" loading="lazy" />
-              <div class="lbl"><div class="nm">${l.name}</div><div class="meta">${meta(l)}</div></div>
-            </div>
-          </div>`,
-        )
-        .join("");
-      const prog = document.querySelector(".rail-progress");
-      prog.innerHTML = top.map((_, i) => `<i class="${i === 0 ? "on" : ""}"></i>`).join("");
-      rail.addEventListener(
-        "scroll",
-        () => {
-          const i = Math.round((rail.scrollLeft / (rail.scrollWidth - rail.clientWidth)) * (top.length - 1));
-          prog.querySelectorAll("i").forEach((el, n) => el.classList.toggle("on", n <= i));
-        },
-        { passive: true },
-      );
-
-      // 3 · print stack
+      // ── 3 · print stack ───────────────────────────────────────────────────
       document.querySelector(".deck").innerHTML = top
         .map((l) => {
           const s = [l.covers[2] ?? l.covers[0], l.covers[1] ?? l.covers[0], l.covers[0]];
-          return `<div class="deck-item"><div class="card-stack">
+          return `<div><div class="card-stack">
             ${s.map((c) => `<div class="sheet"><img src="${img(c, 600)}" alt="" loading="lazy" /></div>`).join("")}
           </div>
           <div class="cap"><div class="nm">${l.name}</div><div class="meta">${meta(l)}</div></div></div>`;
         })
         .join("");
 
-      // 4 · split curtain — this one can carry the full list comfortably
-      document.querySelector(".curtain").innerHTML = withPhotos
+      // ── 4 · split curtain — full index, scroll-driven ─────────────────────
+      document.querySelector(".curtain").innerHTML = locs
         .map(
           (l) => `<div class="curtain-row">
             <div class="txt"><div class="nm">${l.name}</div><div class="meta">${meta(l)}</div></div>
-            <div class="peek"><img src="${img(l.covers[0], 500)}" alt="" loading="lazy" /></div>
+            <div class="peek"><img src="${img(l.covers[0], 560)}" alt="" loading="lazy" /></div>
           </div>`,
         )
         .join("");
 
-      // 5 · contact sheet — all of them
-      document.querySelector(".sheet-grid").innerHTML = withPhotos
+      // ── 5 · contact sheet ─────────────────────────────────────────────────
+      document.querySelector(".sheet-grid").innerHTML = locs
         .map(
           (l, i) => `<div class="neg">
             <span class="n">${String(i + 1).padStart(2, "0")}</span>
@@ -389,35 +441,76 @@
         )
         .join("");
 
-      // 6 · chapter panels
+      // ── 6 · chapter panels ────────────────────────────────────────────────
       document.querySelector(".chapters").innerHTML = top
         .map(
           (l) => `<div class="chapter">
             <img src="${img(l.covers[0], 1400)}" alt="${l.name}" loading="lazy" />
             <div class="copy">
-              <div><div class="nm">${l.name}</div><div class="meta">${l.region}${l.years ? " · " + (l.years[0] === l.years[1] ? l.years[0] : l.years[0] + "–" + l.years[1]) : ""}</div></div>
+              <div><div class="nm">${l.name}</div><div class="meta">${l.region}${l.years ? " · " + yrs(l) : ""}</div></div>
               <div class="cnt">${l.count}</div>
             </div>
           </div>`,
         )
         .join("");
 
-      document.querySelector("#findings").innerHTML = `
-        <li>The home page currently renders <b>${withPhotos.length} location cards</b>. Every
-          treatment above gets better with fewer — 01, 02, 03 and 06 are shown with the
-          <b>top 6 by photo count</b>, which is the real decision hiding underneath the visual one.</li>
-        <li><b>${thin.length} of the ${withPhotos.length} places have fewer than 5 photos</b>
-          (${thin.slice(0, 5).map((l) => l.name + " " + l.count).join(", ")}${thin.length > 5 ? "…" : ""}).
-          A card that opens into three photos is the fastest way to lose a first-time visitor —
-          worth folding those into a "Travels" or "Elsewhere" card.</li>
-        <li>Every treatment shows a <b>frame count</b>. It costs nothing and gives a reason to
-          tap: "Manly, 91 frames" is a promise; "Manly" alone is not.</li>
-        <li>04 (split curtain) and 05 (contact sheet) are the two that scale to all
-          ${withPhotos.length} without feeling like filler, so they work as the
-          <b>"see all places"</b> block underneath a curated set.</li>`;
+      /* Scroll-driven "live" state. rootMargin collapses the viewport to a band
+         across the middle, so the elements crossing it are the intersecting
+         ones — no scroll handler, no per-frame maths.
 
-      // Phone / desktop toggle. Treatments key off the stage width, not the
-      // viewport, so the phone preview is a real narrow layout.
+         The band width matters more than it looks. For a single-winner list it
+         has to be THINNER than one row, or two or three rows sit in the band
+         together and whichever fires last wins — the highlight then flickers
+         between neighbours as you scroll. 49.4% each side leaves roughly a
+         10px line, well under any row height. */
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      function liveOnScroll(selector, { band = 49.4, single = true } = {}) {
+        const els = [...document.querySelectorAll(selector)];
+        if (!els.length || reduced) return;
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const e of entries) {
+              if (!e.isIntersecting) continue;
+              if (single) els.forEach((el) => el.classList.remove("live"));
+              e.target.classList.add("live");
+            }
+          },
+          { rootMargin: `-${band}% 0px -${band}% 0px`, threshold: 0 },
+        );
+        els.forEach((el) => io.observe(el));
+        // Nothing is in the band before you reach the list, and the class only
+        // moves on a new intersection — so seed the first item, otherwise the
+        // list looks dead until you happen to scroll into the middle of it.
+        if (single) els[0].classList.add("live");
+      }
+      liveOnScroll(".curtain-row");
+      // The grids are the opposite case: tiles SHOULD develop together as a
+      // band of them comes into view, so the window is deliberately generous.
+      liveOnScroll(".neg", { band: 25, single: false });
+      liveOnScroll(".card-stack", { band: 25, single: false });
+      document.querySelectorAll(".card-stack").forEach((el) => {
+        new MutationObserver(() => el.classList.toggle("fan", el.classList.contains("live"))).observe(el, {
+          attributes: true,
+          attributeFilter: ["class"],
+        });
+      });
+
+      document.querySelector("#findings").innerHTML = `
+        <li>Showing the <b>top ${top.length} by photo count</b>, most recent year breaking ties:
+          ${top.slice(0, 4).map((l) => `${l.name} ${l.count}`).join(", ")}… If you'd rather they
+          were <b>ordered by date</b> once selected (newest trip first) that's a one-line change —
+          tell me which reads better.</li>
+        <li><b>${thin.length} of the ${locs.length} places hold fewer than 5 photos</b>
+          (${thin.slice(0, 4).map((l) => l.name + " " + l.count).join(", ")}…). Cutting to a top 10
+          hides them from the home page, but they're still reachable from the full index —
+          which is what 04 and 05 are for.</li>
+        <li>04, 05 and 03 now respond to <b>scroll</b> as well as hover, so nothing is
+          locked behind a pointer. All of it stands down under
+          <code>prefers-reduced-motion</code>, showing everything in colour instead.</li>
+        <li>The rail in 01 ends on an <b>"All ${locs.length} places"</b> card — a rail that just
+          runs out is a dead end; one with a destination keeps the click.</li>`;
+
+      // Phone / desktop toggle.
       const seg = document.querySelector(".seg");
       const apply = (v) => {
         document.body.dataset.view = v;
@@ -426,6 +519,7 @@
           s.toggleAttribute("data-wide", v === "desktop");
         });
         seg.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.view === v));
+        syncRail();
       };
       seg.addEventListener("click", (e) => {
         const b = e.target.closest("button");
