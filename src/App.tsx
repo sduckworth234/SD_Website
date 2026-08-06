@@ -1021,12 +1021,36 @@ function CollectionCards({ photos, locations, onOpen, isAdmin = false, onEdit }:
         const pinned = ps
           .filter((p) => p.collectionOrder != null)
           .sort((a, b) => (a.collectionOrder ?? 0) - (b.collectionOrder ?? 0));
-        return { name, photos: (pinned.length ? pinned : ps).slice(0, 5), loc: locByName.get(name) };
+        // photo.year is a string on the row type, and is "" when unknown.
+        const years = ps.map((p) => Number(p.year)).filter((y) => Number.isFinite(y) && y > 0);
+        return {
+          name,
+          photos: (pinned.length ? pinned : ps).slice(0, 5),
+          loc: locByName.get(name),
+          count: ps.length,
+          years: years.length ? ([Math.min(...years), Math.max(...years)] as const) : null,
+        };
       })
       .sort((a, b) => (order.get(a.name) ?? 999) - (order.get(b.name) ?? 999) || a.name.localeCompare(b.name));
   }, [photos, locations]);
 
+  // Phones get the curtain instead of the tile grid — see CollectionCurtain.
+  // Chosen in JS rather than CSS so only one of the two sets of images is ever
+  // requested; a display:none grid would still download every tile.
+  const narrow = useIsNarrow();
+
   if (!cards.length) return null;
+
+  if (narrow) {
+    return (
+      <CollectionCurtain
+        rows={cards}
+        onOpen={onOpen}
+        onEdit={isAdmin && onEdit ? onEdit : undefined}
+      />
+    );
+  }
+
   return (
     <section className="collection-cards scroll-reveal" aria-label="Browse by location">
       {cards.map((c, i) => (
@@ -1039,6 +1063,114 @@ function CollectionCards({ photos, locations, onOpen, isAdmin = false, onEdit }:
           featured={i % 6 === 0}
           onEdit={isAdmin && c.loc && onEdit ? () => onEdit(c.loc as GalleryLocation) : undefined}
         />
+      ))}
+    </section>
+  );
+}
+
+// True on phones. Kept as a hook so the collections block can pick a layout in
+// JS instead of rendering both and hiding one.
+function useIsNarrow(query = "(max-width: 760px)") {
+  const [narrow, setNarrow] = useState(
+    () => typeof window !== "undefined" && window.matchMedia(query).matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const onChange = () => setNarrow(mq.matches);
+    mq.addEventListener("change", onChange);
+    onChange();
+    return () => mq.removeEventListener("change", onChange);
+  }, [query]);
+  return narrow;
+}
+
+type CurtainRow = {
+  name: string;
+  photos: Photo[];
+  loc?: GalleryLocation;
+  count: number;
+  years: readonly [number, number] | null;
+};
+
+// The mobile index of places. On a phone the tile grid becomes a tall wall of
+// near-identical thumbnails you scroll past; this reads as a contents page, and
+// the "live" row — expanded, in colour — follows SCROLL POSITION rather than
+// hover, because hover doesn't exist on touch and the list would otherwise sit
+// grey forever.
+function CollectionCurtain({
+  rows,
+  onOpen,
+  onEdit,
+}: {
+  rows: CurtainRow[];
+  onOpen: (name: string) => void;
+  onEdit?: (location: GalleryLocation) => void;
+}) {
+  const listRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const root = listRef.current;
+    if (!root) return;
+    const items = Array.from(root.querySelectorAll<HTMLElement>(".curtain-row"));
+    if (!items.length) return;
+
+    // With motion off, don't hide anything behind a scroll effect — show the
+    // whole list in colour.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      items.forEach((el) => el.classList.add("is-live"));
+      return;
+    }
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          items.forEach((el) => el.classList.remove("is-live"));
+          entry.target.classList.add("is-live");
+        }
+      },
+      // The band has to be THINNER than one row. A generous band puts two or
+      // three rows inside it at once and the highlight flickers between
+      // neighbours depending on callback order; ~1% of the viewport is a line.
+      { rootMargin: "-49.4% 0px -49.4% 0px", threshold: 0 },
+    );
+    items.forEach((el) => io.observe(el));
+    // Nothing is in the band until you scroll into the list, and the class only
+    // moves on a new intersection — so seed the first row or it looks dead.
+    items[0].classList.add("is-live");
+    return () => io.disconnect();
+  }, [rows]);
+
+  return (
+    <section className="collection-curtain scroll-reveal" aria-label="Browse by location" ref={listRef}>
+      {rows.map((r) => (
+        <div className="curtain-row" key={r.name}>
+          <button className="curtain-hit" type="button" onClick={() => onOpen(r.name)} aria-label={`View the ${r.name} gallery`}>
+            <span className="curtain-txt">
+              <span className="curtain-nm">{r.name}</span>
+              <span className="curtain-meta">
+                {r.count} {r.count === 1 ? "frame" : "frames"}
+                {r.years ? ` · ${r.years[0] === r.years[1] ? r.years[0] : `${r.years[0]}–${r.years[1]}`}` : ""}
+              </span>
+            </span>
+            <span className="curtain-peek">
+              {r.photos[0] ? (
+                <img src={thumbUrl(r.photos[0], 560)} alt="" loading="lazy" decoding="async" />
+              ) : null}
+            </span>
+          </button>
+          {onEdit && r.loc ? (
+            <button
+              className="curtain-edit"
+              type="button"
+              onClick={() => onEdit(r.loc as GalleryLocation)}
+              aria-label={`Choose featured photos for ${r.name}`}
+              title="Choose featured photos"
+            >
+              <Pencil size={13} aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
       ))}
     </section>
   );
