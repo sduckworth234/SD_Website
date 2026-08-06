@@ -4091,6 +4091,37 @@ body:has(.contact-overlay) {
   transform: translateX(5px);
 }
 
+/* The tail row through to everything the top-ten cap left out. Deliberately has
+   no peek image — it is a destination, not another place. */
+.curtain-all .curtain-nm {
+  color: var(--muted);
+  font-size: clamp(1.1rem, 5vw, 1.4rem);
+}
+
+.curtain-all .curtain-hit {
+  padding-block: 18px;
+}
+
+.curtain-arrow {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--muted);
+}
+
+.curtain-all.is-live .curtain-nm {
+  color: var(--ink);
+  transform: none;
+}
+
+.curtain-all.is-live .curtain-arrow {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
 .curtain-edit {
   position: absolute;
   top: 8px;

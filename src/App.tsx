@@ -579,7 +579,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
             <MapPromo photos={publicPhotos} locations={locations} onOpen={goToMap} />
           </AdminHideable>
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "collection_cards")} label="Collections">
-            <CollectionCards photos={publicPhotos} locations={locations} onOpen={openLocation} isAdmin={isAdmin} onEdit={setEditingCollection} />
+            <CollectionCards photos={publicPhotos} locations={locations} onOpen={openLocation} onOpenAll={() => goToGalleries()} isAdmin={isAdmin} onEdit={setEditingCollection} />
           </AdminHideable>
           {heroPortrait ? (
             <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "framed_banner")} label="Framed Editions banner">
@@ -1005,7 +1005,9 @@ function CollectionCard({ name, photos, onOpen, delay, onEdit, featured = false 
 // The home page's location collections — one cross-fading card per location.
 // Each card cycles its admin-pinned photos (collectionOrder), else the first
 // few in gallery order.
-function CollectionCards({ photos, locations, onOpen, isAdmin = false, onEdit }: { photos: Photo[]; locations: GalleryLocation[]; onOpen: (name: string) => void; isAdmin?: boolean; onEdit?: (location: GalleryLocation) => void }) {
+const CURTAIN_LIMIT = 10;
+
+function CollectionCards({ photos, locations, onOpen, onOpenAll, isAdmin = false, onEdit }: { photos: Photo[]; locations: GalleryLocation[]; onOpen: (name: string) => void; onOpenAll?: () => void; isAdmin?: boolean; onEdit?: (location: GalleryLocation) => void }) {
   const cards = useMemo(() => {
     const byLoc = new Map<string, Photo[]>();
     for (const p of photos) {
@@ -1034,6 +1036,23 @@ function CollectionCards({ photos, locations, onOpen, isAdmin = false, onEdit }:
       .sort((a, b) => (order.get(a.name) ?? 999) - (order.get(b.name) ?? 999) || a.name.localeCompare(b.name));
   }, [photos, locations]);
 
+  // The phone list is capped at the ten most recent places — all 26 is a long
+  // scroll past a lot of thin galleries. Newest first, photo count breaking
+  // ties within a year; places with no year at all sort last.
+  //
+  // "Recent" here means the latest year_taken in the place, because that is the
+  // only date the PUBLIC query returns — captured_at is admin-only, so it is
+  // always null out here and cannot be used for ordering.
+  const recent = useMemo(
+    () =>
+      [...cards]
+        .sort(
+          (a, b) => (b.years?.[1] ?? -1) - (a.years?.[1] ?? -1) || b.count - a.count,
+        )
+        .slice(0, CURTAIN_LIMIT),
+    [cards],
+  );
+
   // Phones get the curtain instead of the tile grid — see CollectionCurtain.
   // Chosen in JS rather than CSS so only one of the two sets of images is ever
   // requested; a display:none grid would still download every tile.
@@ -1044,8 +1063,12 @@ function CollectionCards({ photos, locations, onOpen, isAdmin = false, onEdit }:
   if (narrow) {
     return (
       <CollectionCurtain
-        rows={cards}
+        rows={recent}
+        // Capping the list orphans the remaining places on mobile, so the list
+        // ends with a way through to all of them.
+        remaining={cards.length - recent.length}
         onOpen={onOpen}
+        onOpenAll={onOpenAll}
         onEdit={isAdmin && onEdit ? onEdit : undefined}
       />
     );
@@ -1099,11 +1122,15 @@ type CurtainRow = {
 // grey forever.
 function CollectionCurtain({
   rows,
+  remaining = 0,
   onOpen,
+  onOpenAll,
   onEdit,
 }: {
   rows: CurtainRow[];
+  remaining?: number;
   onOpen: (name: string) => void;
+  onOpenAll?: () => void;
   onEdit?: (location: GalleryLocation) => void;
 }) {
   const listRef = useRef<HTMLElement>(null);
@@ -1172,6 +1199,19 @@ function CollectionCurtain({
           ) : null}
         </div>
       ))}
+      {remaining > 0 && onOpenAll ? (
+        <div className="curtain-row curtain-all">
+          <button className="curtain-hit" type="button" onClick={onOpenAll}>
+            <span className="curtain-txt">
+              <span className="curtain-nm">All places</span>
+              <span className="curtain-meta">{remaining} more · view the full archive</span>
+            </span>
+            <span className="curtain-arrow" aria-hidden="true">
+              <ChevronRight size={20} />
+            </span>
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }
