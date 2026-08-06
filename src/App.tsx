@@ -1318,6 +1318,7 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
   });
 
   function goHome() { window.history.pushState({}, "", "/"); onNavigate("/"); }
+  function goGalleries() { window.history.pushState({}, "", "/galleries"); onNavigate("/galleries"); }
   // Classify by the location's DB region (no hardcoded place list — a newly
   // created Australian location should never file under Europe).
   const regionByLocation = useMemo(() => new Map(locations.map((l) => [l.name, l.region])), [locations]);
@@ -1401,7 +1402,21 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
           <p className="eyebrow">Sam Duckworth Photography</p>
           <h1>Framed<br />Editions</h1>
           <p className="sh-lead">Fine-art aerial &amp; coastal prints, framed in solid oak. From the Northern Beaches to the Mediterranean.</p>
-          <a className="solid-button" href={shopLive ? "#shop-grid" : "#shop-wall"}>{shopLive ? "Shop the collection" : "See the collection"}</a>
+          {/* While the shop is still in development there's nothing to buy, so
+              the call to action sends people to the galleries rather than to
+              the glimpse wall further down this page. Flipping "Shop page" on
+              in Admin → Visibility restores the real shop link on its own. */}
+          {shopLive ? (
+            <a className="solid-button" href="#shop-grid">Shop the collection</a>
+          ) : (
+            <a
+              className="solid-button"
+              href="/galleries"
+              onClick={(event) => { event.preventDefault(); goGalleries(); }}
+            >
+              See the collection
+            </a>
+          )}
         </div>
         <div className="fh-stage">
           {heroL ? <OakFrame className="fh-back" src={thumbUrl(heroL, 1000)} orientation="landscape" alt={heroL.title} /> : null}
