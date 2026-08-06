@@ -3998,6 +3998,82 @@ body:has(.contact-overlay) {
   .cc-feat .cc-label { font-size: 1.7rem; }
 }
 
+/* ================= Admin: place order ================= */
+.place-order {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  max-height: 460px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.place-row {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(var(--foam-rgb), 0.5);
+}
+
+/* A place with nothing published never reaches the public gallery, so it's
+   dimmed here rather than looking like a card you can reorder into view. */
+.place-row.is-empty {
+  opacity: 0.55;
+}
+
+.place-pos {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.place-id {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.place-id b {
+  font-weight: 500;
+  font-size: 0.94rem;
+}
+
+.place-id span {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.place-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.place-order-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.place-order-note {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.place-order-note.is-ok { color: var(--success); }
+.place-order-note.is-bad { color: var(--danger); }
+
 /* ================= Home: places curtain (phones only) =================
    The tile grid becomes a tall wall of near-identical thumbnails on a phone.
    This is the same list as a contents page: type-led, with one live row at a

@@ -435,6 +435,32 @@ export async function setLocationFeedOrder(locationId: string, order: number) {
   if (error) throw error;
 }
 
+// Write a new running order for the places. Callers pass the full list in the
+// order they want it; positions are renumbered in tens so there's always room
+// to slot something between two neighbours later, and only the rows that
+// actually moved are written.
+export async function setLocationOrder(orderedLocationIds: string[]) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const { data, error: readError } = await supabase
+    .from("locations")
+    .select("id, sort_order");
+  if (readError) throw readError;
+
+  const current = new Map((data ?? []).map((row) => [row.id as string, row.sort_order as number]));
+  const changed = orderedLocationIds
+    .map((id, index) => ({ id, sortOrder: (index + 1) * 10 }))
+    .filter((row) => current.get(row.id) !== row.sortOrder);
+
+  for (const row of changed) {
+    const { error } = await supabase
+      .from("locations")
+      .update({ sort_order: row.sortOrder })
+      .eq("id", row.id);
+    if (error) throw error;
+  }
+  return changed.length;
+}
+
 // Edit every field on a photo from the admin panel. Title/description/location/
 // year/aspect always write; the rest only write when the caller includes them
 // (use `undefined` to leave a field untouched, `null` to clear it).

@@ -1,5 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import {
+  ArrowUpDown,
   ArrowUpFromLine,
   ArrowUpToLine,
   Check,
@@ -37,6 +38,7 @@ import {
   bulkEditPhotos,
   createCollection,
   createLocation,
+  setLocationOrder,
   createPhotoRecord,
   deleteCollection,
   deletePhoto,
@@ -2989,6 +2991,144 @@ function CollectionCurator({
   );
 }
 
+// Admin panel: the running order of the places. This is `locations.sort_order`,
+// which until now could only be changed by hand in SQL.
+//
+// It drives the home page's location card grid and the order of the place tabs
+// on /galleries. It does NOT drive the phone list on the home page — that one
+// is deliberately sorted newest-first and capped (see CollectionCards), so it
+// stays a "latest work" list rather than a manual one.
+function PlacesOrderAdmin({
+  locations,
+  photos,
+  onChanged,
+}: {
+  locations: GalleryLocation[];
+  photos: Photo[];
+  onChanged: () => void;
+}) {
+  const [order, setOrder] = useState<GalleryLocation[]>(locations);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  // Adopt the server's order whenever it genuinely changes. A reload elsewhere
+  // in the dashboard will discard unsaved moves — the server is the truth, and
+  // the "Unsaved changes" note makes it obvious there was something to save.
+  const dirty = useMemo(
+    () => order.map((l) => l.id).join() !== locations.map((l) => l.id).join(),
+    [order, locations],
+  );
+  useEffect(() => {
+    setOrder((prev) =>
+      prev.map((l) => l.id).join() === locations.map((l) => l.id).join() ? prev : locations,
+    );
+    // Intentionally keyed on the server list only: re-running when `order`
+    // changes would stomp the user's in-progress reordering.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locations]);
+
+  const counts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of photos) {
+      if (!p.published || !p.location || p.location === "Unsorted") continue;
+      map.set(p.location, (map.get(p.location) ?? 0) + 1);
+    }
+    return map;
+  }, [photos]);
+
+  function move(index: number, direction: -1 | 1) {
+    const next = [...order];
+    const target = index + direction;
+    if (target < 0 || target >= next.length) return;
+    [next[index], next[target]] = [next[target], next[index]];
+    setOrder(next);
+    setSaved(false);
+  }
+
+  async function save() {
+    setBusy(true);
+    setError("");
+    try {
+      await setLocationOrder(order.map((l) => l.id));
+      onChanged();
+      setSaved(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save the order.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="admin-visibility" aria-label="Place order">
+      <div className="admin-sec-head"><ArrowUpDown size={16} aria-hidden="true" /><h2>Place order</h2></div>
+      <p className="admin-sec-hint">
+        The running order of the location cards on the home page, and of the place tabs on the
+        gallery. Places with no published photos are listed here but never appear publicly.
+        The phone list on the home page ignores this — it always shows the ten most recent places.
+      </p>
+
+      <div className="place-order">
+        {order.map((location, index) => {
+          const count = counts.get(location.name) ?? 0;
+          return (
+            <div className={`place-row${count ? "" : " is-empty"}`} key={location.id}>
+              <span className="place-pos">{index + 1}</span>
+              <span className="place-id">
+                <b>{location.name}</b>
+                <span>
+                  {count ? `${count} ${count === 1 ? "photo" : "photos"}` : "no published photos"}
+                  {location.region ? ` · ${location.region}` : ""}
+                </span>
+              </span>
+              <span className="place-actions">
+                <button
+                  aria-label={`Move ${location.name} up`}
+                  className="icon-button"
+                  disabled={busy || index === 0}
+                  onClick={() => move(index, -1)}
+                  title="Move up"
+                  type="button"
+                >
+                  <ArrowUpToLine size={14} aria-hidden="true" />
+                </button>
+                <button
+                  aria-label={`Move ${location.name} down`}
+                  className="icon-button"
+                  disabled={busy || index === order.length - 1}
+                  onClick={() => move(index, 1)}
+                  title="Move down"
+                  type="button"
+                >
+                  <ArrowUpFromLine size={14} aria-hidden="true" />
+                </button>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="place-order-foot">
+        <button className="solid-button" disabled={busy || !dirty} onClick={save} type="button">
+          {busy ? "Saving…" : "Save order"}
+        </button>
+        <button
+          className="text-button"
+          disabled={busy || !dirty}
+          onClick={() => { setOrder(locations); setSaved(false); }}
+          type="button"
+        >
+          Reset
+        </button>
+        {dirty ? <span className="place-order-note">Unsaved changes</span> : null}
+        {saved && !dirty ? <span className="place-order-note is-ok">Order saved</span> : null}
+        {error ? <span className="place-order-note is-bad">{error}</span> : null}
+      </div>
+    </section>
+  );
+}
+
 // Admin panel: create, rename, reorder, hide and curate the gallery Collections.
 // Everything about a collection is editable here — nothing is hardcoded.
 function CollectionsAdmin({ photos }: { photos: Photo[] }) {
@@ -3782,6 +3922,7 @@ function AdminDashboard({ session }: { session: Session }) {
       ) : null}
       <MapFeedAdmin photos={adminPhotos} locations={locations} onChanged={refresh} />
       <CollectionsAdmin photos={adminPhotos} />
+      <PlacesOrderAdmin locations={locations} photos={adminPhotos} onChanged={refresh} />
       <VisibilityAdmin photos={adminPhotos} locations={locations} />
       <LocationRail
         activeLocation={activeLocation}
