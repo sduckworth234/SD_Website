@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Five ideas — mobile / Instagram</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Same type system as the live site. */
+      :root {
+        --paper: #f4efe6;
+        --paper-2: #e8e0d3;
+        --ink: #1b1916;
+        --muted: #786d5d;
+        --line: rgba(27, 25, 22, 0.15);
+        --sea: #3f6366;
+        --timber: #b8895b;
+        --sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+        --mono: "Space Grotesk", ui-monospace, Menlo, monospace;
+        --sp: clamp(18px, 4vw, 56px);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; background: var(--paper); color: var(--ink);
+        font-family: var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden;
+      }
+      img { display: block; width: 100%; height: 100%; object-fit: cover; }
+      figure { margin: 0; }
+      button { font: inherit; }
+      a { color: inherit; }
+
+      .head { padding: clamp(48px, 9vh, 100px) var(--sp) 10px; max-width: 1240px; }
+      .head .k { font-family: var(--mono); font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
+      .head h1 { font-size: clamp(2.2rem, 6vw, 4.2rem); font-weight: 600; letter-spacing: -0.04em; line-height: 1; margin: 0; }
+      .head p { font-family: var(--mono); font-weight: 300; font-size: clamp(0.95rem, 1.5vw, 1.1rem); line-height: 1.65; color: #52493d; max-width: 64ch; margin: 20px 0 0; }
+      .head p b { font-weight: 500; color: var(--ink); }
+
+      .case { padding: clamp(56px, 9vh, 100px) var(--sp) 0; max-width: 1240px; }
+      .case-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+      .case-head .n { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+      .case-head h2 { font-size: clamp(1.5rem, 3.2vw, 2.4rem); font-weight: 600; letter-spacing: -0.035em; margin: 0; }
+      .case-head .tag { font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; color: var(--muted); }
+      .case-head .tag.hot { border-color: var(--timber); color: #8d6234; }
+      .why { font-family: var(--mono); font-weight: 300; font-size: 0.95rem; line-height: 1.68; color: #52493d; max-width: 62ch; margin: 12px 0 8px; }
+      .why b { font-weight: 500; color: var(--ink); }
+      .try { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--sea); margin: 14px 0 22px; }
+
+      /* Phone frame — every prototype runs inside a real 390px layout. */
+      .phone {
+        width: 390px; max-width: 100%; margin: 0 auto;
+        border: 10px solid #171614; border-radius: 42px; overflow: hidden;
+        box-shadow: 0 30px 70px rgba(27, 25, 22, 0.24); background: #0b0b0c;
+        position: relative; height: 730px;
+      }
+      .screen { position: absolute; inset: 0; overflow: hidden; }
+
+      /* ── 1 · stories ─────────────────────────────────────────────────────── */
+      .st { position: absolute; inset: 0; background: #000; }
+      .st-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 340ms ease; }
+      .st-slide.on { opacity: 1; }
+      .st-slide::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.55) 0%, transparent 26%, transparent 56%, rgba(0,0,0,.8) 100%); }
+      .st-bars { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 5; display: flex; gap: 4px; }
+      .st-bars i { flex: 1; height: 2.5px; background: rgba(255,255,255,.32); border-radius: 2px; overflow: hidden; }
+      .st-bars i span { display: block; height: 100%; width: 0; background: #fff; }
+      .st-bars i.done span { width: 100%; }
+      .st-bars i.live span { animation: fill 4200ms linear forwards; }
+      @keyframes fill { to { width: 100%; } }
+      .st-top { position: absolute; top: 30px; left: 14px; right: 14px; z-index: 5; display: flex; align-items: center; gap: 9px; color: #fff; }
+      .st-top .av { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--timber), var(--sea)); display: grid; place-items: center; font-size: 11px; font-weight: 600; flex: none; }
+      .st-top .who { font-family: var(--mono); font-size: 12px; }
+      .st-top .who b { display: block; font-weight: 500; font-size: 13px; font-family: var(--sans); }
+      .st-top .who span { opacity: .72; }
+      .st-cap { position: absolute; left: 16px; right: 16px; bottom: 78px; z-index: 5; color: #fff; }
+      .st-cap h3 { font-size: 1.9rem; font-weight: 600; letter-spacing: -0.04em; margin: 0; line-height: 1.02; }
+      .st-cap p { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; opacity: .8; margin: 6px 0 0; }
+      .st-cta { position: absolute; left: 16px; right: 16px; bottom: 22px; z-index: 6; display: flex; gap: 8px; }
+      .st-cta button {
+        flex: 1; border: 1px solid rgba(255,255,255,.42); background: rgba(0,0,0,.32);
+        -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+        color: #fff; border-radius: 999px; padding: 11px; cursor: pointer;
+        font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+      }
+      .st-cta button.primary { background: #fff; color: #111; border-color: #fff; }
+      .st-zone { position: absolute; top: 60px; bottom: 66px; width: 34%; z-index: 4; cursor: pointer; }
+      .st-zone.prev { left: 0; }
+      .st-zone.next { right: 0; width: 66%; }
+      .st-hint { position: absolute; z-index: 7; top: 50%; left: 50%; transform: translate(-50%,-50%); color: rgba(255,255,255,.9); font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; background: rgba(0,0,0,.5); padding: 8px 14px; border-radius: 999px; transition: opacity 500ms; }
+
+      /* ── 2 · before / after ──────────────────────────────────────────────── */
+      .ba { position: absolute; inset: 0; background: #000; touch-action: none; }
+      .ba .layer { position: absolute; inset: 0; }
+      /* The "before" is the same file pushed back to a flat, unedited-looking
+         state — a stand-in for the RAW, which only Sam has. */
+      .ba .before img { filter: saturate(0.42) contrast(0.82) brightness(1.06); }
+      .ba .after { clip-path: inset(0 0 0 var(--split, 50%)); }
+      .ba-handle { position: absolute; top: 0; bottom: 0; left: var(--split, 50%); width: 2px; background: #fff; z-index: 4; box-shadow: 0 0 18px rgba(0,0,0,.5); }
+      .ba-knob {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+        width: 46px; height: 46px; border-radius: 50%; background: #fff; color: #111;
+        display: grid; place-items: center; font-size: 15px; box-shadow: 0 6px 22px rgba(0,0,0,.45);
+      }
+      .ba-tag { position: absolute; top: 16px; z-index: 5; font-family: var(--mono); font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #fff; background: rgba(0,0,0,.5); padding: 6px 11px; border-radius: 999px; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+      .ba-tag.l { left: 14px; }
+      .ba-tag.r { right: 14px; }
+      .ba-foot { position: absolute; left: 16px; right: 16px; bottom: 20px; z-index: 5; color: #fff; }
+      .ba-foot h3 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.035em; margin: 0; }
+      .ba-foot p { font-family: var(--mono); font-size: 11px; letter-spacing: .13em; text-transform: uppercase; opacity: .78; margin: 5px 0 0; }
+
+      /* ── 3 · on your wall ────────────────────────────────────────────────── */
+      .wall { position: absolute; inset: 0; background: linear-gradient(180deg, #e9e4da 0%, #ded7ca 72%, #cfc7b8 72.2%, #c4bbaa 100%); }
+      .wall-room { position: absolute; inset: 0; }
+      /* A drawn room, not a stock photo — it's a scale diagram, and pretending
+         otherwise with someone else's interior would be dishonest. */
+      .sofa { position: absolute; left: 8%; right: 8%; bottom: 6%; height: 96px; background: #6f6a60; border-radius: 12px 12px 4px 4px; }
+      .sofa::before { content: ""; position: absolute; left: 6px; right: 6px; top: 10px; height: 40px; background: #837d72; border-radius: 8px; }
+      .sofa::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: -12px; height: 12px; background: #4b473f; border-radius: 0 0 6px 6px; }
+      .lamp { position: absolute; right: 6%; bottom: 6%; width: 3px; height: 190px; background: #4b473f; }
+      .lamp::before { content: ""; position: absolute; top: -26px; left: -19px; width: 42px; height: 30px; background: #b9b1a2; border-radius: 4px 4px 10px 10px; }
+      /* Scale is the whole point here, so the ART is sized to the print's real
+         dimensions and the mat + moulding add their own real thickness on top —
+         rather than being subtracted out of the print by border-box, which is
+         how a "50cm" print ends up drawn at 22cm. */
+      .frame-hang {
+        position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%);
+        background: #c9a97f; box-shadow: 0 18px 40px rgba(0,0,0,.3);
+        padding: var(--moulding, 6px);
+        transition: padding 520ms cubic-bezier(0.2,0.8,0.2,1);
+      }
+      .frame-hang .mat { background: #f6f3ec; padding: var(--mat, 14px); }
+      .frame-hang .art {
+        overflow: hidden;
+        width: var(--art-w, 80px); height: var(--art-h, 110px);
+        transition: width 520ms cubic-bezier(0.2,0.8,0.2,1), height 520ms cubic-bezier(0.2,0.8,0.2,1);
+      }
+      .wall-ui { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; padding: 14px; background: linear-gradient(transparent, rgba(20,19,17,.9) 34%); }
+      .wall-sizes { display: flex; gap: 7px; justify-content: center; margin-bottom: 12px; }
+      .wall-sizes button {
+        border: 1px solid rgba(255,255,255,.36); background: rgba(0,0,0,.3); color: #fff;
+        border-radius: 999px; padding: 8px 12px; cursor: pointer;
+        font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+      }
+      .wall-sizes button.on { background: #fff; color: #111; border-color: #fff; }
+      .wall-meta { text-align: center; color: #fff; font-family: var(--mono); font-size: 11px; letter-spacing: .1em; }
+      .wall-meta b { font-family: var(--sans); font-size: 1.05rem; font-weight: 600; letter-spacing: -0.02em; display: block; margin-bottom: 3px; }
+      .wall-scale { position: absolute; top: 14px; left: 14px; z-index: 5; font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #4b473f; background: rgba(255,255,255,.7); padding: 6px 10px; border-radius: 999px; }
+
+      /* ── 4 · picks ───────────────────────────────────────────────────────── */
+      .picks { position: absolute; inset: 0; background: var(--paper); overflow-y: auto; }
+      .picks-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding-bottom: 96px; }
+      .pick { position: relative; aspect-ratio: 3/4; overflow: hidden; background: var(--paper-2); }
+      .pick .heart {
+        position: absolute; right: 8px; top: 8px; z-index: 3; width: 32px; height: 32px;
+        border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center;
+        background: rgba(0,0,0,.34); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+        color: #fff; font-size: 15px; transition: transform 320ms cubic-bezier(0.2,2,0.4,1), background 240ms;
+      }
+      .pick.on .heart { background: #fff; color: #d0455a; transform: scale(1.12); }
+      .pick .cap { position: absolute; inset: auto 0 0 0; z-index: 2; padding: 22px 8px 7px; background: linear-gradient(transparent, rgba(0,0,0,.72)); color: #fff; font-size: .78rem; font-weight: 600; letter-spacing: -0.01em; }
+      .picks-tray {
+        position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 6;
+        background: var(--ink); color: var(--paper); border-radius: 14px; padding: 12px 14px;
+        display: flex; align-items: center; gap: 12px;
+        transform: translateY(140%); transition: transform 460ms cubic-bezier(0.2,0.9,0.25,1);
+      }
+      .picks-tray.up { transform: none; }
+      .picks-tray .n { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; opacity: .8; flex: 1; }
+      .picks-tray .n b { display: block; font-family: var(--sans); font-size: 1rem; font-weight: 600; letter-spacing: -0.02em; opacity: 1; text-transform: none; }
+      .picks-tray button { border: 0; border-radius: 999px; padding: 10px 15px; cursor: pointer; background: var(--paper); color: var(--ink); font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+      .picks-head { position: sticky; top: 0; z-index: 4; background: rgba(244,239,230,.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); padding: 13px 14px; border-bottom: 1px solid var(--line); }
+      .picks-head b { font-size: 1.05rem; font-weight: 600; letter-spacing: -0.03em; }
+      .picks-head span { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+
+      /* ── 5 · morph ───────────────────────────────────────────────────────── */
+      .morph { position: absolute; inset: 0; background: var(--paper); overflow: hidden; }
+      .morph-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; }
+      .morph-cell { aspect-ratio: 1; overflow: hidden; background: var(--paper-2); cursor: pointer; }
+      .morph-detail {
+        position: absolute; inset: 0; z-index: 5; background: var(--paper);
+        display: flex; flex-direction: column;
+        transform: translateY(100%); transition: transform 520ms cubic-bezier(0.2,0.9,0.25,1);
+      }
+      .morph-detail.open { transform: none; }
+      .morph-detail .shot { height: 62%; overflow: hidden; background: #000; }
+      .morph-detail .body { padding: 16px; }
+      .morph-detail h3 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.04em; margin: 0; }
+      .morph-detail .meta { font-family: var(--mono); font-size: 11px; letter-spacing: .13em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+      .morph-detail .close { position: absolute; top: 12px; right: 12px; z-index: 6; width: 34px; height: 34px; border-radius: 50%; border: 0; background: rgba(0,0,0,.42); color: #fff; cursor: pointer; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+      .morph-detail .row { display: flex; gap: 8px; margin-top: 16px; }
+      .morph-detail .row button { flex: 1; border: 1px solid var(--line); background: none; border-radius: 999px; padding: 11px; cursor: pointer; font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+      .morph-detail .row button.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+      footer { padding: clamp(60px, 10vh, 110px) var(--sp) 120px; border-top: 1px solid var(--line); margin-top: clamp(60px, 10vh, 110px); }
+      footer h3 { font-size: 1.3rem; font-weight: 600; letter-spacing: -0.03em; margin: 0 0 14px; }
+      footer ol { font-family: var(--mono); font-weight: 300; font-size: 0.95rem; line-height: 1.9; color: #52493d; max-width: 70ch; margin: 0; padding-left: 20px; }
+      footer ol b { font-weight: 500; color: var(--ink); }
+      footer .src { font-family: var(--mono); font-size: .8rem; color: var(--muted); margin-top: 26px; line-height: 1.8; }
+
+      @media (prefers-reduced-motion: reduce) { * { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
+    </style>
+  </head>
+  <body>
+    <div class="head">
+      <p class="k">Sam Duckworth Photography — mobile / Instagram</p>
+      <h1>Five things<br />worth building</h1>
+      <p>
+        All five are working prototypes on your real photos, not pictures of
+        ideas — tap and drag them. They're built around one problem:
+        <b>someone taps your Instagram bio link, lands on a phone, and decides
+        in about three seconds.</b> They just left a fast, gestural, full-screen
+        app. A normal website is a downgrade. So these do two jobs — feel native
+        first, then offer the things Instagram physically can't.
+      </p>
+    </div>
+
+    <section class="case">
+      <div class="case-head"><span class="n">01</span><h2>Stories</h2><span class="tag hot">The bridge from Instagram</span></div>
+      <p class="why">
+        A full-screen, tap-through viewer with progress bars at the top — the
+        exact grammar someone arrives with. Tap right to advance, left to go
+        back. <b>Why it works:</b> zero learning curve, and it inverts the usual
+        problem. Instead of asking an Instagram visitor to learn a website, the
+        website meets them where they already are, then quietly offers the two
+        things the app can't: the full-resolution frame, and a way to buy it.
+      </p>
+      <p class="try">Try it — tap the right side of the screen</p>
+      <div class="phone"><div class="screen"><div class="st"></div></div></div>
+    </section>
+
+    <section class="case">
+      <div class="case-head"><span class="n">02</span><h2>The edit</h2><span class="tag">Highest share rate</span></div>
+      <p class="why">
+        Drag to wipe between the flat original and the finished frame.
+        <b>Why it works:</b> before/after is consistently the most-shared thing a
+        photographer posts, because it shows the craft rather than the result —
+        it reframes you from "someone with a good camera" to someone with an eye.
+        It also gives people a reason to come back to the site, which a static
+        gallery never does.
+        <b>Note:</b> the "before" here is your finished file pushed back to a
+        flat state as a stand-in — only you have the real originals.
+      </p>
+      <p class="try">Try it — drag the handle left and right</p>
+      <div class="phone"><div class="screen"><div class="ba"></div></div></div>
+    </section>
+
+    <section class="case">
+      <div class="case-head"><span class="n">03</span><h2>On your wall</h2><span class="tag hot">Sells prints</span></div>
+      <p class="why">
+        Pick a size and see the framed print against a room at true scale.
+        <b>Why it works:</b> the single biggest reason people don't buy art
+        online is that they can't picture the size — "is 40×50 big?" is
+        unanswerable in a product grid. Showing it next to a sofa answers it
+        instantly. This is the one idea here that directly moves money, and it
+        slots into Framed Editions when the shop opens.
+      </p>
+      <p class="try">Try it — switch sizes and watch the frame scale</p>
+      <div class="phone"><div class="screen"><div class="wall"></div></div></div>
+    </section>
+
+    <section class="case">
+      <div class="case-head"><span class="n">04</span><h2>Picks</h2><span class="tag">Works before the shop does</span></div>
+      <p class="why">
+        Heart anything; a tray slides up with what you've chosen and one button
+        to send it to you. <b>Why it works:</b> it captures intent while the
+        shop is still unbuilt — instead of "come back when it launches", someone
+        leaves you a shortlist and an email address. It's also a reason to keep
+        scrolling: collecting is a loop, browsing isn't.
+      </p>
+      <p class="try">Try it — tap a few hearts</p>
+      <div class="phone"><div class="screen"><div class="picks"></div></div></div>
+    </section>
+
+    <section class="case">
+      <div class="case-head"><span class="n">05</span><h2>Native transitions</h2><span class="tag">Cheapest win here</span></div>
+      <p class="why">
+        Tap a tile and the photo expands into the detail view instead of the
+        page blinking. <b>Why it works:</b> this is what separates "an app" from
+        "a website" in a way nobody can articulate but everyone feels. The
+        browser now does it natively — the View Transitions API shipped in
+        Safari on iOS 18.1, so it works for essentially your whole Instagram
+        audience, degrades to a plain cut on anything older, and costs almost
+        nothing in code.
+      </p>
+      <p class="try">Try it — tap any tile</p>
+      <div class="phone"><div class="screen"><div class="morph"></div></div></div>
+    </section>
+
+    <footer>
+      <h3>If you only do one</h3>
+      <ol id="rank"></ol>
+      <div class="src">
+        Research notes: 2026 Awwwards winners have shifted from sites that
+        <i>look</i> impressive to sites that <i>feel</i> interactive — full-page
+        hero images with overlay text now appear in under 12% of winners, and
+        video backgrounds under 8%. Worth knowing, because your current home
+        page hero is exactly that pattern. View Transitions support confirmed
+        for Safari iOS 18.1+ (same-document) and 18.4+ (cross-document).
+      </div>
+    </footer>
+
+    <script type="module">
+      const BASE = "https://krixuiimabosiorzxzju.supabase.co/storage/v1/render/image/public/photos/";
+      const img = (p, w, q = 76) => `${BASE}${p.path}?width=${w}&resize=contain&quality=${q}`;
+
+      const all = await fetch("./photos.json").then((r) => r.json());
+      const port = all.filter((p) => p.aspect === "portrait");
+      const land = all.filter((p) => p.aspect === "landscape" || p.aspect === "wide");
+      const meta = (p) => `${p.location}${p.year ? " · " + p.year : ""}`;
+
+      /* ── 1 · stories ──────────────────────────────────────────────────── */
+      const story = [port[0], land[0], port[2], land[3], port[4]].filter(Boolean);
+      const st = document.querySelector(".st");
+      st.innerHTML =
+        story.map((p, i) => `<div class="st-slide${i === 0 ? " on" : ""}"><img src="${img(p, 900)}" alt="${p.title}" loading="lazy" /></div>`).join("") +
+        `<div class="st-bars">${story.map(() => `<i><span></span></i>`).join("")}</div>
+         <div class="st-top">
+           <span class="av">SD</span>
+           <span class="who"><b>sam.duckworth</b><span>Northern Beaches · AU</span></span>
+         </div>
+         <div class="st-cap"><h3></h3><p></p></div>
+         <div class="st-cta">
+           <button class="primary">Buy the print</button>
+           <button>See the gallery</button>
+         </div>
+         <div class="st-zone prev"></div><div class="st-zone next"></div>
+         <div class="st-hint">Tap right →</div>`;
+
+      let si = 0;
+      const bars = [...st.querySelectorAll(".st-bars i")];
+      const paint = () => {
+        const p = story[si];
+        st.querySelectorAll(".st-slide").forEach((el, n) => el.classList.toggle("on", n === si));
+        st.querySelector(".st-cap h3").textContent = p.title;
+        st.querySelector(".st-cap p").textContent = meta(p);
+        bars.forEach((b, n) => {
+          b.classList.toggle("done", n < si);
+          b.classList.remove("live");
+          if (n === si) { void b.offsetWidth; b.classList.add("live"); }
+        });
+      };
+      const go = (d) => { si = (si + d + story.length) % story.length; paint(); };
+      st.querySelector(".st-zone.next").addEventListener("click", () => go(1));
+      st.querySelector(".st-zone.prev").addEventListener("click", () => go(-1));
+      const hint = st.querySelector(".st-hint");
+      st.addEventListener("click", () => { hint.style.opacity = "0"; }, { once: true });
+      paint();
+
+      /* ── 2 · before / after ───────────────────────────────────────────── */
+      const shot = land[1] ?? land[0];
+      const ba = document.querySelector(".ba");
+      ba.innerHTML = `
+        <div class="layer before"><img src="${img(shot, 900)}" alt="" /></div>
+        <div class="layer after"><img src="${img(shot, 900)}" alt="${shot.title}" /></div>
+        <span class="ba-tag l">Original</span><span class="ba-tag r">Edited</span>
+        <div class="ba-handle"><div class="ba-knob">⇔</div></div>
+        <div class="ba-foot"><h3>${shot.title}</h3><p>${meta(shot)}</p></div>`;
+      const setSplit = (clientX) => {
+        const r = ba.getBoundingClientRect();
+        const pct = Math.min(100, Math.max(0, ((clientX - r.left) / r.width) * 100));
+        ba.style.setProperty("--split", pct + "%");
+      };
+      let dragging = false;
+      ba.addEventListener("pointerdown", (e) => { dragging = true; ba.setPointerCapture(e.pointerId); setSplit(e.clientX); });
+      ba.addEventListener("pointermove", (e) => { if (dragging) setSplit(e.clientX); });
+      ba.addEventListener("pointerup", () => { dragging = false; });
+      ba.style.setProperty("--split", "50%");
+
+      /* ── 3 · on your wall ─────────────────────────────────────────────── */
+      // Real print sizes; the room is ~2.6 m of wall across the phone's width,
+      // which is what makes the frame's scale meaningful rather than decorative.
+      const SIZES = [
+        { label: "30×40", w: 30, h: 40 },
+        { label: "50×70", w: 50, h: 70 },
+        { label: "70×100", w: 70, h: 100 },
+      ];
+      const art = port[1] ?? port[0];
+      const wall = document.querySelector(".wall");
+      wall.innerHTML = `
+        <div class="wall-room"><div class="sofa"></div><div class="lamp"></div></div>
+        <span class="wall-scale">Wall shown ≈ 2.6 m across</span>
+        <div class="frame-hang"><div class="mat"><div class="art"><img src="${img(art, 700)}" alt="${art.title}" /></div></div></div>
+        <div class="wall-ui">
+          <div class="wall-sizes">${SIZES.map((s, i) => `<button data-i="${i}" class="${i === 1 ? "on" : ""}">${s.label} cm</button>`).join("")}</div>
+          <div class="wall-meta"><b>${art.title}</b>${art.location} · framed in oak</div>
+        </div>`;
+      const hang = wall.querySelector(".frame-hang");
+      const WALL_CM = 260; // wall visible across the phone, ≈ a 3-seater + air
+      const MAT_CM = 5;    // typical mount board
+      const MOULD_CM = 2;  // oak moulding
+      let sizeIndex = 1;
+      const applySize = (i) => {
+        sizeIndex = i;
+        const s = SIZES[i];
+        const perCm = wall.clientWidth / WALL_CM;
+        hang.style.setProperty("--art-w", s.w * perCm + "px");
+        hang.style.setProperty("--art-h", s.h * perCm + "px");
+        hang.style.setProperty("--mat", MAT_CM * perCm + "px");
+        hang.style.setProperty("--moulding", MOULD_CM * perCm + "px");
+        wall.querySelectorAll(".wall-sizes button").forEach((b, n) => b.classList.toggle("on", n === i));
+      };
+      wall.querySelector(".wall-sizes").addEventListener("click", (e) => {
+        const b = e.target.closest("button");
+        if (b) applySize(+b.dataset.i);
+      });
+      // Size after layout, and re-derive if the frame ever changes width —
+      // measuring clientWidth too early silently produces a wrong scale.
+      requestAnimationFrame(() => applySize(1));
+      new ResizeObserver(() => applySize(sizeIndex)).observe(wall);
+
+      /* ── 4 · picks ────────────────────────────────────────────────────── */
+      const pickSet = all.slice(0, 12);
+      const picks = document.querySelector(".picks");
+      picks.innerHTML = `
+        <div class="picks-head"><b>Northern Beaches</b><span>Tap the heart to shortlist</span></div>
+        <div class="picks-grid">
+          ${pickSet.map((p, i) => `<figure class="pick" data-i="${i}">
+            <img src="${img(p, 420)}" alt="${p.title}" loading="lazy" />
+            <button class="heart" aria-label="Shortlist ${p.title}">♥</button>
+            <figcaption class="cap">${p.title}</figcaption>
+          </figure>`).join("")}
+        </div>
+        <div class="picks-tray"><span class="n"><b>0 prints shortlisted</b>Send them to Sam</span><button>Enquire</button></div>`;
+      const tray = picks.querySelector(".picks-tray");
+      const chosen = new Set();
+      picks.querySelector(".picks-grid").addEventListener("click", (e) => {
+        const h = e.target.closest(".heart");
+        if (!h) return;
+        const cell = h.closest(".pick");
+        const i = +cell.dataset.i;
+        chosen.has(i) ? chosen.delete(i) : chosen.add(i);
+        cell.classList.toggle("on", chosen.has(i));
+        tray.classList.toggle("up", chosen.size > 0);
+        tray.querySelector(".n b").textContent =
+          `${chosen.size} print${chosen.size === 1 ? "" : "s"} shortlisted`;
+      });
+
+      /* ── 5 · morph (View Transitions where supported) ─────────────────── */
+      const grid = all.slice(12, 20);
+      const morph = document.querySelector(".morph");
+      morph.innerHTML = `
+        <div class="morph-grid">
+          ${grid.map((p, i) => `<div class="morph-cell" data-i="${i}"><img src="${img(p, 420)}" alt="${p.title}" loading="lazy" /></div>`).join("")}
+        </div>
+        <div class="morph-detail">
+          <button class="close" aria-label="Close">✕</button>
+          <div class="shot"><img alt="" /></div>
+          <div class="body">
+            <h3></h3><div class="meta"></div>
+            <div class="row"><button class="primary">Buy the print</button><button>Where it was shot</button></div>
+          </div>
+        </div>`;
+      const detail = morph.querySelector(".morph-detail");
+      const open = (i) => {
+        const p = grid[i];
+        detail.querySelector(".shot img").src = img(p, 900);
+        detail.querySelector("h3").textContent = p.title;
+        detail.querySelector(".meta").textContent =
+          `${p.location}${p.year ? " · " + p.year : ""}${p.alt ? " · " + Math.round(p.alt) + " m" : ""}`;
+        detail.classList.add("open");
+      };
+      const run = (fn) =>
+        document.startViewTransition ? document.startViewTransition(fn) : fn();
+      morph.querySelector(".morph-grid").addEventListener("click", (e) => {
+        const c = e.target.closest(".morph-cell");
+        if (c) run(() => open(+c.dataset.i));
+      });
+      detail.querySelector(".close").addEventListener("click", () =>
+        run(() => detail.classList.remove("open")),
+      );
+
+      document.querySelector("#rank").innerHTML = `
+        <li><b>Stories (01)</b> — the biggest single lever, because it fixes the
+          exact moment you're losing people: the jump from a gestural app to a
+          website. Also the most reusable — every trip becomes one.</li>
+        <li><b>Native transitions (05)</b> — cheapest thing on this page by a
+          distance. Mostly a few lines of CSS plus one API call, and it lifts the
+          whole site rather than adding a section.</li>
+        <li><b>On your wall (03)</b> — the only one that directly moves money.
+          Worth building alongside the shop rather than before it.</li>
+        <li><b>Picks (04)</b> — the right move <i>while</i> the shop is unbuilt;
+          it turns "come back later" into a lead. Partly redundant once checkout
+          exists.</li>
+        <li><b>The edit (02)</b> — the best content play, but it needs you to
+          export originals, so it's the one with real ongoing effort attached.</li>`;
+    </script>
+  </body>
+</html>
