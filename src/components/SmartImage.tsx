@@ -16,10 +16,15 @@ export function SmartImage({
   sizes,
   src,
   srcSet,
+  vtId,
 }: {
   alt: string;
   className?: string;
   eager?: boolean;
+  // Marks this image as a view-transition candidate for the given photo id.
+  // lib/viewTransition.ts finds it by this attribute to morph a tile into the
+  // lightbox — see morphPhoto().
+  vtId?: string;
   // Marks the LCP-critical image (e.g. the landing hero): loads eagerly at
   // high network priority.
   priority?: boolean;
@@ -76,6 +81,7 @@ export function SmartImage({
       <img
         alt={alt}
         className={`smart-img${loaded ? " is-loaded" : ""}${instant ? " is-instant" : ""}${className ? ` ${className}` : ""}`}
+        data-vt={vtId}
         decoding="async"
         draggable={false}
         fetchPriority={priority ? "high" : undefined}

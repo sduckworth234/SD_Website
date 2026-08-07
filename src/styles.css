@@ -3998,6 +3998,47 @@ body:has(.contact-overlay) {
   .cc-feat .cc-label { font-size: 1.7rem; }
 }
 
+/* ================= Native view transitions =================
+   A tapped tile expands into the lightbox instead of the page cutting to it —
+   the difference between "a website" and "an app" on a phone. The pairing is
+   set up in lib/viewTransition.ts, which puts the `vt-photo` name on the tile
+   for the outgoing frame; this claims it for the lightbox image on the way in.
+   Unsupported browsers simply never run any of this. */
+.lightbox-morph {
+  view-transition-name: vt-photo;
+}
+
+::view-transition-group(vt-photo) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+
+/* Both frames are the same photograph, so cross-fading them just muddies the
+   middle of the animation — hold each at full opacity and let the box tween. */
+::view-transition-old(vt-photo),
+::view-transition-new(vt-photo) {
+  animation: none;
+  mix-blend-mode: normal;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The rest of the page gets a short fade so the lightbox scrim doesn't snap. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 260ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* viewTransition.ts already bails out, but if a transition is somehow live,
+     don't animate it. */
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
 /* ================= Admin: place order ================= */
 .place-order {
   display: grid;

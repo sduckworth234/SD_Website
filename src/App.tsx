@@ -73,6 +73,7 @@ import {
 import type { Collection, GalleryLocation, InstagramPost, LocationBucket, Photo, SiteSetting } from "./types";
 import { collectionTitle } from "./types";
 import { compressToWebp, extractPhotoMetadata } from "./lib/ingest";
+import { morphBack, morphPhoto } from "./lib/viewTransition";
 import type { ExtractedPhotoMeta } from "./lib/ingest";
 import { reverseGeocode } from "./lib/geocode";
 import type { Placement } from "./lib/geocode";
@@ -450,6 +451,10 @@ function AdminHideable({ visible, isAdmin, label, children }: { visible: boolean
 function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
   const { photos, recentPhotos, publicPhotos, locations, locationNames, collections, instagramPosts, flags, settingValue, isAdmin, isScrolled, isLoading, loadGallery } = useSiteData();
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  // Tapped tile ⇄ lightbox as a native morph where the browser supports it.
+  const openPhoto = (photo: Photo) => morphPhoto(photo.id, () => setSelectedPhoto(photo));
+  const closePhoto = () => morphBack(selectedPhoto?.id ?? null, () => setSelectedPhoto(null));
+
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [recentSlot, setRecentSlot] = useState<number | null>(null);
   const [editingCollection, setEditingCollection] = useState<GalleryLocation | null>(null);
@@ -572,7 +577,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
                 isAdmin={isAdmin}
                 onChangePhoto={setRecentSlot}
                 onEditPhoto={setEditingPhoto}
-                onSelect={setSelectedPhoto}
+                onSelect={openPhoto}
                 photos={recentPhotos}
               />
             </AdminHideable>
@@ -602,7 +607,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
       {selectedPhoto ? (
         <Lightbox
           photo={selectedPhoto}
-          onClose={() => setSelectedPhoto(null)}
+          onClose={closePhoto}
           onViewOnMap={viewPhotoOnMap}
           onViewGallery={(p) => openLocation(p.location)}
         />
@@ -669,6 +674,10 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [mobileAxis, setMobileAxis] = useState<"collections" | "places">("collections");
   const [view, setView] = useState<GalleryView>("flow");
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  // Tapped tile ⇄ lightbox as a native morph where the browser supports it.
+  const openPhoto = (photo: Photo) => morphPhoto(photo.id, () => setSelectedPhoto(photo));
+  const closePhoto = () => morphBack(selectedPhoto?.id ?? null, () => setSelectedPhoto(null));
+
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [imagesReady, setImagesReady] = useState(false);
 
@@ -951,7 +960,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
         <Gallery
           isAdmin={isAdmin}
           onEditPhoto={setEditingPhoto}
-          onSelectPhoto={setSelectedPhoto}
+          onSelectPhoto={openPhoto}
           onSendToTop={sendToTop}
           onToggleMapFeature={toggleMapFeature}
           onUnpublish={unpublishPhoto}
@@ -961,7 +970,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
       )}
       <Footer />
       {selectedPhoto ? (
-        <Lightbox photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} onViewOnMap={viewPhotoOnMap} />
+        <Lightbox photo={selectedPhoto} onClose={closePhoto} onViewOnMap={viewPhotoOnMap} />
       ) : null}
       {editingPhoto ? (
         <PhotoEditOverlay locations={locations} onClose={() => setEditingPhoto(null)} onSaved={loadGallery} photo={editingPhoto} />
@@ -1648,6 +1657,7 @@ function RecentWork({
               srcSet={srcSetFor(photo)}
               sizes="(max-width: 900px) 50vw, 33vw"
               alt={`${photo.title}, ${photo.location}`}
+              vtId={photo.id}
             />
             <div className="photo-meta">
               <span>
@@ -2676,6 +2686,7 @@ function Gallery({
             src={photo.imageUrl}
             srcSet={srcSetFor(photo)}
             sizes={GRID_SIZES}
+            vtId={photo.id}
             alt={`${photo.title}, ${photo.location}`}
             // First screenful loads immediately (and is pre-warmed by the
             // gallery gate); the rest fetch lazily as you scroll, so the page
@@ -2791,6 +2802,7 @@ function Lightbox({
         </button>
         <div className="lightbox-image">
           <SmartImage
+            className="lightbox-morph"
             src={photo.imageUrl}
             srcSet={srcSetFor(photo)}
             sizes="(max-width: 920px) 92vw, 60vw"
