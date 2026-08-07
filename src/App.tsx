@@ -73,7 +73,11 @@ import {
 import type { Collection, GalleryLocation, InstagramPost, LocationBucket, Photo, SiteSetting } from "./types";
 import { collectionTitle } from "./types";
 import { compressToWebp, extractPhotoMetadata } from "./lib/ingest";
-import { morphBack, morphPhoto } from "./lib/viewTransition";
+import { morphBack, morphPhoto, prewarmPhoto } from "./lib/viewTransition";
+
+// Shared so the view-transition pre-warm resolves the SAME srcset candidate the
+// lightbox <img> will request — a different variant would warm the wrong file.
+const LIGHTBOX_SIZES = "(max-width: 920px) 92vw, 60vw";
 import type { ExtractedPhotoMeta } from "./lib/ingest";
 import { reverseGeocode } from "./lib/geocode";
 import type { Placement } from "./lib/geocode";
@@ -452,7 +456,16 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
   const { photos, recentPhotos, publicPhotos, locations, locationNames, collections, instagramPosts, flags, settingValue, isAdmin, isScrolled, isLoading, loadGallery } = useSiteData();
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   // Tapped tile ⇄ lightbox as a native morph where the browser supports it.
-  const openPhoto = (photo: Photo) => morphPhoto(photo.id, () => setSelectedPhoto(photo));
+  const morphTarget = (photo: Photo) => ({
+    id: photo.id,
+    src: photo.imageUrl,
+    srcSet: srcSetFor(photo),
+    sizes: LIGHTBOX_SIZES,
+  });
+  const openPhoto = (photo: Photo) => morphPhoto(morphTarget(photo), () => setSelectedPhoto(photo));
+  // Start the lightbox image downloading on finger-down so the morph has real
+  // pixels by the time the tap lands.
+  const warmPhoto = (photo: Photo) => prewarmPhoto(morphTarget(photo));
   const closePhoto = () => morphBack(selectedPhoto?.id ?? null, () => setSelectedPhoto(null));
 
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
@@ -578,6 +591,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
                 onChangePhoto={setRecentSlot}
                 onEditPhoto={setEditingPhoto}
                 onSelect={openPhoto}
+                onWarm={warmPhoto}
                 photos={recentPhotos}
               />
             </AdminHideable>
@@ -675,7 +689,16 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [view, setView] = useState<GalleryView>("flow");
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   // Tapped tile ⇄ lightbox as a native morph where the browser supports it.
-  const openPhoto = (photo: Photo) => morphPhoto(photo.id, () => setSelectedPhoto(photo));
+  const morphTarget = (photo: Photo) => ({
+    id: photo.id,
+    src: photo.imageUrl,
+    srcSet: srcSetFor(photo),
+    sizes: LIGHTBOX_SIZES,
+  });
+  const openPhoto = (photo: Photo) => morphPhoto(morphTarget(photo), () => setSelectedPhoto(photo));
+  // Start the lightbox image downloading on finger-down so the morph has real
+  // pixels by the time the tap lands.
+  const warmPhoto = (photo: Photo) => prewarmPhoto(morphTarget(photo));
   const closePhoto = () => morphBack(selectedPhoto?.id ?? null, () => setSelectedPhoto(null));
 
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
@@ -961,6 +984,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
           isAdmin={isAdmin}
           onEditPhoto={setEditingPhoto}
           onSelectPhoto={openPhoto}
+          onWarm={warmPhoto}
           onSendToTop={sendToTop}
           onToggleMapFeature={toggleMapFeature}
           onUnpublish={unpublishPhoto}
@@ -1623,12 +1647,14 @@ function RecentWork({
   onChangePhoto,
   onEditPhoto,
   onSelect,
+  onWarm,
   photos,
 }: {
   isAdmin: boolean;
   onChangePhoto: (slot: number) => void;
   onEditPhoto: (photo: Photo) => void;
   onSelect: (photo: Photo) => void;
+  onWarm?: (photo: Photo) => void;
   photos: Photo[];
 }) {
   const tiles = photos.slice(0, 9);
@@ -1642,6 +1668,7 @@ function RecentWork({
             className={`recent-tile recent-tile-${index + 1} scroll-reveal${isAdmin ? " is-admin" : ""}`}
             key={photo.id}
             onClick={() => onSelect(photo)}
+            onPointerDown={() => onWarm?.(photo)}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
@@ -2642,6 +2669,7 @@ function Gallery({
   isAdmin,
   onEditPhoto,
   onSelectPhoto,
+  onWarm,
   onSendToTop,
   onToggleMapFeature,
   onUnpublish,
@@ -2651,6 +2679,7 @@ function Gallery({
   isAdmin: boolean;
   onEditPhoto: (photo: Photo) => void;
   onSelectPhoto: (photo: Photo) => void;
+  onWarm?: (photo: Photo) => void;
   onSendToTop: (photo: Photo) => void;
   onToggleMapFeature: (photo: Photo) => void;
   onUnpublish: (photo: Photo) => void;
@@ -2664,6 +2693,7 @@ function Gallery({
           className={`photo-tile ${photo.aspect} scroll-reveal${isAdmin ? " is-admin" : ""}`}
           key={photo.id}
           onClick={() => onSelectPhoto(photo)}
+          onPointerDown={() => onWarm?.(photo)}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
@@ -2803,9 +2833,10 @@ function Lightbox({
         <div className="lightbox-image">
           <SmartImage
             className="lightbox-morph"
+            noFade
             src={photo.imageUrl}
             srcSet={srcSetFor(photo)}
-            sizes="(max-width: 920px) 92vw, 60vw"
+            sizes={LIGHTBOX_SIZES}
             alt={`${photo.title}, ${photo.location}`}
             onMeasure={setRatio}
           />

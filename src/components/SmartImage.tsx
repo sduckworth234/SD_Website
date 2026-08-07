@@ -11,6 +11,7 @@ export function SmartImage({
   alt,
   className,
   eager = false,
+  noFade = false,
   onMeasure,
   priority = false,
   sizes,
@@ -21,6 +22,12 @@ export function SmartImage({
   alt: string;
   className?: string;
   eager?: boolean;
+  // Render fully opaque from the very first frame instead of fading in.
+  // Required for anything inside a view transition: the browser snapshots the
+  // new frame immediately, and an image still at opacity 0 gets captured
+  // invisible — the tile then animates into an empty box. Only safe when the
+  // caller has already decoded the image (see lib/viewTransition.ts).
+  noFade?: boolean;
   // Marks this image as a view-transition candidate for the given photo id.
   // lib/viewTransition.ts finds it by this attribute to morph a tile into the
   // lightbox — see morphPhoto().
@@ -77,10 +84,10 @@ export function SmartImage({
 
   return (
     <>
-      {loaded ? null : <span className="img-skeleton" aria-hidden="true" />}
+      {loaded || noFade ? null : <span className="img-skeleton" aria-hidden="true" />}
       <img
         alt={alt}
-        className={`smart-img${loaded ? " is-loaded" : ""}${instant ? " is-instant" : ""}${className ? ` ${className}` : ""}`}
+        className={`smart-img${loaded || noFade ? " is-loaded" : ""}${instant || noFade ? " is-instant" : ""}${className ? ` ${className}` : ""}`}
         data-vt={vtId}
         decoding="async"
         draggable={false}
