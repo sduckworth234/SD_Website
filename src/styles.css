@@ -4002,63 +4002,53 @@ body:has(.contact-overlay) {
   .cc-feat .cc-label { font-size: 1.7rem; }
 }
 
-/* ================= Native view transitions =================
-   A tapped tile expands into the lightbox instead of the page cutting to it —
-   the difference between "a website" and "an app" on a phone. The pairing is
-   set up in lib/viewTransition.ts, which puts the `vt-photo` name on the tile
-   for the outgoing frame; this claims it for the lightbox image on the way in.
-   Unsupported browsers simply never run any of this. */
-.lightbox-morph {
-  view-transition-name: vt-photo;
+/* ================= Lightbox open / close =================
+   This replaced a shared-element view-transition morph that animated the tile
+   into the panel. The two are different shapes — the tile is cover-cropped,
+   the panel is contain-fitted — so every open depended on decode timing,
+   layout settling and a crop mismatch all landing together, and on a phone it
+   never looked clean.
+
+   Plain compositor-only animation instead: opacity and transform, nothing that
+   touches layout, nothing that can stall waiting on an image. It runs the same
+   on every browser and every connection. The photo is already decoded by the
+   time this plays, because tiles pre-warm it on pointerdown. */
+@keyframes lightbox-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* The card itself gets its own name so the border, close button and caption
-   grow with the photo instead of appearing at full size around a still-
-   animating image — that pop was the other half of the clunk. */
+@keyframes lightbox-panel-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.972); }
+  to { opacity: 1; transform: none; }
+}
+
+.lightbox {
+  animation: lightbox-in 160ms ease-out both;
+}
+
 .lightbox-panel {
-  view-transition-name: vt-panel;
+  animation: lightbox-panel-in 220ms cubic-bezier(0.22, 0.9, 0.28, 1) both;
 }
 
-::view-transition-group(vt-photo),
-::view-transition-group(vt-panel) {
-  animation-duration: 380ms;
-  animation-timing-function: cubic-bezier(0.22, 0.8, 0.3, 1);
+/* Exit is deliberately quicker than entry — a slow dismissal feels like lag,
+   where a slow reveal feels considered. React holds the panel mounted for
+   LIGHTBOX_EXIT_MS so this actually gets to play. */
+.lightbox.is-closing {
+  animation: lightbox-in 190ms ease-in reverse both;
+  pointer-events: none;
 }
 
-/* The two frames are NOT the same picture: the tile is cover-cropped and the
-   lightbox is contain-fitted, so their aspect ratios differ. Each snapshot is
-   therefore fitted the way its own element is, and they cross-fade — killing
-   the fade (an earlier attempt) left one snapshot stretched to the other's box,
-   which is what read as the image "shrinking and disappearing". */
-::view-transition-old(vt-photo) {
-  object-fit: cover;
-  animation-duration: 240ms;
-}
-
-::view-transition-new(vt-photo) {
-  object-fit: contain;
-  animation-duration: 300ms;
-}
-
-/* The chrome has no outgoing counterpart when opening, so it just fades. */
-::view-transition-old(vt-panel),
-::view-transition-new(vt-panel) {
-  animation-duration: 260ms;
-}
-
-/* The rest of the page gets a short fade so the lightbox scrim doesn't snap. */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 240ms;
+.lightbox.is-closing .lightbox-panel {
+  animation: lightbox-panel-in 190ms ease-in reverse both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* viewTransition.ts already bails out, but if a transition is somehow live,
-     don't animate it. */
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation: none !important;
+  .lightbox,
+  .lightbox-panel,
+  .lightbox.is-closing,
+  .lightbox.is-closing .lightbox-panel {
+    animation: none;
   }
 }
 

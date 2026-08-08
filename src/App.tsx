@@ -73,11 +73,13 @@ import {
 import type { Collection, GalleryLocation, InstagramPost, LocationBucket, Photo, SiteSetting } from "./types";
 import { collectionTitle } from "./types";
 import { compressToWebp, extractPhotoMetadata } from "./lib/ingest";
-import { morphBack, morphPhoto, prewarmPhoto } from "./lib/viewTransition";
+import { prewarmPhoto } from "./lib/viewTransition";
 
 // Shared so the view-transition pre-warm resolves the SAME srcset candidate the
 // lightbox <img> will request — a different variant would warm the wrong file.
 const LIGHTBOX_SIZES = "(max-width: 920px) 92vw, 60vw";
+// Keep in step with the .lightbox.is-closing animation in styles.css.
+const LIGHTBOX_EXIT_MS = 190;
 import type { ExtractedPhotoMeta } from "./lib/ingest";
 import { reverseGeocode } from "./lib/geocode";
 import type { Placement } from "./lib/geocode";
@@ -455,18 +457,18 @@ function AdminHideable({ visible, isAdmin, label, children }: { visible: boolean
 function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
   const { photos, recentPhotos, publicPhotos, locations, locationNames, collections, instagramPosts, flags, settingValue, isAdmin, isScrolled, isLoading, loadGallery } = useSiteData();
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
-  // Tapped tile ⇄ lightbox as a native morph where the browser supports it.
+  // Shared shape for the lightbox pre-warm — see lib/viewTransition.ts.
   const morphTarget = (photo: Photo) => ({
     id: photo.id,
     src: photo.imageUrl,
     srcSet: srcSetFor(photo),
     sizes: LIGHTBOX_SIZES,
   });
-  const openPhoto = (photo: Photo) => morphPhoto(morphTarget(photo), () => setSelectedPhoto(photo));
-  // Start the lightbox image downloading on finger-down so the morph has real
-  // pixels by the time the tap lands.
+  const openPhoto = (photo: Photo) => setSelectedPhoto(photo);
+  // Start the lightbox image downloading on finger-down, so the photo is
+  // already decoded when the panel opens rather than popping in after it.
   const warmPhoto = (photo: Photo) => prewarmPhoto(morphTarget(photo));
-  const closePhoto = () => morphBack(selectedPhoto?.id ?? null, () => setSelectedPhoto(null));
+  const closePhoto = () => setSelectedPhoto(null);
 
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [recentSlot, setRecentSlot] = useState<number | null>(null);
@@ -688,18 +690,18 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [mobileAxis, setMobileAxis] = useState<"collections" | "places">("collections");
   const [view, setView] = useState<GalleryView>("flow");
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
-  // Tapped tile ⇄ lightbox as a native morph where the browser supports it.
+  // Shared shape for the lightbox pre-warm — see lib/viewTransition.ts.
   const morphTarget = (photo: Photo) => ({
     id: photo.id,
     src: photo.imageUrl,
     srcSet: srcSetFor(photo),
     sizes: LIGHTBOX_SIZES,
   });
-  const openPhoto = (photo: Photo) => morphPhoto(morphTarget(photo), () => setSelectedPhoto(photo));
-  // Start the lightbox image downloading on finger-down so the morph has real
-  // pixels by the time the tap lands.
+  const openPhoto = (photo: Photo) => setSelectedPhoto(photo);
+  // Start the lightbox image downloading on finger-down, so the photo is
+  // already decoded when the panel opens rather than popping in after it.
   const warmPhoto = (photo: Photo) => prewarmPhoto(morphTarget(photo));
-  const closePhoto = () => morphBack(selectedPhoto?.id ?? null, () => setSelectedPhoto(null));
+  const closePhoto = () => setSelectedPhoto(null);
 
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [imagesReady, setImagesReady] = useState(false);
@@ -2815,13 +2817,29 @@ function Lightbox({
   // not for pinning the box.
   const exactRatio = photo.ratio ?? null;
 
+  // Play the exit animation, THEN unmount. Without this the panel is ripped out
+  // of the DOM the instant you hit the X — the photo just vanishes, which is
+  // what made closing feel abrupt.
+  const [closing, setClosing] = useState(false);
+  const closeTimer = useRef<number | undefined>(undefined);
+  const dismiss = useCallback(() => {
+    if (closeTimer.current) return; // already on the way out
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      onClose();
+      return;
+    }
+    setClosing(true);
+    closeTimer.current = window.setTimeout(onClose, LIGHTBOX_EXIT_MS);
+  }, [onClose]);
+  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") dismiss();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [dismiss]);
 
   const hasCoords = photo.latitude != null && photo.longitude != null;
   // "Unsorted" photos have no place page to land on, so the button is hidden
@@ -2832,10 +2850,10 @@ function Lightbox({
   const isPortrait = ratio < 1;
 
   return (
-    <div className="lightbox" role="dialog" aria-modal="true" aria-label={photo.title}>
-      <button className="lightbox-backdrop" onClick={onClose} type="button" aria-label="Close" />
+    <div className={`lightbox${closing ? " is-closing" : ""}`} role="dialog" aria-modal="true" aria-label={photo.title}>
+      <button className="lightbox-backdrop" onClick={dismiss} type="button" aria-label="Close" />
       <section className={`lightbox-panel${isPortrait ? " is-portrait" : ""}`}>
-        <button className="icon-button close-button" onClick={onClose} type="button" aria-label="Close">
+        <button className="icon-button close-button" onClick={dismiss} type="button" aria-label="Close">
           <X size={18} aria-hidden="true" />
         </button>
         <div
@@ -2843,7 +2861,6 @@ function Lightbox({
           style={exactRatio ? ({ "--shot-ratio": String(exactRatio) } as CSSProperties) : undefined}
         >
           <SmartImage
-            className="lightbox-morph"
             noFade
             src={photo.imageUrl}
             srcSet={srcSetFor(photo)}
