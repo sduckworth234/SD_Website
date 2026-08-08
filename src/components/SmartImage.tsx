@@ -28,9 +28,8 @@ export function SmartImage({
   // invisible — the tile then animates into an empty box. Only safe when the
   // caller has already decoded the image (see lib/viewTransition.ts).
   noFade?: boolean;
-  // Marks this image as a view-transition candidate for the given photo id.
-  // lib/viewTransition.ts finds it by this attribute to morph a tile into the
-  // lightbox — see morphPhoto().
+  // Stamps the photo's id onto the <img> as data-vt. Kept as a stable hook for
+  // finding a specific photo's tile in the DOM.
   vtId?: string;
   // Marks the LCP-critical image (e.g. the landing hero): loads eagerly at
   // high network priority.

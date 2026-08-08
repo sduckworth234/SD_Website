@@ -75,8 +75,8 @@ import { collectionTitle } from "./types";
 import { compressToWebp, extractPhotoMetadata } from "./lib/ingest";
 import { prewarmPhoto } from "./lib/viewTransition";
 
-// Shared so the view-transition pre-warm resolves the SAME srcset candidate the
-// lightbox <img> will request — a different variant would warm the wrong file.
+// Shared so the pre-warm resolves the SAME srcset candidate the lightbox <img>
+// will request — warming a different variant would help nothing.
 const LIGHTBOX_SIZES = "(max-width: 920px) 92vw, 60vw";
 // Keep in step with the .lightbox.is-closing animation in styles.css.
 const LIGHTBOX_EXIT_MS = 190;
