@@ -638,8 +638,11 @@ export async function bulkEditPhotos(
   if (error) throw error;
 }
 
+// `ratio` matters here as much as it does in the gallery: without it the Recent
+// Work tiles — and the lightbox opened from them — can only guess a photo's
+// shape from its aspect bucket, which is wrong by ~20% on a 16:9 frame.
 const RECENT_SELECT =
-  "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)";
+  "id, title, slug, description, location_id, kind, year_taken, ratio, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, locations(id, slug, name, region, description, sort_order)";
 
 // The "Recent Work" mosaic: admin-pinned photos (is_featured) sit in their
 // chosen slot (sort_order 1..limit); any empty slots are filled with the most

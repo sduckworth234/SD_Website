@@ -2800,11 +2800,20 @@ function Lightbox({
   // the place the photo belongs to, so the button would go nowhere useful.
   onViewGallery?: (photo: Photo) => void;
 }) {
-  // Measured width/height ratio of the loaded image. We start from the stored
-  // aspect (no layout flash) and correct to the true ratio once it loads — so
-  // even a mis-tagged image lands in the right layout.
-  const [ratio, setRatio] = useState<number | null>(null);
-  useEffect(() => { setRatio(null); }, [photo.id]);
+  // Every published row carries an exact 4dp width/height ratio, so the panel
+  // is laid out correctly on its FIRST render — no measuring, no correcting.
+  //
+  // This used to start null and get fixed up by onMeasure once the image
+  // loaded, which meant the panel picked a layout, then swapped grid template
+  // and width the moment the bytes arrived. During a view transition that
+  // relayout lands mid-animation and is most of what made the morph feel
+  // clunky. tileRatio() falls back to the aspect bucket if a ratio is missing.
+  const ratio = tileRatio(photo);
+  // Only RESERVE a shape when the row actually carries one. tileRatio() falls
+  // back to a nominal bucket value, and reserving that would letterbox the
+  // photo inside its own frame — a guess is fine for choosing the layout, but
+  // not for pinning the box.
+  const exactRatio = photo.ratio ?? null;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -2818,10 +2827,9 @@ function Lightbox({
   // "Unsorted" photos have no place page to land on, so the button is hidden
   // rather than pointing at an empty gallery.
   const canViewGallery = Boolean(onViewGallery && photo.location && photo.location !== "Unsorted");
-  const guessPortrait = photo.aspect === "portrait" || photo.aspect === "square";
   // Taller-than-wide → portrait card (image beside the caption); otherwise the
   // classic landscape card (image above the caption).
-  const isPortrait = ratio != null ? ratio < 1 : guessPortrait;
+  const isPortrait = ratio < 1;
 
   return (
     <div className="lightbox" role="dialog" aria-modal="true" aria-label={photo.title}>
@@ -2830,7 +2838,10 @@ function Lightbox({
         <button className="icon-button close-button" onClick={onClose} type="button" aria-label="Close">
           <X size={18} aria-hidden="true" />
         </button>
-        <div className="lightbox-image">
+        <div
+          className="lightbox-image"
+          style={exactRatio ? ({ "--shot-ratio": String(exactRatio) } as CSSProperties) : undefined}
+        >
           <SmartImage
             className="lightbox-morph"
             noFade
@@ -2838,7 +2849,6 @@ function Lightbox({
             srcSet={srcSetFor(photo)}
             sizes={LIGHTBOX_SIZES}
             alt={`${photo.title}, ${photo.location}`}
-            onMeasure={setRatio}
           />
           <AltitudeBadge photo={photo} />
         </div>
