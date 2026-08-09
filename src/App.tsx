@@ -32,7 +32,7 @@ import {
   X,
 } from "lucide-react";
 import type { CSSProperties, DependencyList, ReactNode } from "react";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   assignRecentSlot,
   bulkEditPhotos,
@@ -457,6 +457,7 @@ function AdminHideable({ visible, isAdmin, label, children }: { visible: boolean
 function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
   const { photos, recentPhotos, publicPhotos, locations, locationNames, collections, instagramPosts, flags, settingValue, isAdmin, isScrolled, isLoading, loadGallery } = useSiteData();
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
   // Shared shape for the lightbox pre-warm — see lib/viewTransition.ts.
   const morphTarget = (photo: Photo) => ({
     id: photo.id,
@@ -464,7 +465,14 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
     srcSet: srcSetFor(photo),
     sizes: LIGHTBOX_SIZES,
   });
-  const openPhoto = (photo: Photo) => setSelectedPhoto(photo);
+  const openPhoto = (photo: Photo, from?: HTMLElement) => {
+    // Remember where the tap came from so the panel can grow out of that tile
+    // rather than out of the middle of the screen (apple-design §7: anchor
+    // interactions to their source).
+    const box = from?.getBoundingClientRect();
+    setOrigin(box ? { x: box.left + box.width / 2, y: box.top + box.height / 2 } : null);
+    setSelectedPhoto(photo);
+  };
   // Start the lightbox image downloading on finger-down, so the photo is
   // already decoded when the panel opens rather than popping in after it.
   const warmPhoto = (photo: Photo) => prewarmPhoto(morphTarget(photo));
@@ -624,6 +632,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
         <Lightbox
           photo={selectedPhoto}
           onClose={closePhoto}
+          origin={origin}
           onViewOnMap={viewPhotoOnMap}
           onViewGallery={(p) => openLocation(p.location)}
         />
@@ -690,6 +699,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [mobileAxis, setMobileAxis] = useState<"collections" | "places">("collections");
   const [view, setView] = useState<GalleryView>("flow");
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
   // Shared shape for the lightbox pre-warm — see lib/viewTransition.ts.
   const morphTarget = (photo: Photo) => ({
     id: photo.id,
@@ -697,7 +707,14 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
     srcSet: srcSetFor(photo),
     sizes: LIGHTBOX_SIZES,
   });
-  const openPhoto = (photo: Photo) => setSelectedPhoto(photo);
+  const openPhoto = (photo: Photo, from?: HTMLElement) => {
+    // Remember where the tap came from so the panel can grow out of that tile
+    // rather than out of the middle of the screen (apple-design §7: anchor
+    // interactions to their source).
+    const box = from?.getBoundingClientRect();
+    setOrigin(box ? { x: box.left + box.width / 2, y: box.top + box.height / 2 } : null);
+    setSelectedPhoto(photo);
+  };
   // Start the lightbox image downloading on finger-down, so the photo is
   // already decoded when the panel opens rather than popping in after it.
   const warmPhoto = (photo: Photo) => prewarmPhoto(morphTarget(photo));
@@ -996,7 +1013,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
       )}
       <Footer />
       {selectedPhoto ? (
-        <Lightbox photo={selectedPhoto} onClose={closePhoto} onViewOnMap={viewPhotoOnMap} />
+        <Lightbox photo={selectedPhoto} origin={origin} onClose={closePhoto} onViewOnMap={viewPhotoOnMap} />
       ) : null}
       {editingPhoto ? (
         <PhotoEditOverlay locations={locations} onClose={() => setEditingPhoto(null)} onSaved={loadGallery} photo={editingPhoto} />
@@ -1655,7 +1672,7 @@ function RecentWork({
   isAdmin: boolean;
   onChangePhoto: (slot: number) => void;
   onEditPhoto: (photo: Photo) => void;
-  onSelect: (photo: Photo) => void;
+  onSelect: (photo: Photo, from?: HTMLElement) => void;
   onWarm?: (photo: Photo) => void;
   photos: Photo[];
 }) {
@@ -1669,7 +1686,7 @@ function RecentWork({
           <div
             className={`recent-tile recent-tile-${index + 1} scroll-reveal${isAdmin ? " is-admin" : ""}`}
             key={photo.id}
-            onClick={() => onSelect(photo)}
+            onClick={(event) => onSelect(photo, event.currentTarget)}
             onPointerDown={() => onWarm?.(photo)}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === " ") {
@@ -2680,7 +2697,7 @@ function Gallery({
 }: {
   isAdmin: boolean;
   onEditPhoto: (photo: Photo) => void;
-  onSelectPhoto: (photo: Photo) => void;
+  onSelectPhoto: (photo: Photo, from?: HTMLElement) => void;
   onWarm?: (photo: Photo) => void;
   onSendToTop: (photo: Photo) => void;
   onToggleMapFeature: (photo: Photo) => void;
@@ -2694,7 +2711,7 @@ function Gallery({
         <div
           className={`photo-tile ${photo.aspect} scroll-reveal${isAdmin ? " is-admin" : ""}`}
           key={photo.id}
-          onClick={() => onSelectPhoto(photo)}
+          onClick={(event) => onSelectPhoto(photo, event.currentTarget)}
           onPointerDown={() => onWarm?.(photo)}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
@@ -2791,11 +2808,14 @@ function Gallery({
 
 function Lightbox({
   photo,
+  origin,
   onClose,
   onViewOnMap,
   onViewGallery,
 }: {
   photo: Photo;
+  // Viewport point the photo was opened from — the tapped tile's centre.
+  origin?: { x: number; y: number } | null;
   onClose: () => void;
   onViewOnMap: (photo: Photo) => void;
   // Only passed on the home page — inside /galleries you're already looking at
@@ -2816,6 +2836,35 @@ function Lightbox({
   // photo inside its own frame — a guess is fine for choosing the layout, but
   // not for pinning the box.
   const exactRatio = photo.ratio ?? null;
+
+  // Grow the panel out of the tile that was tapped instead of out of its own
+  // centre. transform-origin is relative to the panel's own box, so the tile's
+  // viewport point has to be converted into a percentage of it. useLayoutEffect
+  // so it lands before the entry animation's first frame.
+  const panelRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    if (!origin) {
+      panel.style.removeProperty("transform-origin");
+      return;
+    }
+    // The entry animation's from-state is already applied by the time this
+    // runs, so getBoundingClientRect() reports the SCALED box. Recover the
+    // resting box from the layout size, or the origin lands a few px adrift.
+    const box = panel.getBoundingClientRect();
+    const w = panel.offsetWidth;
+    const h = panel.offsetHeight;
+    if (!w || !h) return;
+    const left = box.left + (box.width - w) / 2;
+    const top = box.top + (box.height - h) / 2;
+    // Clamped so a tile far off-screen doesn't fling the origin miles away and
+    // turn a gentle scale into a slide across the viewport.
+    const clamp = (v: number) => Math.max(-40, Math.min(140, v));
+    const x = clamp(((origin.x - left) / w) * 100);
+    const y = clamp(((origin.y - top) / h) * 100);
+    panel.style.transformOrigin = `${x.toFixed(1)}% ${y.toFixed(1)}%`;
+  }, [origin, photo.id]);
 
   // Play the exit animation, THEN unmount. Without this the panel is ripped out
   // of the DOM the instant you hit the X — the photo just vanishes, which is
@@ -2852,7 +2901,7 @@ function Lightbox({
   return (
     <div className={`lightbox${closing ? " is-closing" : ""}`} role="dialog" aria-modal="true" aria-label={photo.title}>
       <button className="lightbox-backdrop" onClick={dismiss} type="button" aria-label="Close" />
-      <section className={`lightbox-panel${isPortrait ? " is-portrait" : ""}`}>
+      <section className={`lightbox-panel${isPortrait ? " is-portrait" : ""}`} ref={panelRef}>
         <button className="icon-button close-button" onClick={dismiss} type="button" aria-label="Close">
           <X size={18} aria-hidden="true" />
         </button>

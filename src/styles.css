@@ -839,9 +839,13 @@ h1 {
   transition: transform 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.feature-card:hover img,
-.photo-tile:hover img {
-  transform: scale(1.07);
+/* Touch fires a synthetic hover on tap that then sticks, leaving the tile
+   zoomed after you've moved on — so zoom-on-hover is desktop-only. */
+@media (hover: hover) and (pointer: fine) {
+  .feature-card:hover img,
+  .photo-tile:hover img {
+    transform: scale(1.07);
+  }
 }
 
 .feature-card div {
@@ -1727,7 +1731,9 @@ body:has(.contact-overlay) {
   transition: border-color 200ms ease, transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.ig-tile:hover { border-color: var(--ink); transform: translateY(-2px); }
+@media (hover: hover) and (pointer: fine) {
+  .ig-tile:hover { border-color: var(--ink); transform: translateY(-2px); }
+  }
 
 .ig-tile-img {
   position: relative;
@@ -1812,8 +1818,10 @@ body:has(.contact-overlay) {
   transition: transform 1100ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.recent-tile:hover img {
-  transform: scale(1.08);
+@media (hover: hover) and (pointer: fine) {
+  .recent-tile:hover img {
+    transform: scale(1.08);
+  }
 }
 
 /* Editorial brick: 4 cols × 3 rows, with a staggered wide banner per row
@@ -3790,9 +3798,11 @@ body:has(.contact-overlay) {
   -webkit-tap-highlight-color: transparent;
 }
 
-.map-promo-mini:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(var(--ink-rgb), 0.16);
+@media (hover: hover) and (pointer: fine) {
+  .map-promo-mini:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(var(--ink-rgb), 0.16);
+  }
 }
 
 /* D4 "drone feed": cross-fading frames under an aerial HUD overlay. `cover` fills
@@ -4034,13 +4044,21 @@ body:has(.contact-overlay) {
 /* Exit is deliberately quicker than entry — a slow dismissal feels like lag,
    where a slow reveal feels considered. React holds the panel mounted for
    LIGHTBOX_EXIT_MS so this actually gets to play. */
+@keyframes lightbox-out {
+  to { opacity: 0; }
+}
+
+@keyframes lightbox-panel-out {
+  to { opacity: 0; transform: translateY(4px) scale(0.985); }
+}
+
 .lightbox.is-closing {
-  animation: lightbox-in 190ms ease-in reverse both;
+  animation: lightbox-out 190ms cubic-bezier(0.23, 1, 0.32, 1) both;
   pointer-events: none;
 }
 
 .lightbox.is-closing .lightbox-panel {
-  animation: lightbox-panel-in 190ms ease-in reverse both;
+  animation: lightbox-panel-out 190ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4184,19 +4202,26 @@ body:has(.contact-overlay) {
   color: var(--muted);
 }
 
+/* The box is a fixed size and only TRANSFORM changes, so the row never
+   relayouts. This used to animate `width`, which forces layout + paint on
+   every scroll step as the live row moves down the list — the single most
+   expensive thing on the phone home page. */
 .curtain-peek {
   display: block;
-  width: 76px;
+  width: min(46vw, 240px);
   aspect-ratio: 3 / 2;
   overflow: hidden;
   border-radius: 4px;
   background: var(--paper-deep);
   filter: grayscale(1) brightness(0.96);
   opacity: 0.72;
+  transform: scale(0.34);
+  transform-origin: right center;
   transition:
-    width 620ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    filter 520ms ease,
-    opacity 420ms ease;
+    transform 420ms cubic-bezier(0.23, 1, 0.32, 1),
+    filter 320ms ease,
+    opacity 260ms ease;
+  will-change: transform;
 }
 
 .curtain-peek img {
@@ -4211,7 +4236,7 @@ body:has(.contact-overlay) {
 }
 
 .curtain-row.is-live .curtain-peek {
-  width: min(46vw, 240px);
+  transform: scale(1);
   filter: none;
   opacity: 1;
 }
