@@ -208,7 +208,31 @@ function useScrollReveal(dependencies: DependencyList) {
 
     elements.forEach((element) => observer.observe(element));
 
-    return () => observer.disconnect();
+    // Fail-safe. Content must never be permanently invisible because an
+    // animation trigger didn't fire — a missed callback shouldn't be able to
+    // hide a whole section. This sweeps anything already within the viewport
+    // and reveals it, covering restores from bfcache, a tab that was
+    // backgrounded during load, and observer callbacks that never arrive.
+    const sweep = () => {
+      for (const element of elements) {
+        if (element.classList.contains("is-visible")) continue;
+        const box = element.getBoundingClientRect();
+        if (box.top < window.innerHeight && box.bottom > 0) {
+          element.classList.add("is-visible");
+          observer.unobserve(element);
+        }
+      }
+    };
+    const sweepTimer = window.setTimeout(sweep, 1200);
+    window.addEventListener("pageshow", sweep);
+    document.addEventListener("visibilitychange", sweep);
+
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(sweepTimer);
+      window.removeEventListener("pageshow", sweep);
+      document.removeEventListener("visibilitychange", sweep);
+    };
   }, dependencies);
 }
 
@@ -304,6 +328,28 @@ function App() {
   return <NotFound onNavigate={navigate} />;
 }
 
+// Rebuild the Recent Work mosaic from photos already in memory. Mirrors the
+// server-side pick: admin-pinned photos (featured, sort_order 1..limit) sit in
+// their chosen slot, and the remaining slots fill in gallery order.
+function deriveRecentWork(all: Photo[], limit: number): Photo[] {
+  const usable = all.filter((p) => p.published !== false && p.location && p.location !== "Unsorted");
+  const slots: (Photo | null)[] = Array.from({ length: limit }, () => null);
+  const placed = new Set<string>();
+  for (const p of usable) {
+    const slot = (p.sortOrder ?? 0) - 1;
+    if (p.featured && slot >= 0 && slot < limit && !slots[slot]) {
+      slots[slot] = p;
+      placed.add(p.id);
+    }
+  }
+  const fill = usable.filter((p) => !placed.has(p.id));
+  let f = 0;
+  for (let i = 0; i < limit; i += 1) {
+    if (!slots[i] && f < fill.length) slots[i] = fill[f++];
+  }
+  return slots.filter(Boolean) as Photo[];
+}
+
 // Shared data (photos, locations, recent), admin detection, scroll state and the
 // derived public/location lists — used by both the Home page and Galleries page.
 function useSiteData() {
@@ -326,9 +372,14 @@ function useSiteData() {
       getInstagramPosts(),
     ]);
     setPhotos(data.photos);
+    // Recent Work is its own request, and it used to return [] on ANY failure —
+    // no retry, no fallback — so a single flaky call on mobile data made the
+    // section vanish while the rest of the page loaded fine. Everything it
+    // needs is already in the gallery payload, so fall back to deriving it
+    // rather than showing nothing.
+    setRecentPhotos(recent.length >= 5 ? recent : deriveRecentWork(data.photos, 9));
     setLocations(data.locations);
     setCollections(data.collections ?? []);
-    setRecentPhotos(recent);
     setSettings(siteSettings);
     setInstagramPosts(igPosts);
   }, []);
@@ -1696,7 +1747,7 @@ function RecentWork({
             }}
             role="button"
             tabIndex={0}
-            style={{ "--reveal-delay": `${index * 80}ms` } as CSSProperties}
+            style={{ "--reveal-delay": `${index * 45}ms` } as CSSProperties}
           >
             <SmartImage
               src={photo.imageUrl}
@@ -2723,7 +2774,7 @@ function Gallery({
           tabIndex={0}
           style={
             {
-              "--reveal-delay": `${Math.min(index, 12) * 38}ms`,
+              "--reveal-delay": `${Math.min(index, 8) * 32}ms`,
               // Flow view reserves each tile's true shape up front so the
               // masonry never reflows as images arrive. (Box view keeps its
               // uniform CSS aspect.)
