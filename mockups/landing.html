@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Landing screen — five openings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --paper: #f4efe6;
+        --paper-2: #e8e0d3;
+        --ink: #1b1916;
+        --muted: #786d5d;
+        --line: rgba(27, 25, 22, 0.15);
+        --sea: #3f6366;
+        --timber: #b8895b;
+        --sans: "Archivo", ui-sans-serif, system-ui, sans-serif;
+        --mono: "Space Grotesk", ui-monospace, Menlo, monospace;
+        --sp: clamp(18px, 4vw, 56px);
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+      img { display: block; width: 100%; height: 100%; object-fit: cover; }
+      button { font: inherit; }
+
+      .head { padding: clamp(44px, 8vh, 90px) var(--sp) 8px; max-width: 1240px; }
+      .head .k { font-family: var(--mono); font-size: 11px; letter-spacing: .28em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+      .head h1 { font-size: clamp(2.1rem, 5.6vw, 3.8rem); font-weight: 600; letter-spacing: -.04em; line-height: 1; margin: 0; }
+      .head p { font-family: var(--mono); font-weight: 300; font-size: clamp(.92rem, 1.4vw, 1.06rem); line-height: 1.66; color: #52493d; max-width: 66ch; margin: 18px 0 0; }
+      .head b { font-weight: 500; color: var(--ink); }
+
+      .case { padding: clamp(48px, 7vh, 84px) var(--sp) 0; max-width: 1240px; }
+      .case-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+      .case-head .n { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+      .case-head h2 { font-size: clamp(1.4rem, 3vw, 2.1rem); font-weight: 600; letter-spacing: -.035em; margin: 0; }
+      .tag { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; color: var(--muted); }
+      .tag.hot { border-color: var(--timber); color: #8d6234; }
+      .why { font-family: var(--mono); font-weight: 300; font-size: .93rem; line-height: 1.68; color: #52493d; max-width: 62ch; margin: 10px 0 16px; }
+      .why b { font-weight: 500; color: var(--ink); }
+      .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+      .replay { border: 1px solid var(--line); background: none; border-radius: 999px; padding: 9px 16px; cursor: pointer; font-family: var(--mono); font-size: 12px; }
+      .replay:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+      .note { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+      .phone { width: 390px; max-width: 100%; margin: 0 auto; border: 10px solid #171614; border-radius: 40px; overflow: hidden; box-shadow: 0 26px 60px rgba(27,25,22,.22); background: #0b0b0c; height: 700px; position: relative; }
+      .screen { position: absolute; inset: 0; overflow: hidden; }
+
+      /* shared hero furniture */
+      .brandbar { position: absolute; top: 0; left: 0; right: 0; z-index: 8; display: flex; align-items: center; justify-content: space-between; padding: 16px; color: #fff; }
+      .brandbar .sd { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.55); font-size: .68rem; font-weight: 700; }
+      .brandbar nav { display: flex; gap: 14px; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; opacity: .85; }
+      .cue { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 8; color: #fff; font-family: var(--mono); font-size: 10px; letter-spacing: .26em; text-transform: uppercase; opacity: .72; }
+      .wordmark { font-size: clamp(2.1rem, 11vw, 3.1rem); font-weight: 600; letter-spacing: -.045em; line-height: .95; }
+      .eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .26em; text-transform: uppercase; opacity: .8; }
+
+      /* ── 01 ignition ─────────────────────────────────────────────────────── */
+      .ig-wrap { position: absolute; inset: 0; background: #0b0b0c; }
+      .ig-cell { position: absolute; overflow: hidden; will-change: transform, opacity; }
+      .ig-hero { position: absolute; inset: 0; opacity: 0; }
+      .ig-copy { position: absolute; left: 18px; right: 18px; bottom: 54px; z-index: 7; color: #fff; opacity: 0; }
+      .play .ig-cell { animation: ig-converge 900ms cubic-bezier(0.7, 0, 0.2, 1) forwards; }
+      .play .ig-hero { animation: ig-hero-in 700ms cubic-bezier(0.23,1,0.32,1) 620ms forwards; }
+      .play .ig-copy { animation: rise-in 520ms cubic-bezier(0.23,1,0.32,1) 900ms forwards; }
+      @keyframes ig-converge { to { transform: translate(var(--tx), var(--ty)) scale(.2); opacity: 0; } }
+      @keyframes ig-hero-in { from { opacity: 0; transform: scale(1.06); } to { opacity: 1; transform: none; } }
+      @keyframes rise-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+      /* ── 02 deal ─────────────────────────────────────────────────────────── */
+      .dl-wrap { position: absolute; inset: 0; background: var(--paper); display: grid; place-items: center; }
+      .dl-card { position: absolute; width: 62%; aspect-ratio: 3/4; background: #fff; padding: 8px; box-shadow: 0 18px 40px rgba(27,25,22,.28); opacity: 0; will-change: transform, opacity; }
+      .dl-card > span { display: block; width: 100%; height: 100%; overflow: hidden; }
+      .play .dl-card { animation: deal 700ms cubic-bezier(0.2, 0.9, 0.25, 1) forwards; animation-delay: var(--d); }
+      @keyframes deal { from { opacity: 0; transform: translate(0, 120%) rotate(0deg) scale(.94); } to { opacity: 1; transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(1); } }
+      .dl-copy { position: absolute; left: 18px; right: 18px; bottom: 40px; z-index: 7; color: var(--ink); opacity: 0; }
+      .play .dl-copy { animation: rise-in 520ms cubic-bezier(0.23,1,0.32,1) 1250ms forwards; }
+
+      /* ── 03 knockout ─────────────────────────────────────────────────────── */
+      .ko-wrap { position: absolute; inset: 0; background: var(--paper); display: grid; place-items: center; }
+      .ko-name {
+        font-size: 20vw; font-weight: 700; letter-spacing: -.055em; line-height: .84; text-align: center;
+        background-image: var(--shot); background-size: cover; background-position: center;
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+        padding: 0 12px;
+      }
+      .ko-sub { position: absolute; bottom: 92px; left: 0; right: 0; text-align: center; color: var(--muted); opacity: 0; }
+      .ko-strip { position: absolute; left: 0; right: 0; bottom: 34px; display: flex; gap: 4px; padding: 0 16px; opacity: 0; }
+      .ko-strip span { flex: 1; aspect-ratio: 1; overflow: hidden; border-radius: 2px; }
+      .play .ko-name { animation: ko-in 900ms cubic-bezier(0.23,1,0.32,1) forwards; }
+      .play .ko-sub { animation: rise-in 500ms cubic-bezier(0.23,1,0.32,1) 700ms forwards; }
+      .play .ko-strip { animation: rise-in 520ms cubic-bezier(0.23,1,0.32,1) 880ms forwards; }
+      @keyframes ko-in { from { opacity: 0; letter-spacing: .06em; } to { opacity: 1; letter-spacing: -.055em; } }
+
+      /* ── 04 filmstrip ────────────────────────────────────────────────────── */
+      .fs-wrap { position: absolute; inset: 0; background: #0b0b0c; overflow: hidden; }
+      .fs-col { position: absolute; top: -60%; height: 220%; width: 50%; display: grid; gap: 6px; grid-auto-rows: 26%; }
+      .fs-col.a { left: 0; animation: drift-up 26s linear infinite; }
+      .fs-col.b { right: 0; animation: drift-down 32s linear infinite; }
+      .fs-col span { overflow: hidden; }
+      @keyframes drift-up { to { transform: translateY(-33%); } }
+      @keyframes drift-down { to { transform: translateY(33%); } }
+      .fs-scrim { position: absolute; inset: 0; z-index: 5; background: linear-gradient(180deg, rgba(11,11,12,.72), rgba(11,11,12,.34) 40%, rgba(11,11,12,.9)); }
+      .fs-copy { position: absolute; inset: auto 18px 54px; z-index: 7; color: #fff; opacity: 0; }
+      .play .fs-copy { animation: rise-in 620ms cubic-bezier(0.23,1,0.32,1) 260ms forwards; }
+
+      /* ── 05 golden hour ──────────────────────────────────────────────────── */
+      .gh-wrap { position: absolute; inset: 0; background: #0b0b0c; }
+      .gh-shot { position: absolute; inset: 0; opacity: 0; transition: opacity 700ms ease; }
+      .gh-shot.on { opacity: 1; }
+      .gh-scrim { position: absolute; inset: 0; z-index: 4; background: linear-gradient(180deg, rgba(11,11,12,.6), transparent 38%, rgba(11,11,12,.86)); }
+      .gh-copy { position: absolute; inset: auto 18px 78px; z-index: 7; color: #fff; }
+      .gh-clock { position: absolute; left: 18px; top: 60px; z-index: 7; color: #fff; font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase; opacity: .84; }
+      .gh-clock b { display: block; font-family: var(--sans); font-size: 1.1rem; font-weight: 600; letter-spacing: -.02em; margin-top: 3px; }
+      .gh-slider { position: absolute; left: 18px; right: 18px; bottom: 22px; z-index: 8; }
+      .gh-slider input { width: 100%; accent-color: var(--timber); }
+      .gh-slider .lbl { display: flex; justify-content: space-between; color: rgba(255,255,255,.7); font-family: var(--mono); font-size: 9px; letter-spacing: .16em; text-transform: uppercase; margin-bottom: 4px; }
+
+      footer { padding: clamp(50px,8vh,90px) var(--sp) 120px; border-top: 1px solid var(--line); margin-top: clamp(50px,8vh,90px); }
+      footer h3 { font-size: 1.2rem; font-weight: 600; letter-spacing: -.03em; margin: 0 0 12px; }
+      footer ol, footer ul { font-family: var(--mono); font-weight: 300; font-size: .93rem; line-height: 1.85; color: #52493d; max-width: 70ch; margin: 0 0 20px; padding-left: 20px; }
+      footer b { font-weight: 500; color: var(--ink); }
+
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; } }
+    </style>
+  </head>
+  <body>
+    <div class="head">
+      <p class="k">Sam Duckworth Photography — the landing screen</p>
+      <h1>Five openings</h1>
+      <p>
+        The first two seconds, on a phone, for someone who just tapped your
+        Instagram bio. All five run on your real photos — hit <b>Replay</b> on
+        any of them to watch the load again. The current hero is a full-bleed
+        photo with the name over it; worth knowing that pattern now appears in
+        <b>under 12% of Awwwards winners</b>, down from being the default. These
+        are five ways out of it.
+      </p>
+    </div>
+
+    <section class="case">
+      <div class="case-head"><span class="n">01</span><h2>Ignition</h2><span class="tag hot">Shows the body of work instantly</span></div>
+      <p class="why">
+        Opens as a contact sheet of your archive, which collapses inward into a
+        single frame. <b>Why it hooks:</b> in under a second it says "there is a
+        lot here" and then "and this is the standard" — breadth and quality in
+        one gesture. It also answers the question a first-time visitor actually
+        has, which isn't "who is this" but "is there enough here to be worth my
+        time".
+      </p>
+      <div class="row"><button class="replay" data-for="ignition">Replay ↻</button><span class="note">~950ms, then settled</span></div>
+      <div class="phone"><div class="screen" id="ignition"></div></div>
+    </section>
+
+    <section class="case">
+      <div class="case-head"><span class="n">02</span><h2>The deal</h2><span class="tag">Ties to Framed Editions</span></div>
+      <p class="why">
+        Prints deal onto the surface and settle into a loose stack.
+        <b>Why it hooks:</b> it's tactile and it makes the photographs feel like
+        objects rather than files — which is exactly the story the print shop
+        needs to tell. The warm paper background is also a deliberate break from
+        every other photographer's black hero.
+      </p>
+      <div class="row"><button class="replay" data-for="deal">Replay ↻</button><span class="note">~1.3s, staggered</span></div>
+      <div class="phone"><div class="screen" id="deal"></div></div>
+    </section>
+
+    <section class="case">
+      <div class="case-head"><span class="n">03</span><h2>Knockout</h2><span class="tag">Most editorial</span></div>
+      <p class="why">
+        Your name set enormous, with the photograph showing through the
+        letterforms. <b>Why it hooks:</b> it's the most designed of the five and
+        the most memorable — it reads as a brand rather than a template. The
+        trade-off is honest: the photo is decoration here, not the subject, so
+        it works best if you pick one very graphic frame and change it rarely.
+      </p>
+      <div class="row"><button class="replay" data-for="knockout">Replay ↻</button><span class="note">~900ms · CSS background-clip, no images stacked</span></div>
+      <div class="phone"><div class="screen" id="knockout"></div></div>
+    </section>
+
+    <section class="case">
+      <div class="case-head"><span class="n">04</span><h2>Filmstrip</h2><span class="tag">Motion without video</span></div>
+      <p class="why">
+        Two columns of frames drifting in opposite directions behind the
+        wordmark, forever. <b>Why it hooks:</b> movement holds attention where a
+        static hero doesn't, and it never stops — so there's no "the animation
+        finished, now what". It costs a fraction of a video: no autoplay
+        policy fights, no multi-megabyte download, and it's two transforms.
+      </p>
+      <div class="row"><button class="replay" data-for="filmstrip">Replay ↻</button><span class="note">Continuous · 2 animated transforms total</span></div>
+      <div class="phone"><div class="screen" id="filmstrip"></div></div>
+    </section>
+
+    <section class="case">
+      <div class="case-head"><span class="n">05</span><h2>Golden hour</h2><span class="tag">Feels alive, costs nothing</span></div>
+      <p class="why">
+        The hero matches the time of day where the visitor is standing — dawn
+        at dawn, last light in the evening. <b>Why it hooks:</b> it's a small
+        personal shock; people notice a site that seems to know something about
+        them. It's also the cheapest idea here — one line of JS picking from
+        four curated photos.
+        <br /><br />
+        <b>Drag the slider</b> to move through the day. This demo picks the four
+        frames by hand; wiring it for real would need a time-of-day tag on the
+        photo, since capture time isn't in the public data.
+      </p>
+      <div class="row"><span class="note">Slider = the visitor's local time</span></div>
+      <div class="phone"><div class="screen" id="golden"></div></div>
+    </section>
+
+    <footer>
+      <h3>If I had to pick</h3>
+      <ol>
+        <li><b>01 Ignition</b> — it answers the real first-visit question ("is there enough here?")
+          faster than anything else, and it reuses the archive you already have.</li>
+        <li><b>05 Golden hour</b> — least effort by a distance, and the only one that makes the
+          site feel like it's running rather than published. Pairs with any of the others.</li>
+        <li><b>04 Filmstrip</b> — the safest upgrade on what's there now: same full-bleed feel,
+          but moving, and far cheaper than the video route most photographers take.</li>
+      </ol>
+      <h3>Two things worth saying</h3>
+      <ul>
+        <li>All five are <b>transform and opacity only</b> — no layout animation, nothing that
+          repaints per frame. They cost roughly what the current hero costs.</li>
+        <li>A load animation plays <b>once</b>. Anything longer than about a second of it is
+          spending your visitor's attention before they've seen a photograph — which is why
+          every one of these settles inside ~1.3s.</li>
+      </ul>
+    </footer>
+
+    <script type="module">
+      const BASE = "https://krixuiimabosiorzxzju.supabase.co/storage/v1/render/image/public/photos/";
+      const img = (p, w) => `${BASE}${p.path}?width=${w}&resize=contain&quality=76`;
+      const all = await fetch("./photos.json").then((r) => r.json());
+      const land = all.filter((p) => p.aspect === "landscape" || p.aspect === "wide");
+      const port = all.filter((p) => p.aspect === "portrait");
+
+      const bar = `<div class="brandbar"><span class="sd">SD</span><nav><span>Gallery</span><span>Map</span><span>Prints</span></nav></div>`;
+      const cue = `<div class="cue">Scroll</div>`;
+
+      /* 01 — ignition */
+      const igCells = all.slice(0, 24);
+      document.querySelector("#ignition").innerHTML = `
+        <div class="ig-wrap">
+          ${igCells.map((p, i) => {
+            const c = i % 4, r = Math.floor(i / 4);
+            // each tile flies toward the centre of the screen
+            const tx = (50 - (c * 25 + 12.5)) * 3.4, ty = (50 - (r * 16.6 + 8.3)) * 3.4;
+            return `<div class="ig-cell" style="left:${c * 25}%;top:${r * 16.6}%;width:25%;height:16.7%;--tx:${tx}%;--ty:${ty}%;animation-delay:${(i % 7) * 26}ms">
+              <img src="${img(p, 240)}" alt="" loading="lazy" /></div>`;
+          }).join("")}
+          <div class="ig-hero"><img src="${img(land[0], 900)}" alt="${land[0].title}" /></div>
+          <div class="ig-copy"><div class="eyebrow">Aerial &amp; Landscape</div><div class="wordmark">Sam<br/>Duckworth</div></div>
+          ${bar}${cue}
+        </div>`;
+
+      /* 02 — the deal */
+      const dealSet = [port[0], land[1], port[2], land[3], port[1]].filter(Boolean);
+      const spread = [
+        { x: "-34%", y: "6%", r: "-9deg" }, { x: "26%", y: "-4%", r: "7deg" },
+        { x: "-14%", y: "-8%", r: "-3deg" }, { x: "16%", y: "10%", r: "4deg" },
+        { x: "0%", y: "0%", r: "-1deg" },
+      ];
+      document.querySelector("#deal").innerHTML = `
+        <div class="dl-wrap">
+          ${dealSet.map((p, i) => `<div class="dl-card" style="--x:${spread[i].x};--y:${spread[i].y};--r:${spread[i].r};--d:${i * 130}ms;z-index:${i}">
+            <span><img src="${img(p, 500)}" alt="" loading="lazy" /></span></div>`).join("")}
+          <div class="dl-copy"><div class="eyebrow" style="color:var(--muted)">Framed Editions</div><div class="wordmark">Sam Duckworth</div></div>
+        </div>`;
+
+      /* 03 — knockout */
+      const ko = land[2] ?? land[0];
+      document.querySelector("#knockout").innerHTML = `
+        <div class="ko-wrap" style="--shot:url('${img(ko, 900)}')">
+          <div class="ko-name">SAM<br/>DUCK<br/>WORTH</div>
+          <div class="ko-sub eyebrow">Aerial &amp; Landscape · Northern Beaches</div>
+          <div class="ko-strip">${all.slice(4, 10).map((p) => `<span><img src="${img(p, 160)}" alt="" loading="lazy" /></span>`).join("")}</div>
+        </div>`;
+
+      /* 04 — filmstrip */
+      const colA = all.slice(0, 8), colB = all.slice(8, 16);
+      document.querySelector("#filmstrip").innerHTML = `
+        <div class="fs-wrap">
+          <div class="fs-col a">${colA.concat(colA).map((p) => `<span><img src="${img(p, 320)}" alt="" loading="lazy" /></span>`).join("")}</div>
+          <div class="fs-col b">${colB.concat(colB).map((p) => `<span><img src="${img(p, 320)}" alt="" loading="lazy" /></span>`).join("")}</div>
+          <div class="fs-scrim"></div>
+          <div class="fs-copy"><div class="eyebrow">Aerial &amp; Landscape · Northern Beaches</div><div class="wordmark">Sam Duckworth</div></div>
+          ${bar}${cue}
+        </div>`;
+
+      /* 05 — golden hour */
+      const BANDS = [
+        { from: 5, to: 8, name: "First light", photo: land[4] ?? land[0] },
+        { from: 8, to: 16, name: "Daylight", photo: land[5] ?? land[1] },
+        { from: 16, to: 20, name: "Golden hour", photo: land[0] },
+        { from: 20, to: 29, name: "After dark", photo: land[6] ?? land[2] },
+      ];
+      const bandFor = (h) => BANDS.find((b) => h >= b.from && h < b.to) ?? BANDS[3];
+      const nowH = new Date().getHours();
+      document.querySelector("#golden").innerHTML = `
+        <div class="gh-wrap">
+          ${BANDS.map((b, i) => `<div class="gh-shot" data-i="${i}"><img src="${img(b.photo, 900)}" alt="" loading="lazy" /></div>`).join("")}
+          <div class="gh-scrim"></div>
+          <div class="gh-clock">Sydney now<b class="gh-band">—</b></div>
+          <div class="gh-copy"><div class="eyebrow gh-eyebrow">—</div><div class="wordmark">Sam Duckworth</div></div>
+          <div class="gh-slider">
+            <div class="lbl"><span>5am</span><span>Noon</span><span>11pm</span></div>
+            <input type="range" min="5" max="28" value="${nowH < 5 ? nowH + 24 : nowH}" />
+          </div>
+          ${bar}
+        </div>`;
+      const gh = document.querySelector("#golden");
+      const paintGolden = (h) => {
+        const b = bandFor(h);
+        const i = BANDS.indexOf(b);
+        gh.querySelectorAll(".gh-shot").forEach((el, n) => el.classList.toggle("on", n === i));
+        gh.querySelector(".gh-band").textContent = b.name;
+        const hh = ((h % 24) + 24) % 24;
+        gh.querySelector(".gh-eyebrow").textContent =
+          `${String(hh).padStart(2, "0")}:00 · ${b.name}`;
+      };
+      gh.querySelector("input").addEventListener("input", (e) => paintGolden(+e.target.value));
+      paintGolden(nowH < 5 ? nowH + 24 : nowH);
+
+      /* Load animations play once — replay re-triggers them. */
+      const play = (id) => {
+        const el = document.querySelector("#" + id);
+        el.classList.remove("play");
+        void el.offsetWidth; // force reflow so the animation restarts
+        el.classList.add("play");
+      };
+      document.querySelectorAll(".replay").forEach((b) =>
+        b.addEventListener("click", () => play(b.dataset.for)),
+      );
+
+      // Play each one as it scrolls into view, the first time.
+      const io = new IntersectionObserver(
+        (es) => es.forEach((e) => { if (e.isIntersecting) { play(e.target.id); io.unobserve(e.target); } }),
+        { threshold: 0.35 },
+      );
+      ["ignition", "deal", "knockout", "filmstrip"].forEach((id) => io.observe(document.querySelector("#" + id)));
+    </script>
+  </body>
+</html>
