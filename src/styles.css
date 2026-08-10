@@ -4020,6 +4020,74 @@ body:has(.contact-overlay) {
   .cc-feat .cc-label { font-size: 1.7rem; }
 }
 
+/* ================= Landing ignition =================
+   The contact sheet that collapses into the hero. Every tile animates ONLY
+   transform and opacity, so the whole sheet is composited on the GPU and never
+   touches layout — which is what makes a 150-tile grid viable on a phone.
+   background-image rather than <img> keeps it to one node per cell, and the
+   thumbnails are decoded before the sheet is shown (see Ignition.tsx). */
+.ignition {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  background: var(--shade);
+  pointer-events: none;
+  contain: strict;
+}
+
+.ign-cell {
+  position: absolute;
+  display: block;
+  background-size: cover;
+  background-position: center;
+  /* A hairline of the backdrop between frames reads as a contact sheet rather
+     than one continuous image. */
+  outline: 0.5px solid rgba(0, 0, 0, 0.28);
+  outline-offset: -0.5px;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+.ignition.is-firing .ign-cell {
+  /* Accelerating inward: things falling toward a point speed up. The tail end
+     eases so the last of it settles rather than snapping. */
+  animation: ign-collapse var(--ign-dur, 640ms) cubic-bezier(0.5, 0, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+.ignition.is-firing {
+  animation: ign-clear var(--ign-dur, 640ms) linear 180ms both;
+}
+
+@keyframes ign-collapse {
+  to {
+    transform: translate3d(var(--tx), var(--ty), 0) scale(0.06) rotate(var(--rot));
+    opacity: 0;
+  }
+}
+
+/* The backdrop behind the tiles clears slightly after they start moving, so the
+   hero is revealed THROUGH the collapse rather than behind a curtain. */
+@keyframes ign-clear {
+  to { background-color: transparent; }
+}
+
+/* The hero settles as the sheet closes — anchored, not a separate event. */
+.landing-stage.cinematic .landing-photo {
+  animation: ign-settle 900ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes ign-settle {
+  from { transform: scale(1.045); }
+  to { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ignition { display: none; }
+  .landing-stage.cinematic .landing-photo { animation: none; }
+}
+
 /* ================= Lightbox open / close =================
    This replaced a shared-element view-transition morph that animated the tile
    into the panel. The two are different shapes — the tile is cover-cropped,
