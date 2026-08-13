@@ -87,7 +87,6 @@ import { useSeo } from "./lib/seo";
 import { Header } from "./components/Header";
 import { OakFrame } from "./components/OakFrame";
 import { SmartImage } from "./components/SmartImage";
-import { Ignition, IGNITION_DISTINCT, IGNITION_THUMB_W } from "./components/Ignition";
 
 // Lazy-loaded so MapLibre + the basemap stay out of the main gallery bundle.
 const MapPage = lazy(() => import("./MapPage"));
@@ -588,20 +587,6 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
   // crop). "0" = no rotation (covers/centre-crops as usual).
   const heroRotate = settingValue.hero_mobile_rotate ?? "0";
 
-  // Thumbnails for the landing ignition. Spread evenly across the whole
-  // archive rather than taking the first N — those are all one location, and
-  // the point of the sheet is breadth. Deliberately tiny: the cells are a few
-  // hundred px wide at most, and they're fetched once and reused across the
-  // grid so a denser sheet costs no extra requests.
-  const ignitionSheet = useMemo(() => {
-    const pool = publicPhotos.filter((p) => p.storagePath);
-    if (pool.length < IGNITION_DISTINCT) return [];
-    const step = Math.max(1, Math.floor(pool.length / IGNITION_DISTINCT));
-    return Array.from({ length: IGNITION_DISTINCT }, (_, i) =>
-      thumbUrl(pool[(i * step) % pool.length], IGNITION_THUMB_W),
-    );
-  }, [publicPhotos]);
-
   // The 2026 Europe hero: an admin-curated, ordered photo list stored as a
   // JSON id array in site_settings (same pattern as the shop's "wall" preview).
   // Empty/unset = the section doesn't render at all (see Hero2026).
@@ -642,7 +627,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
   return (
     <main>
       <Header isScrolled={isScrolled} onNavigate={onNavigate} onOpenAbout={() => setIsAboutOpen(true)} />
-      <Hero photo={heroPhoto} locations={locationNames} isAdmin={isAdmin} rotate={heroRotate} onPickHero={() => setHeroPicking(true)} sheet={ignitionSheet} />
+      <Hero photo={heroPhoto} locations={locationNames} isAdmin={isAdmin} rotate={heroRotate} onPickHero={() => setHeroPicking(true)} />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
       {isLoading ? (
         <>
@@ -2050,11 +2035,10 @@ function HeroPicker({
 // by the existing fade-from-black, with the wordmark over it and the photo's
 // place · title set small in the bottom-left corner. On mobile the photo fills
 // the screen (portrait) when flagged portrait-worthy, else letterboxes.
-function Hero({ photo, locations, isAdmin, rotate, onPickHero, sheet = [] }: { photo?: Photo; locations: string[]; isAdmin: boolean; rotate: string; onPickHero: () => void; sheet?: string[] }) {
+function Hero({ photo, locations, isAdmin, rotate, onPickHero }: { photo?: Photo; locations: string[]; isAdmin: boolean; rotate: string; onPickHero: () => void }) {
   const rotClass = rotate === "90" ? " rotate-90" : rotate === "270" ? " rotate-270" : "";
   return (
     <section className={`hero landing-stage cinematic${rotClass}`} id="top" aria-label="Sam Duckworth Photography">
-      <Ignition sources={sheet} />
       {photo ? (
         <div className="landing-photo" aria-hidden="true">
           <SmartImage src={photo.imageUrl} alt="" priority />
