@@ -1,6 +1,6 @@
 # Design concepts — samduckworth.com
 
-Five reimaginings of the site, built to be looked at side by side. **Nothing
+Eight reimaginings of the site, built to be looked at side by side. **Nothing
 here touches the live app** — separate folder, separate dev server, no imports
 into `src/`.
 
@@ -16,7 +16,7 @@ bottom of the screen, so you can flick between them without going back.
 There's also a `mockups` entry in `.claude/launch.json`, so the preview tooling
 can start it by name.
 
-## The five
+## The eight
 
 | # | Concept | What it is |
 |---|---------|------------|
@@ -25,10 +25,13 @@ can start it by name.
 | 03 | **Atlas** | The flight log as the interface. Altitude, GPS and capture dates become the navigation — scrub the altitude ladder, read live telemetry, see every frame plotted at its true coordinates. |
 | 04 | **Horizon** | One frame at a time, scroll as the shutter. Each place is a full-screen chapter; the photo parallaxes and the place name wipes in on a clip-path. Ends by dropping you into the whole archive. |
 | 05 | **Prism** | WebGL. The hero is displaced by a flow field around the cursor, and switching place dissolves one photo into the next through that same field. Magnetic grid, custom cursor. Degrades to a plain image with no WebGL. |
+| 06 | **Correspondence** | Northern Beaches and Europe paired by visual rhyme. A story-led portfolio that finds recurring shapes, colours and gestures across distance. |
+| 07 | **Light Table** | A tactile contact sheet for exploring the archive. Filter, change density and inspect a frame without losing the whole field. |
+| 08 | **Editions Room** | A print-first shop concept with live wall colour, frame finish, artwork and scale controls. |
 
 ## Data
 
-All five run on your real catalogue. `photos.json` is a curated 149-frame subset
+All eight run on your real catalogue. `photos.json` is a curated 149-frame subset
 of the 589 published photos, pulled from Supabase with real titles, locations,
 regions, aspect ratios, capture years, drone altitudes and GPS. Images are
 served from the same Supabase transform CDN the live site uses, so the loading
@@ -52,7 +55,7 @@ switcher). `switch.css` styles the switcher only.
 **ui-ux-pro-max** skill generated for a fine-art photography portfolio —
 palette, type pairing, spacing scale, motion tier, anti-patterns, pre-delivery
 checklist. It scored *Exaggerated Minimalism* + *Portfolio Grid* highest, which
-is the backbone of 01 and 02. Concepts 03–05 deliberately push past it.
+is the backbone of 01 and 02. Concepts 03–08 deliberately push past it.
 
 Note its palette is the generic monochrome-plus-blue it recommends for the
 category — 01 keeps your warm paper instead, because that's your identity and
@@ -60,7 +63,7 @@ the database doesn't know about it.
 
 ## Accessibility / performance notes
 
-- All five respect `prefers-reduced-motion` (parallax, marquee, crossfades and
+- All eight respect `prefers-reduced-motion` (parallax, marquee, crossfades and
   the reveal animations all stand down).
 - No horizontal overflow at 375px on any page — verified.
 - Images use `srcset`/`sizes` and `loading="lazy"` below the fold.

@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>09 Print Configurator — Sam Duckworth</title>
+    <link rel="stylesheet" href="./switch.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Space+Grotesk:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+      :root{
+        --ink:#f2f0ec; --ink-soft:rgba(242,240,236,.66); --muted:#8b8880;
+        --paper:#0b0b0c; --paper-deep:#161719; --foam:#131315;
+        --line:rgba(242,240,236,.14); --timber:#c8945f;
+        --danger:#e2705c; --success:#5fbd88;
+        --sans:"Archivo",ui-sans-serif,system-ui,sans-serif;
+        --mono:"Space Grotesk",ui-monospace,monospace;
+        --pad:clamp(16px,3vw,34px);
+        --r:3px;
+      }
+      *{box-sizing:border-box}
+      html{-webkit-tap-highlight-color:transparent}
+      body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);overflow-x:hidden}
+      button{font:inherit;color:inherit;cursor:pointer;background:none;border:0}
+      img{display:block;max-width:100%}
+      a{color:inherit}
+      .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+      /* ── header ─────────────────────────────────────────────────────── */
+      header{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;padding:14px var(--pad);background:rgba(11,11,12,.72);backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);border-bottom:1px solid var(--line)}
+      .brand{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none}
+      .brand .back{opacity:.5}
+      .cart-btn{position:relative;display:flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:8px 10px;border:1px solid var(--line);border-radius:999px}
+      .cart-btn svg{width:15px;height:15px}
+      .cart-count{position:absolute;top:-6px;right:-6px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:var(--timber);color:#171310;font:600 10px/17px var(--mono);text-align:center}
+      .cart-count[data-empty="true"]{display:none}
+
+      /* ── layout shell ───────────────────────────────────────────────── */
+      .shop{display:grid;grid-template-columns:1fr;padding-bottom:70px}
+      @media(min-width:960px){.shop{grid-template-columns:minmax(0,1.15fr) minmax(360px,420px);align-items:start;padding-bottom:0}}
+
+      /* ── stage: the true-to-size room mockup ───────────────────────── */
+      .stage{position:relative}
+      .room-wrap{position:relative;width:100%;aspect-ratio:928/1152;overflow:hidden;background:#1c1a17}
+      @media(min-width:960px){.room-wrap{position:sticky;top:57px;height:calc(100svh - 57px);aspect-ratio:auto}}
+      .room-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center}
+      .stage-tag{position:absolute;left:var(--pad);top:18px;z-index:2;display:flex;flex-direction:column;gap:2px;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.5)}
+      .stage-tag .k{margin:0;font:500 10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;opacity:.75}
+      .stage-tag h1{margin:0;font:600 clamp(1.3rem,3vw,1.8rem)/1.1 var(--sans);letter-spacing:-.02em}
+      .stage-tag .loc{font-size:11px;opacity:.8}
+
+      .frame{position:absolute;left:58%;top:42%;transform:translate(-50%,-50%);box-shadow:14px 22px 34px rgba(0,0,0,.38),3px 5px 9px rgba(0,0,0,.22);transition:width 340ms cubic-bezier(.16,1,.3,1),height 340ms cubic-bezier(.16,1,.3,1)}
+      .frame-band{width:100%;height:100%;box-sizing:border-box;position:relative;transition:background 220ms ease}
+      .frame-band::after{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 1px rgba(255,255,255,.16),inset 0 1px 3px rgba(0,0,0,.25);pointer-events:none}
+      .frame-mat{width:100%;height:100%;box-sizing:border-box;background:#efe9dd;box-shadow:inset 0 0 10px rgba(0,0,0,.14)}
+      .frame-window{position:relative;width:100%;height:100%;overflow:hidden;background:#141414;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+      .frame-window img{width:100%;height:100%;object-fit:cover;transition:opacity 260ms ease}
+      .frame-glass{position:absolute;inset:0;background:linear-gradient(122deg,rgba(255,255,255,.16) 0%,rgba(255,255,255,.04) 26%,transparent 48%);pointer-events:none}
+
+      .scroll-hint{position:absolute;right:var(--pad);bottom:16px;z-index:2;display:flex;align-items:center;gap:6px;font:500 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:#fff;opacity:.7}
+      @media(min-width:960px){.scroll-hint{display:none}}
+
+      /* ── control panel ──────────────────────────────────────────────── */
+      .panel{padding:22px var(--pad) 26px;display:flex;flex-direction:column;gap:22px}
+      @media(min-width:960px){.panel{height:calc(100svh - 57px);overflow-y:auto}}
+
+      .switcher-row{display:flex;flex-direction:column;gap:9px}
+      .switcher-row label{font:500 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+      .photo-strip{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+      .photo-strip::-webkit-scrollbar{display:none}
+      .photo-pick{flex:none;width:52px;height:52px;border-radius:var(--r);overflow:hidden;opacity:.5;outline:1px solid transparent;outline-offset:2px;transition:opacity 160ms,outline-color 160ms}
+      .photo-pick img{width:100%;height:100%;object-fit:cover}
+      .photo-pick.on{opacity:1;outline-color:var(--timber)}
+
+      .prod-head{display:flex;flex-direction:column;gap:4px}
+      .prod-head .edition{font:500 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--timber)}
+      .prod-head h2{margin:0;font:600 1.7rem/1.08 var(--sans);letter-spacing:-.02em}
+      .prod-head .sub{font-size:12.5px;color:var(--muted)}
+
+      .group{display:flex;flex-direction:column;gap:10px}
+      .group-head{display:flex;align-items:baseline;justify-content:space-between}
+      .group-head label{font:500 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+      .group-head .val{font-size:11px;color:var(--ink-soft)}
+
+      .sizes{display:flex;gap:7px;flex-wrap:wrap}
+      .size-btn{flex:1 1 auto;min-width:56px;padding:10px 6px;border:1px solid var(--line);border-radius:var(--r);text-align:center;transition:border-color 160ms,background 160ms}
+      .size-btn b{display:block;font:600 13px/1 var(--sans)}
+      .size-btn span{display:block;margin-top:3px;font:400 9.5px/1 var(--mono);color:var(--muted)}
+      .size-btn.on{border-color:var(--ink);background:rgba(242,240,236,.06)}
+      .size-btn.on span{color:var(--ink-soft)}
+      .size-btn[disabled]{opacity:.28;pointer-events:none}
+
+      .swatches{display:flex;gap:9px;flex-wrap:wrap}
+      .swatch-btn{display:flex;flex-direction:column;align-items:center;gap:6px;width:44px}
+      .swatch-chip{width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.18);box-shadow:0 1px 2px rgba(0,0,0,.4);outline:2px solid transparent;outline-offset:2px;transition:outline-color 160ms,transform 160ms}
+      .swatch-btn.on .swatch-chip{outline-color:var(--ink);transform:scale(1.06)}
+      .swatch-btn span{font-size:8.5px;letter-spacing:.02em;color:var(--muted);text-align:center;line-height:1.15}
+      .swatch-btn.on span{color:var(--ink-soft)}
+
+      .mount-toggle{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+      .mount-toggle button{flex:1;padding:11px 8px;font:500 11.5px/1 var(--sans);text-align:center;transition:background 160ms,color 160ms}
+      .mount-toggle button.on{background:var(--ink);color:#0b0b0c}
+      .mount-note{font-size:11px;color:var(--muted);line-height:1.5}
+
+      .price-row{display:flex;align-items:baseline;justify-content:space-between;padding-top:4px;border-top:1px solid var(--line)}
+      .price-row .price{font:600 1.7rem/1 var(--sans)}
+      .add-cart{position:sticky;bottom:0;margin-top:2px;padding:15px 18px;background:var(--ink);color:#0b0b0c;border-radius:var(--r);display:flex;align-items:center;justify-content:center;gap:8px;font:600 12px/1 var(--sans);letter-spacing:.04em;text-transform:uppercase;transition:transform 120ms ease}
+      .add-cart:active{transform:scale(.98)}
+      .add-cart.flash{animation:flash 480ms ease}
+      @keyframes flash{0%{background:var(--success)}100%{background:var(--ink)}}
+      .cart-count.pulse{animation:cartPulse 420ms cubic-bezier(.34,1.56,.64,1)}
+      @keyframes cartPulse{0%{transform:scale(1)}45%{transform:scale(1.4)}100%{transform:scale(1)}}
+
+      .ship-note{display:flex;gap:8px;align-items:flex-start;font-size:11.5px;line-height:1.55;color:var(--muted)}
+      .ship-note svg{flex:none;width:14px;height:14px;margin-top:2px;color:var(--timber)}
+
+      /* ── trust strip ────────────────────────────────────────────────── */
+      .trust{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+      .trust div{background:var(--paper);padding:20px var(--pad);text-align:center}
+      .trust svg{width:20px;height:20px;margin-bottom:9px;color:var(--timber)}
+      .trust b{display:block;font:600 12px/1.3 var(--sans);margin-bottom:3px}
+      .trust span{display:block;font-size:10.5px;color:var(--muted);line-height:1.4}
+      @media(max-width:640px){.trust{grid-template-columns:1fr}}
+
+      /* ── pairs-well-with ────────────────────────────────────────────── */
+      .pairs{padding:44px var(--pad) 60px}
+      .pairs-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:6px}
+      .pairs-head h3{margin:0;font:600 1.3rem/1.1 var(--sans);letter-spacing:-.01em}
+      .pairs-callout{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--timber);margin-bottom:20px}
+      .pairs-callout svg{width:13px;height:13px}
+      .pairs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+      .pair-card{text-align:left}
+      .pair-photo{aspect-ratio:4/3;overflow:hidden;background:#1c1a17;border-radius:var(--r);margin-bottom:9px}
+      .pair-photo img{width:100%;height:100%;object-fit:cover;transition:transform 500ms cubic-bezier(.16,1,.3,1)}
+      .pair-card:hover .pair-photo img{transform:scale(1.05)}
+      .pair-card b{display:block;font:500 13px/1.3 var(--sans)}
+      .pair-card span{display:block;font-size:10.5px;color:var(--muted);margin-top:2px}
+
+      .about{padding:0 var(--pad) 70px;max-width:60ch}
+      .about p{font-size:12.5px;line-height:1.65;color:var(--muted)}
+      .about b{color:var(--ink-soft)}
+
+      /* ── cart drawer ────────────────────────────────────────────────── */
+      .scrim{position:fixed;inset:0;background:rgba(4,4,5,.6);opacity:0;pointer-events:none;transition:opacity 220ms ease;z-index:40}
+      .scrim.open{opacity:1;pointer-events:auto}
+      .cart-drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);background:var(--foam);border-left:1px solid var(--line);z-index:41;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 280ms cubic-bezier(.16,1,.3,1)}
+      .cart-drawer.open{transform:translateX(0)}
+      .cart-head{display:flex;align-items:center;justify-content:space-between;padding:16px var(--pad);border-bottom:1px solid var(--line)}
+      .cart-head h3{margin:0;font:600 1.1rem/1 var(--sans)}
+      .cart-close{padding:6px;font-size:20px;line-height:1}
+      .cart-items{flex:1;overflow-y:auto;padding:8px var(--pad)}
+      .cart-empty{padding:40px 0;text-align:center;color:var(--muted);font-size:13px}
+      .cart-item{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+      .cart-item img{width:54px;height:54px;object-fit:cover;border-radius:var(--r);flex:none}
+      .ci-info{flex:1;min-width:0}
+      .ci-info b{display:block;font:500 12.5px/1.3 var(--sans)}
+      .ci-info span{display:block;font-size:10.5px;color:var(--muted);margin-top:2px}
+      .ci-price{font:500 12.5px/1 var(--mono)}
+      .ci-remove{font-size:10px;color:var(--danger);text-transform:uppercase;letter-spacing:.06em;margin-top:6px}
+      .cart-foot{padding:16px var(--pad) max(16px,env(safe-area-inset-bottom));border-top:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+      .promo{display:flex;gap:8px}
+      .promo input{flex:1;background:transparent;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;color:var(--ink);font:400 12px var(--sans)}
+      .promo input::placeholder{color:var(--muted)}
+      .promo button{padding:10px 14px;border:1px solid var(--line);border-radius:var(--r);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+      .promo-msg{font-size:11px;min-height:14px}
+      .promo-msg.ok{color:var(--success)}
+      .promo-msg.err{color:var(--danger)}
+      .cart-lines{display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+      .cart-lines .row{display:flex;justify-content:space-between;color:var(--ink-soft)}
+      .cart-lines .row.total{font:600 15px/1 var(--sans);color:var(--ink);padding-top:8px;border-top:1px solid var(--line)}
+      .cart-lines .row.discount{color:var(--success)}
+      .au-note{font-size:10.5px;color:var(--muted);display:flex;gap:6px;align-items:flex-start}
+      .au-note svg{flex:none;width:12px;height:12px;margin-top:2px}
+      .checkout-btn{padding:15px;background:var(--ink);color:#0b0b0c;border-radius:var(--r);font:600 12px/1 var(--sans);letter-spacing:.05em;text-transform:uppercase;text-align:center}
+      .checkout-note{font-size:10px;color:var(--muted);text-align:center}
+
+      @media(prefers-reduced-motion:reduce){*{transition-duration:1ms!important;animation-duration:1ms!important}}
+    </style>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="./index.html"><span class="back">◀</span> SD Editions</a>
+      <button class="cart-btn" id="cartBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L21 8H6"/><circle cx="9.5" cy="20.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="17.5" cy="20.5" r="1.3" fill="currentColor" stroke="none"/></svg>
+        Cart <span class="cart-count" id="cartCount" data-empty="true">0</span>
+      </button>
+    </header>
+
+    <main class="shop">
+      <div class="stage">
+        <div class="room-wrap" id="roomWrap">
+          <img class="room-img" src="./assets/room-corner.jpg" alt="A framed print hung in a bright, minimal dining corner" />
+          <div class="frame" id="frame">
+            <div class="frame-band" id="frameBand">
+              <div class="frame-mat" id="frameMat">
+                <div class="frame-window">
+                  <img id="frameImg" src="" alt="" />
+                  <div class="frame-glass" aria-hidden="true"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="stage-tag">
+            <p class="k">Framed Editions</p>
+            <h1 id="stageTitle"></h1>
+            <p class="loc" id="stageLoc"></p>
+          </div>
+        </div>
+        <div class="scroll-hint">Configure ↓</div>
+      </div>
+
+      <div class="panel">
+        <div class="switcher-row">
+          <label>Prefer a different shot?</label>
+          <div class="photo-strip" id="photoStrip"></div>
+        </div>
+
+        <div class="prod-head">
+          <span class="edition" id="editionTag">Open edition · Fine-art giclée</span>
+          <h2 id="prodTitle"></h2>
+          <p class="sub" id="prodSub"></p>
+        </div>
+
+        <div class="group">
+          <div class="group-head"><label>Size</label><span class="val" id="sizeVal"></span></div>
+          <div class="sizes" id="sizes"></div>
+        </div>
+
+        <div class="group">
+          <div class="group-head"><label>Frame colour</label><span class="val" id="colourVal"></span></div>
+          <div class="swatches" id="swatches"></div>
+        </div>
+
+        <div class="group">
+          <div class="group-head"><label>Mount</label></div>
+          <div class="mount-toggle" id="mountToggle">
+            <button type="button" data-mounted="true">Mounted</button>
+            <button type="button" data-mounted="false">Unmounted</button>
+          </div>
+          <p class="mount-note" id="mountNote"></p>
+        </div>
+
+        <div class="price-row">
+          <span class="price" id="priceVal"></span>
+        </div>
+        <button class="add-cart" id="addCart" type="button">Add to cart</button>
+        <p class="ship-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1" y="6" width="14" height="11" rx="1"/><path d="M15 10h4l3 3.5V17h-7z"/><circle cx="6" cy="19.5" r="1.6"/><circle cx="17.5" cy="19.5" r="1.6"/></svg>
+          <span>Shipping isn't flat — it's quoted live from the print size (from $15.10, AU only). Add a second print to the same order and it usually adds just <b style="color:var(--ink-soft)">$5</b>, not another full shipping charge.</span>
+        </p>
+      </div>
+    </main>
+
+    <section class="trust">
+      <div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        <b>Printed to order</b>
+        <span>Made in Australia when you order — nothing sits in a warehouse.</span>
+      </div>
+      <div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <b>Archival fine-art paper</b>
+        <span>200gsm giclée print, rated to outlast a lifetime on the wall.</span>
+      </div>
+      <div>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        <b>Ships in 2–3 days</b>
+        <span>Tracked Australia Post, straight from an Australian lab.</span>
+      </div>
+    </section>
+
+    <section class="pairs">
+      <div class="pairs-head"><h3>Pairs well with</h3></div>
+      <p class="pairs-callout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M2 12h20"/></svg>
+        Pick one to configure — adding it to the same order usually costs about $5 in shipping, not $15.
+      </p>
+      <div class="pairs-grid" id="pairsGrid"></div>
+    </section>
+
+    <section class="about">
+      <p><b>What this mockup is:</b> every size, colour and price on this page comes straight from a live pull of Prodigi's print‑fulfilment API — not placeholder numbers. Room scale is calibrated against the glass on the table (~9.5 cm), so an A2 genuinely reads as an A2. Mount and frame colour are read from the real classic‑frame catalogue (8 colours, AU‑fulfilled A5–A1). Cart, discount code and checkout below are a working <b>demo only</b> — Stripe + the held‑order queue come next.</p>
+    </section>
+
+    <div class="scrim" id="scrim"></div>
+    <div class="cart-drawer" id="cartDrawer" aria-label="Cart">
+      <div class="cart-head"><h3>Your cart</h3><button class="cart-close" id="cartClose" aria-label="Close cart">×</button></div>
+      <div class="cart-items" id="cartItems"></div>
+      <div class="cart-foot">
+        <div class="promo">
+          <input id="promoInput" type="text" placeholder="Discount code" autocomplete="off" />
+          <button id="promoApply" type="button">Apply</button>
+        </div>
+        <p class="promo-msg" id="promoMsg"></p>
+        <div class="cart-lines" id="cartLines"></div>
+        <p class="au-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
+          Shipping within Australia only. Exact cost is confirmed at checkout.
+        </p>
+        <button class="checkout-btn" id="checkoutBtn" type="button">Checkout</button>
+        <p class="checkout-note">Demo cart — real checkout isn't wired up yet.</p>
+      </div>
+    </div>
+
+    <script type="module">
+      import { img, photos, switcher } from "./mock.js";
+
+      // ── real Prodigi data (pulled live from api.sandbox.prodigi.com, 2026-08-14) ──
+      // Outer product dimensions are the true finished-frame footprint (confirmed:
+      // "no mount" prints fill almost the entire outer size). Mat width is DERIVED,
+      // not guessed: outer size minus (print-area px / 300dpi), per size, per range.
+      const SIZES = [
+        { id: "A5", outer: [14.8, 21.0], mat: 2.5, cfp: 51.10, cfpm: 57.10 },
+        { id: "A4", outer: [21.0, 29.7], mat: 3.7, cfp: 57.10, cfpm: 57.10 },
+        { id: "A3", outer: [29.7, 42.0], mat: 4.8, cfp: 75.10, cfpm: 77.10 },
+        { id: "A2", outer: [41.9, 59.4], mat: 5.0, cfp: 95.10, cfpm: 110.10 },
+        { id: "A1", outer: [59.4, 84.1], mat: 4.8, cfp: 136.55, cfpm: 161.55 },
+      ];
+      const MOULDING_CM = 1.0; // visible timber width carved out of the mounted border
+      const UNMOUNTED_BAND_CM = 0.5; // thin frame-only edge when there's no mat
+
+      // Curated down to 3 of the real 8 classic-frame colours: white, black
+      // and "natural" — Prodigi's actual pale-oak finish (not the darker
+      // "brown" option), colour-matched against a real Prodigi sample photo
+      // and rendered with a faint grain so it reads as timber, not paint.
+      const COLOURS = [
+        {
+          id: "natural", label: "Wood",
+          css: "linear-gradient(135deg,#d3b78c,#c2a175 45%,#a9865f)",
+          grain: "repeating-linear-gradient(100deg, rgba(70,48,24,.05) 0px, rgba(70,48,24,.05) 1px, transparent 2px, transparent 6px, rgba(255,244,222,.07) 7px, transparent 9px)",
+        },
+        { id: "black", label: "Black", css: "linear-gradient(135deg,#2c2c2c,#141414)" },
+        { id: "white", label: "White", css: "linear-gradient(135deg,#f4f0e6,#dcd6c8)" },
+      ];
+
+      // Room photo calibration: shot square-on (camera perpendicular to the
+      // wall, no vanishing lines) so a flat CSS rectangle sits correctly.
+      // Scale measured against the amber glass on the table (~9.5cm rocks
+      // glass = 73px tall at the image's native 928px width, grid-measured).
+      // Fixed centre point on the wall — every size grows/shrinks equally in
+      // all directions from here, the way galleries actually hang work (same
+      // eye-level centre regardless of piece size), rather than from an edge.
+      // The corner side-table is confined to the bottom-left, well clear of
+      // this anchor, so even a portrait A1 never collides with furniture.
+      const ROOM = { naturalW: 928, pxPerCmAtNative: 7.16, centerX: 0.580, centerY: 0.420 };
+
+      const money = (n) => `$${n.toFixed(2)}`;
+      const orientOf = (p) => (p.aspect === "portrait" || p.aspect === "square" ? "portrait" : "landscape");
+
+      const rows = await photos();
+      const find = (t, l) => rows.find((p) => p.title === t && (!l || p.location === l));
+      const WORKS = [
+        find("Island Panorama", "Italy"),
+        find("Town Above the Cove", "Portugal"),
+        find("Blush", "Manly"),
+        find("Queenscliff", "Manly"),
+      ].filter(Boolean);
+      const PAIR_POOL = rows.filter((p) => !WORKS.includes(p)).slice(0, 24);
+
+      const state = { photo: WORKS[0], size: "A3", mounted: true, colour: "natural" };
+      const cart = [];
+
+      function currentPhoto() { return state.photo; }
+      function currentSize() { return SIZES.find((s) => s.id === state.size); }
+      function currentSku() {
+        const range = state.mounted ? "CFPM" : "CFP";
+        return `GLOBAL-${range}-${state.size}`;
+      }
+      function currentPrice() {
+        const s = currentSize();
+        return state.mounted ? s.cfpm : s.cfp;
+      }
+
+      // ── stage: true-to-size frame render ──────────────────────────────
+      const roomWrap = document.getElementById("roomWrap");
+      const frameEl = document.getElementById("frame");
+      const frameBand = document.getElementById("frameBand");
+      const frameMat = document.getElementById("frameMat");
+      const frameImg = document.getElementById("frameImg");
+
+      function renderFrame() {
+        const photo = currentPhoto();
+        const size = currentSize();
+        const orient = orientOf(photo);
+        const [short, long] = size.outer;
+        const outerW = orient === "landscape" ? long : short;
+        const outerH = orient === "landscape" ? short : long;
+
+        const pxPerCm = (roomWrap.clientWidth / ROOM.naturalW) * ROOM.pxPerCmAtNative;
+        const wPx = outerW * pxPerCm, hPx = outerH * pxPerCm;
+        frameEl.style.width = `${wPx}px`;
+        frameEl.style.height = `${hPx}px`;
+        frameEl.style.left = `${ROOM.centerX * 100}%`;
+        frameEl.style.top = `${ROOM.centerY * 100}%`;
+
+        const bandCm = state.mounted ? MOULDING_CM : UNMOUNTED_BAND_CM;
+        const matCm = state.mounted ? Math.max(0, size.mat - MOULDING_CM) : 0;
+        const colourDef = COLOURS.find((c) => c.id === state.colour);
+        frameBand.style.background = colourDef.grain ? `${colourDef.grain}, ${colourDef.css}` : colourDef.css;
+        frameBand.style.padding = `${bandCm * pxPerCm}px`;
+        frameMat.style.padding = `${matCm * pxPerCm}px`;
+
+        if (frameImg.dataset.src !== photo.id) {
+          frameImg.style.opacity = 0;
+          setTimeout(() => {
+            frameImg.src = img(photo, 1200, 84);
+            frameImg.alt = `${photo.title}, ${photo.location}, framed`;
+            frameImg.dataset.src = photo.id;
+            frameImg.style.opacity = 1;
+          }, 140);
+        }
+
+        document.getElementById("stageTitle").textContent = photo.title;
+        document.getElementById("stageLoc").textContent = photo.location;
+      }
+      new ResizeObserver(renderFrame).observe(roomWrap);
+
+      // ── shared: select a photo (from the quick-picks OR "pairs well with") ──
+      function selectPhoto(p) {
+        state.photo = p;
+        photoStrip.querySelectorAll(".photo-pick").forEach((el) => el.classList.toggle("on", WORKS[+el.dataset.i] === p));
+        renderAll();
+      }
+
+      // ── panel: photo switcher ─────────────────────────────────────────
+      const photoStrip = document.getElementById("photoStrip");
+      photoStrip.innerHTML = WORKS.map((p, i) =>
+        `<button class="photo-pick${p === state.photo ? " on" : ""}" data-i="${i}" title="${p.title}, ${p.location}"><img src="${img(p, 120)}" alt="${p.title}"></button>`
+      ).join("");
+      photoStrip.addEventListener("click", (e) => {
+        const b = e.target.closest(".photo-pick");
+        if (!b) return;
+        selectPhoto(WORKS[+b.dataset.i]);
+      });
+
+      // ── panel: size ─────────────────────────────────────────────────
+      const sizesEl = document.getElementById("sizes");
+      sizesEl.innerHTML = SIZES.map((s) => {
+        const [w, h] = s.outer;
+        return `<button class="size-btn${s.id === state.size ? " on" : ""}" data-size="${s.id}"><b>${s.id}</b><span>${w.toFixed(0)}×${h.toFixed(0)}cm</span></button>`;
+      }).join("");
+      sizesEl.addEventListener("click", (e) => {
+        const b = e.target.closest(".size-btn");
+        if (!b) return;
+        state.size = b.dataset.size;
+        renderAll();
+      });
+
+      // ── panel: colour ───────────────────────────────────────────────
+      const swatchesEl = document.getElementById("swatches");
+      swatchesEl.innerHTML = COLOURS.map((c) =>
+        `<button class="swatch-btn${c.id === state.colour ? " on" : ""}" data-colour="${c.id}" title="${c.label}"><span class="swatch-chip" style="background:${c.css}"></span><span>${c.label}</span></button>`
+      ).join("");
+      swatchesEl.addEventListener("click", (e) => {
+        const b = e.target.closest(".swatch-btn");
+        if (!b) return;
+        state.colour = b.dataset.colour;
+        renderAll();
+      });
+
+      // ── panel: mount ────────────────────────────────────────────────
+      const mountToggle = document.getElementById("mountToggle");
+      mountToggle.addEventListener("click", (e) => {
+        const b = e.target.closest("button");
+        if (!b) return;
+        state.mounted = b.dataset.mounted === "true";
+        renderAll();
+      });
+
+      function renderPanel() {
+        const photo = currentPhoto();
+        const size = currentSize();
+        document.getElementById("prodTitle").textContent = photo.title;
+        document.getElementById("prodSub").textContent = `${photo.location} · ${photo.year || ""}`.trim();
+        document.getElementById("sizeVal").textContent = `${size.outer[0].toFixed(1)} × ${size.outer[1].toFixed(1)} cm`;
+        document.getElementById("colourVal").textContent = COLOURS.find((c) => c.id === state.colour).label;
+        sizesEl.querySelectorAll(".size-btn").forEach((el) => el.classList.toggle("on", el.dataset.size === state.size));
+        swatchesEl.querySelectorAll(".swatch-btn").forEach((el) => el.classList.toggle("on", el.dataset.colour === state.colour));
+        mountToggle.querySelectorAll("button").forEach((el) => el.classList.toggle("on", (el.dataset.mounted === "true") === state.mounted));
+        document.getElementById("mountNote").textContent = state.mounted
+          ? "Snow-white mat, fixed width per size — the frame's outer size doesn't change, mount or not."
+          : "Print runs to the frame's edge. Same outer size as mounted, just no mat.";
+        document.getElementById("priceVal").textContent = money(currentPrice());
+      }
+
+      function renderAll() { renderFrame(); renderPanel(); }
+
+      // ── add to cart ─────────────────────────────────────────────────
+      const cartCount = document.getElementById("cartCount");
+      const addCartBtn = document.getElementById("addCart");
+      addCartBtn.addEventListener("click", () => {
+        const photo = currentPhoto();
+        cart.push({
+          photo, size: state.size, mounted: state.mounted, colour: state.colour,
+          sku: currentSku(), price: currentPrice(),
+        });
+        cartCount.textContent = String(cart.length);
+        cartCount.dataset.empty = cart.length === 0 ? "true" : "false";
+        cartCount.classList.remove("pulse"); void cartCount.offsetWidth; cartCount.classList.add("pulse");
+        addCartBtn.classList.remove("flash"); void addCartBtn.offsetWidth; addCartBtn.classList.add("flash");
+        addCartBtn.textContent = "Added ✓";
+        setTimeout(() => (addCartBtn.textContent = "Add to cart"), 900);
+        renderCart();
+      });
+
+      // ── pairs well with ────────────────────────────────────────────────
+      // Clicking a pair loads it into the configurator above — same as the
+      // "prefer a different shot" strip — so size/colour/mount get chosen
+      // before it's added, instead of assuming a size on the customer's behalf.
+      const pairsGrid = document.getElementById("pairsGrid");
+      const pairPicks = PAIR_POOL.sort(() => 0.5 - Math.random()).slice(0, 4);
+      pairsGrid.innerHTML = pairPicks.map((p) =>
+        `<button class="pair-card" data-id="${p.id}"><div class="pair-photo"><img src="${img(p, 400)}" alt="${p.title}, ${p.location}" loading="lazy"></div><b>${p.title}</b><span>${p.location} · from $51</span></button>`
+      ).join("");
+      pairsGrid.addEventListener("click", (e) => {
+        const b = e.target.closest(".pair-card");
+        if (!b) return;
+        const p = rows.find((r) => r.id === b.dataset.id);
+        if (!p) return;
+        selectPhoto(p);
+        document.querySelector(".stage").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+
+      // ── cart drawer ─────────────────────────────────────────────────
+      const scrim = document.getElementById("scrim");
+      const cartDrawer = document.getElementById("cartDrawer");
+      const cartItems = document.getElementById("cartItems");
+      const cartLines = document.getElementById("cartLines");
+      let discountPct = 0, discountLabel = "";
+
+      const CODES = { "PRINT10": 0.10, "WELCOME15": 0.15 };
+
+      function openCart() { scrim.classList.add("open"); cartDrawer.classList.add("open"); renderCart(); }
+      function closeCart() { scrim.classList.remove("open"); cartDrawer.classList.remove("open"); }
+      document.getElementById("cartBtn").addEventListener("click", openCart);
+      document.getElementById("cartClose").addEventListener("click", closeCart);
+      scrim.addEventListener("click", closeCart);
+
+      document.getElementById("promoApply").addEventListener("click", () => {
+        const val = document.getElementById("promoInput").value.trim().toUpperCase();
+        const msg = document.getElementById("promoMsg");
+        if (CODES[val]) {
+          discountPct = CODES[val]; discountLabel = val;
+          msg.textContent = `${val} applied — ${Math.round(discountPct * 100)}% off`;
+          msg.className = "promo-msg ok";
+        } else {
+          discountPct = 0; discountLabel = "";
+          msg.textContent = val ? "That code isn't valid." : "";
+          msg.className = "promo-msg err";
+        }
+        renderCart();
+      });
+
+      function removeFromCart(i) { cart.splice(i, 1); cartCount.textContent = String(cart.length); cartCount.dataset.empty = cart.length === 0 ? "true" : "false"; renderCart(); }
+
+      function renderCart() {
+        if (!cart.length) {
+          cartItems.innerHTML = `<p class="cart-empty">Nothing in your cart yet — configure a print and add it.</p>`;
+          cartLines.innerHTML = "";
+          return;
+        }
+        cartItems.innerHTML = cart.map((it, i) => `
+          <div class="cart-item">
+            <img src="${img(it.photo, 120)}" alt="${it.photo.title}">
+            <div class="ci-info">
+              <b>${it.photo.title}</b>
+              <span>${it.size} · ${COLOURS.find((c) => c.id === it.colour).label} · ${it.mounted ? "Mounted" : "Unmounted"}</span>
+              <span class="ci-remove" data-remove="${i}" role="button">Remove</span>
+            </div>
+            <div class="ci-price">${money(it.price)}</div>
+          </div>`).join("");
+
+        const subtotal = cart.reduce((s, it) => s + it.price, 0);
+        const discount = subtotal * discountPct;
+        const maxSingleShip = Math.max(...cart.map((it) => (it.size === "A1" ? 21.55 : 15.10)));
+        const shipEstimate = cart.length ? maxSingleShip + (cart.length - 1) * 5 : 0;
+        const total = subtotal - discount + shipEstimate;
+
+        cartLines.innerHTML = `
+          <div class="row"><span>Subtotal</span><span>${money(subtotal)}</span></div>
+          ${discountPct ? `<div class="row discount"><span>${discountLabel}</span><span>−${money(discount)}</span></div>` : ""}
+          <div class="row"><span>Shipping (estimate, AU)</span><span>~${money(shipEstimate)}</span></div>
+          <div class="row total"><span>Total</span><span>${money(total)}</span></div>`;
+      }
+      cartItems.addEventListener("click", (e) => {
+        const r = e.target.closest("[data-remove]");
+        if (r) removeFromCart(+r.dataset.remove);
+      });
+      document.getElementById("checkoutBtn").addEventListener("click", () => {
+        if (!cart.length) return;
+        alert("This is a mockup — Stripe checkout isn't wired up yet. See Shop Setup/ for the build plan.");
+      });
+
+      renderAll();
+      switcher("shop-configurator");
+    </script>
+  </body>
+</html>

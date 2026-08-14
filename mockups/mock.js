@@ -59,6 +59,10 @@ export function switcher(current) {
     ["atlas", "03 Atlas"],
     ["horizon", "04 Horizon"],
     ["prism", "05 Prism"],
+    ["correspondence", "06 Near / Far"],
+    ["lighttable", "07 Light Table"],
+    ["editions-room", "08 Editions"],
+    ["shop-configurator", "09 Print Shop"],
   ];
   const el = document.createElement("nav");
   el.className = "mock-switch";
