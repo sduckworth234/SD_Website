@@ -8,6 +8,7 @@ import {
   Crosshair,
   Eye,
   EyeOff,
+  Frame,
   Globe,
   Images,
   Instagram,
@@ -87,6 +88,9 @@ import { useSeo } from "./lib/seo";
 import { Header } from "./components/Header";
 import { OakFrame } from "./components/OakFrame";
 import { SmartImage } from "./components/SmartImage";
+import { PrintConfigurator } from "./components/PrintConfigurator";
+import { useCart } from "./lib/cart";
+import { money, priceFor } from "./lib/printCatalogue";
 
 // Lazy-loaded so MapLibre + the basemap stay out of the main gallery bundle.
 const MapPage = lazy(() => import("./MapPage"));
@@ -315,6 +319,11 @@ function App() {
 
   if (matches("/shop")) {
     return <ShopPage onNavigate={navigate} />;
+  }
+
+  if (path.startsWith("/shop/")) {
+    const slug = path.slice("/shop/".length).replace(/\/$/, "");
+    return <ShopProductRoute slug={slug} onNavigate={navigate} />;
   }
 
   if (matches("/galleries")) {
@@ -686,6 +695,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           origin={origin}
           onViewOnMap={viewPhotoOnMap}
           onViewGallery={(p) => openLocation(p.location)}
+          onOrderPrint={flags.print_configurator === true ? (p) => { window.history.pushState({}, "", `/shop/${p.slug}`); onNavigate(`/shop/${p.slug}`); } : undefined}
         />
       ) : null}
       {editingPhoto ? (
@@ -742,7 +752,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
 // The full photo gallery (moved off the home page): filter rail + masonry/box
 // grid + lightbox, with inline admin tools and ?location= deep-linking.
 function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) {
-  const { publicPhotos, locations, visibleCollections, isAdmin, isLoading, loadGallery } = useSiteData();
+  const { publicPhotos, locations, visibleCollections, flags, isAdmin, isLoading, loadGallery } = useSiteData();
   const [activeLocation, setActiveLocation] = useState<ActiveLocation>(() => readLocationParam() ?? allLocations);
   const [activeCollectionId, setActiveCollectionId] = useState<string>(ALL_COLLECTIONS);
   // Phones can't afford two sticky rails, so they switch between them instead.
@@ -1064,7 +1074,13 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
       )}
       <Footer />
       {selectedPhoto ? (
-        <Lightbox photo={selectedPhoto} origin={origin} onClose={closePhoto} onViewOnMap={viewPhotoOnMap} />
+        <Lightbox
+          photo={selectedPhoto}
+          origin={origin}
+          onClose={closePhoto}
+          onViewOnMap={viewPhotoOnMap}
+          onOrderPrint={flags.print_configurator === true ? (p) => { window.history.pushState({}, "", `/shop/${p.slug}`); onNavigate(`/shop/${p.slug}`); } : undefined}
+        />
       ) : null}
       {editingPhoto ? (
         <PhotoEditOverlay locations={locations} onClose={() => setEditingPhoto(null)} onSaved={loadGallery} photo={editingPhoto} />
@@ -1357,9 +1373,31 @@ const SHOP_SIZES = [
   { id: "A2", cm: "42×59 cm", price: 260 },
   { id: "A1", cm: "59×84 cm", price: 390 },
 ];
-function ShopProduct({ photo, onAdd }: { photo: Photo; onAdd: () => void }) {
+// `productHref` is only passed when the print_configurator flag is on — the
+// card then opens the real product page (true-to-size room, real sizes/colours,
+// real cart) instead of the old inline size-picker. Flag off = old behaviour,
+// byte-for-byte, so this ships safely disabled until the configurator is ready.
+function ShopProduct({ photo, onAdd, productHref, onOpen }: { photo: Photo; onAdd: () => void; productHref?: string; onOpen?: () => void }) {
   const [size, setSize] = useState(1);
   const orient = photo.aspect === "portrait" || photo.aspect === "square" ? "portrait" : "landscape";
+  if (productHref) {
+    return (
+      <a
+        className={`shop-card ${orient}`}
+        href={productHref}
+        onClick={(e) => { e.preventDefault(); onOpen?.(); }}
+      >
+        <div className="shop-card-frame">
+          <OakFrame src={thumbUrl(photo, 820)} orientation={orient} alt={`${photo.title}, ${photo.location}`} />
+        </div>
+        <div className="shop-card-info">
+          <div className="sc-ttl">{photo.title}</div>
+          <div className="sc-loc">{photo.location}</div>
+          <div className="sc-buy"><span className="sc-price">From {money(priceFor("A5", false))}</span></div>
+        </div>
+      </a>
+    );
+  }
   return (
     <article className={`shop-card ${orient}`}>
       <div className="shop-card-frame">
@@ -1410,6 +1448,7 @@ function WallPreview({ ids, photos }: { ids: string[]; photos: Photo[] }) {
 function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
   const { publicPhotos, locations, flags, isAdmin, settingValue, loadGallery } = useSiteData();
   const [cart, setCart] = useState(0);
+  const realCart = useCart();
   const [filter, setFilter] = useState("All");
   // Two independent curations: "shop" = the products for sale (in_shop), "wall" =
   // the coming-soon collection glimpse (its own ordered list in shop_preview).
@@ -1430,6 +1469,10 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
   // Explicit true — so before settings load (flags empty) we default to the
   // safe "not live" preview, never a flash of the transactional shop.
   const shopLive = flags.shop_public === true;
+  // Same pattern as shop_public: defaults OFF with no row required, so the
+  // true-to-size configurator ships disabled until Admin → Visibility flips it.
+  const configuratorOn = flags.print_configurator === true;
+  const cartCount = configuratorOn ? realCart.items.length : cart;
 
   const shopPhotos = useMemo(
     () => publicPhotos.filter((p) => p.inShop).sort((a, b) => (a.shopOrder ?? 1e9) - (b.shopOrder ?? 1e9)),
@@ -1489,7 +1532,7 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
       <button className="shop-logo" onClick={goHome} type="button">FRAMED EDITIONS</button>
       <div className="shop-nav-links">
         <a href="/" onClick={(e) => { e.preventDefault(); goHome(); }}>← samduckworth.com</a>
-        {shopLive ? <span className="shop-cart">Cart · {cart}</span> : null}
+        {shopLive ? <span className="shop-cart">Cart · {cartCount}</span> : null}
       </div>
     </div>
   );
@@ -1548,7 +1591,15 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
           </div>
           {filtered.length ? (
             <div className="shop-grid">
-              {filtered.map((p) => <ShopProduct key={p.id} photo={p} onAdd={() => setCart((c) => c + 1)} />)}
+              {filtered.map((p) => (
+                <ShopProduct
+                  key={p.id}
+                  photo={p}
+                  onAdd={() => setCart((c) => c + 1)}
+                  productHref={configuratorOn ? `/shop/${p.slug}` : undefined}
+                  onOpen={configuratorOn ? () => { window.history.pushState({}, "", `/shop/${p.slug}`); onNavigate(`/shop/${p.slug}`); } : undefined}
+                />
+              ))}
             </div>
           ) : (
             <p className="shop-empty">
@@ -1609,6 +1660,30 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
       ) : null}
     </main>
   );
+}
+
+// The real per-photo print product page (/shop/<slug>) — gated on the same
+// print_configurator flag as the ShopProduct card link and the Lightbox's
+// "Order a print" button. Every published photo is orderable this way, not
+// just the curated /shop grid (in_shop only controls what appears in that
+// grid). Bookmarking or sharing this URL while the flag is off (or for a
+// photo that's unpublished) bounces back to /shop rather than rendering a
+// half-built page.
+function ShopProductRoute({ slug, onNavigate }: { slug: string; onNavigate: (route: string) => void }) {
+  const { publicPhotos, flags, isLoading } = useSiteData();
+  const configuratorOn = flags.print_configurator === true;
+  const photo = publicPhotos.find((p) => p.slug === slug);
+  const shouldRedirect = !isLoading && (!configuratorOn || !photo);
+
+  useEffect(() => {
+    if (shouldRedirect) {
+      window.history.replaceState({}, "", "/shop");
+      onNavigate("/shop");
+    }
+  }, [shouldRedirect, onNavigate]);
+
+  if (!photo || shouldRedirect) return null;
+  return <PrintConfigurator photo={photo} otherShopPhotos={publicPhotos} onNavigate={onNavigate} />;
 }
 
 function InstagramRail() {
@@ -2863,6 +2938,7 @@ function Lightbox({
   onClose,
   onViewOnMap,
   onViewGallery,
+  onOrderPrint,
 }: {
   photo: Photo;
   // Viewport point the photo was opened from — the tapped tile's centre.
@@ -2872,6 +2948,9 @@ function Lightbox({
   // Only passed on the home page — inside /galleries you're already looking at
   // the place the photo belongs to, so the button would go nowhere useful.
   onViewGallery?: (photo: Photo) => void;
+  // Only passed when print_configurator is on — every published photo (not
+  // just the curated /shop grid) gets a way to order it as a print.
+  onOrderPrint?: (photo: Photo) => void;
 }) {
   // Every published row carries an exact 4dp width/height ratio, so the panel
   // is laid out correctly on its FIRST render — no measuring, no correcting.
@@ -2945,6 +3024,7 @@ function Lightbox({
   // "Unsorted" photos have no place page to land on, so the button is hidden
   // rather than pointing at an empty gallery.
   const canViewGallery = Boolean(onViewGallery && photo.location && photo.location !== "Unsorted");
+  const canOrderPrint = Boolean(onOrderPrint);
   // Taller-than-wide → portrait card (image beside the caption); otherwise the
   // classic landscape card (image above the caption).
   const isPortrait = ratio < 1;
@@ -2976,8 +3056,14 @@ function Lightbox({
           </span>
           <h2>{photo.title}</h2>
           {photo.year ? <small>{photo.year}</small> : null}
-          {hasCoords || canViewGallery ? (
+          {hasCoords || canViewGallery || canOrderPrint ? (
             <div className="lightbox-actions">
+              {canOrderPrint ? (
+                <button className="map-link-button order-print-button" onClick={() => onOrderPrint!(photo)} type="button">
+                  <Frame size={14} aria-hidden="true" />
+                  Order a print
+                </button>
+              ) : null}
               {canViewGallery ? (
                 <button className="map-link-button" onClick={() => onViewGallery!(photo)} type="button">
                   <Images size={14} aria-hidden="true" />
@@ -3545,7 +3631,14 @@ const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
   { key: "contact_prompt", label: "Home — Contact / Work with me", hint: "The “Let’s work together” prompt + contact popup." },
   { key: "instagram_feed", label: "Home — Instagram feed", hint: "The live strip of your latest Instagram posts, above the footer." },
   { key: "shop_public", label: "Shop page — public", hint: "Open /shop to the public (otherwise it shows “Opening soon”)." },
+  { key: "print_configurator", label: "Shop — Print configurator", hint: "The true-to-size room preview + size/frame/mount picker + cart on each print's own page (/shop/<slug>). Off = the old inline size picker stays on the shop grid." },
 ];
+
+// Flags that default OFF with no site_settings row (vs. every other flag,
+// which defaults ON) — "not ready to launch yet", not "hide this section".
+// Matched here so the toggle itself shows the true state on a fresh install,
+// instead of reading "on" for something the public gate is actually hiding.
+const DEFAULT_OFF_FLAGS = new Set(["shop_public", "print_configurator"]);
 
 // Admin panel: flip what the public can see, and choose the two photos shown in
 // the home Framed Editions banner. Reads/writes public.site_settings.
@@ -3646,7 +3739,7 @@ function VisibilityAdmin({ photos, locations }: { photos: Photo[]; locations: Ga
       <p className="admin-sec-hint">Choose what the public sees. You always see everything while signed in.</p>
       <div className="vis-flags">
         {VISIBILITY_FLAGS.map((f) => {
-          const on = flags[f.key] !== false;
+          const on = DEFAULT_OFF_FLAGS.has(f.key) ? flags[f.key] === true : flags[f.key] !== false;
           return (
             <div className="vis-flag" key={f.key}>
               <span className="vis-flag-text"><b>{f.label}</b><span>{f.hint}</span></span>
