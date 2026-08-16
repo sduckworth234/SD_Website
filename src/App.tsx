@@ -1416,14 +1416,14 @@ function CollectionsSkeleton() {
   );
 }
 
-// Framed Editions shop banner — two oak-framed prints + a call to the shop.
+// Framed Editions shop banner — two framed prints + a call to the shop.
 function FramedHero({ portrait, landscape, onShop }: { portrait?: Photo; landscape?: Photo; onShop: () => void }) {
   return (
     <section className="framed-hero scroll-reveal" aria-label="Framed prints">
       <div className="fh-copy">
         <p className="eyebrow">Framed Editions</p>
         <h2>Take the view home.</h2>
-        <p className="fh-lead">Fine-art prints, framed in solid oak — ready to hang.</p>
+        <p className="fh-lead">Fine-art prints, professionally framed — ready to hang.</p>
         <button className="solid-button" type="button" onClick={onShop}>Shop the collection</button>
         <p className="fh-flag"><span className="fh-flag-dot" aria-hidden="true" />Coming soon</p>
       </div>
@@ -1523,7 +1523,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   const [curating, setCurating] = useState<null | "shop" | "wall">(null);
 
   useSeo("Framed Editions — Sam Duckworth Photography", {
-    description: "Fine-art aerial and coastal prints, framed in solid oak — by Sam Duckworth. Launching soon.",
+    description: "Fine-art aerial and coastal prints, professionally framed — by Sam Duckworth. Launching soon.",
     path: "/shop",
   });
 
@@ -1616,7 +1616,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
         <div className="sh-copy">
           <p className="eyebrow">Sam Duckworth Photography</p>
           <h1>Framed<br />Editions</h1>
-          <p className="sh-lead">Fine-art aerial &amp; coastal prints, framed in solid oak. From the Northern Beaches to the Mediterranean.</p>
+          <p className="sh-lead">Fine-art aerial &amp; coastal prints, professionally framed. From the Northern Beaches to the Mediterranean.</p>
           {/* Public visitors get the gallery CTA until the public shop opens;
               authenticated admins get the real shop action for testing. */}
           {shopLive ? (
@@ -1637,7 +1637,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
         </div>
       </section>
       <div className="shop-strip">
-        <span><b>Solid oak</b> frame</span><span><b>Archival</b> matte</span>
+        <span><b>Gallery-quality</b> frames</span><span><b>Archival</b> matte</span>
         <span><b>Ready</b> to hang</span><span><b>Ships</b> worldwide</span>
       </div>
 
