@@ -11,8 +11,8 @@ current checkout and fulfilment implementation.
 - [Sample Order — Reproduce in Production.md](./Sample%20Order%20%E2%80%94%20Reproduce%20in%20Production.md) —
   physical sample-order reference and print-quality checklist.
 
-The deployed schema is defined by
-[`supabase/migrations/20260816000132_shop_checkout_fulfilment.sql`](../supabase/migrations/20260816000132_shop_checkout_fulfilment.sql).
+The deployed shop schema is defined by the fulfilment and provider migrations in
+[`supabase/migrations/`](../supabase/migrations/).
 Safe environment placeholders are in [`.env.example`](../.env.example).
 
 ## Historical research
@@ -33,12 +33,12 @@ The implementation is disabled unless explicitly enabled:
 ```dotenv
 VITE_SHOP_ENABLED=false
 SHOP_CHECKOUT_ENABLED=false
-SHOP_FULFILMENT_ENABLED=false
+SHOP_FULFILMENT_PROVIDER=manual
 ```
 
 The first gate removes the public shopping flow from the frontend build. The
 second blocks public Stripe Checkout Sessions. A verified signed-in admin can
 still use the shop and create a Checkout Session for test purchases while those
-two public gates are false. The third gate blocks Prodigi submission for everyone,
-including admins. Supabase settings `shop_public` and `print_configurator` are an
-additional admin-controlled public visibility gate.
+two public gates are false. Manual mode keeps orders in Shop Orders and makes no
+Prodigi API call; only explicit `prodigi` enables automation. Supabase settings
+`shop_public` and `print_configurator` are an additional visibility gate.

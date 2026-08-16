@@ -2,8 +2,8 @@
 
 Photography gallery and framed-print shop at **https://samduckworth.com**. It is
 a React/Vite application deployed by Vercel from `main`, with Supabase for data,
-auth and storage, Stripe for payment, Prodigi for print fulfilment, and Resend for
-transactional email.
+auth and storage, Stripe for payment, manual or optional Prodigi print fulfilment,
+and Resend for transactional email.
 
 > **Working on this? Read [`CLAUDE.md`](./CLAUDE.md) first.** For shop activation,
 > use [`Shop Setup/Shop Checkout — Setup Handoff.md`](./Shop%20Setup/Shop%20Checkout%20%E2%80%94%20Setup%20Handoff.md).
@@ -31,19 +31,20 @@ Create a gitignored `.env.local` from [`.env.example`](./.env.example). Never
 commit real secret keys. Browser-safe variables use the `VITE_` prefix; Stripe,
 Prodigi, Supabase service-role, Cron and Resend secrets are server-only.
 
-The shop has three deployment gates. All default to disabled when missing:
+The shop has two public deployment gates and a safe fulfilment selector:
 
 ```dotenv
 VITE_SHOP_ENABLED=false
 SHOP_CHECKOUT_ENABLED=false
-SHOP_FULFILMENT_ENABLED=false
+SHOP_FULFILMENT_PROVIDER=manual
 ```
 
-Keep them false in Production until the activation checklist and test-mode cycle
-are complete. Supabase settings `shop_public` and `print_configurator` provide a
+Keep both gates false and the provider manual until the activation checklist and
+test-mode cycle are complete. Supabase settings `shop_public` and `print_configurator` provide a
 second, admin-managed public visibility gate. A verified signed-in admin can
 still open the shop, products and Stripe test flow while the two public gates are
-false; `SHOP_FULFILMENT_ENABLED=false` always prevents submission to Prodigi.
+false. Manual mode keeps checkout/order admin live, makes no Prodigi API calls,
+and locks each paid order to manual even if later orders switch to Prodigi.
 
 ## Supabase
 
@@ -70,8 +71,9 @@ Also set in Supabase Dashboard under **Authentication → URL Configuration**:
 - Redirect URLs: `https://samduckworth.com/admin`
 
 Schema, RLS, Storage and Cron definitions live in [`supabase/migrations/`](./supabase/migrations/).
-The shop order/fulfilment migration is
-[`20260816000132_shop_checkout_fulfilment.sql`](./supabase/migrations/20260816000132_shop_checkout_fulfilment.sql).
+The shop migrations include
+[`20260816000132_shop_checkout_fulfilment.sql`](./supabase/migrations/20260816000132_shop_checkout_fulfilment.sql)
+and [`20260816112601_manual_fulfilment_provider.sql`](./supabase/migrations/20260816112601_manual_fulfilment_provider.sql).
 
 ## Admin access and shop catalogue
 

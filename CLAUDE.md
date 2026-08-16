@@ -149,24 +149,23 @@ Conventions the gallery relies on:
   and an atomic `create_paid_order` function executable only by service-role.
 - The private `print-masters` bucket accepts JPEG only. Admins may manage masters;
   only server code creates short-lived download URLs for Prodigi.
-- **Schema changes can't be applied programmatically here.** The service key does
-  rows, not DDL (PostgREST), and the `supabase` CLI is logged into a different
-  account, so `db push` won't reach this project. Write the migration file in
-  `supabase/migrations/`, then **Sam runs the SQL by hand in the Supabase SQL
-  editor**. Data backfills then go through the service key as normal.
+- Apply schema changes through the connected Supabase migration tool, keep the
+  matching SQL in `supabase/migrations/`, query the result, and run security and
+  performance advisors after DDL. The service-role key itself remains row-only.
 
 ## Deploy / domain
 
 - Push to `main` → Vercel builds + deploys.
-- The shop ships safely while disabled. `VITE_SHOP_ENABLED`,
-  `SHOP_CHECKOUT_ENABLED`, and `SHOP_FULFILMENT_ENABLED` all default false when
-  missing; keep them false in Production until the launch proof is complete.
+- The shop ships safely while disabled. `VITE_SHOP_ENABLED` and
+  `SHOP_CHECKOUT_ENABLED` default false; `SHOP_FULFILMENT_PROVIDER` defaults to
+  `manual`. Keep the gates false/provider manual until launch proof is complete.
 - `VITE_SHOP_ENABLED` and `SHOP_CHECKOUT_ENABLED` are **public** gates. A user
   whose Supabase session passes `is_admin()` may still open shop/product/checkout
   routes and create a Checkout Session for testing. The API verifies the bearer
   token server-side; this is not a client boolean bypass.
-- `SHOP_FULFILMENT_ENABLED` has no admin bypass. No order reaches Prodigi while
-  it is false, including from the Admin “Submit now” control.
+- Manual mode makes no Prodigi API calls. Only the exact provider `prodigi` can
+  submit, and each order's provider snapshot prevents later toggles sweeping up
+  older manual orders.
 - Public launch additionally requires the Supabase `shop_public` and
   `print_configurator` settings. These runtime switches complement rather than
   replace the environment kill switches.

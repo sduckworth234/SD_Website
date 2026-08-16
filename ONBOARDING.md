@@ -22,12 +22,11 @@ Copy the variable names from [`.env.example`](./.env.example) into a gitignored
 
 - Push straight to `main`; Vercel auto-deploys it.
 - Run `npm run build` and `npm audit` before pushing code changes.
-- Keep `VITE_SHOP_ENABLED`, `SHOP_CHECKOUT_ENABLED`, and
-  `SHOP_FULFILMENT_ENABLED` false in Production until launch is deliberately
-  approved. Missing flags are false.
+- Keep `VITE_SHOP_ENABLED` and `SHOP_CHECKOUT_ENABLED` false, with
+  `SHOP_FULFILMENT_PROVIDER=manual`, until launch is deliberately approved.
 - Signed-in admins retain shop/product access and may create Stripe test Checkout
-  Sessions while the public UI/checkout gates are false. Prodigi fulfilment has
-  no admin bypass.
+  Sessions while the public UI/checkout gates are false. Manual is the safe
+  provider fallback; only explicit `prodigi` enables external submission.
 - Supabase runtime settings `shop_public` and `print_configurator` are an
   additional public visibility gate controlled in Admin.
 - Supabase row changes are live immediately; code and `VITE_` changes require a
@@ -55,15 +54,17 @@ can enter the sales flow. A photo must satisfy both to be purchasable.
 ## 4. Admin
 
 `/admin` uses Supabase email/password auth; the user must also be in
-`public.admin_users`. The workspace has six tabs:
+`public.admin_users`. The workspace has seven tabs:
 
 - **Photos** — upload, search, edit, publish, feature and bulk actions.
 - **Collections** — create, order and curate gallery collections.
 - **Homepage** — curate homepage imagery.
 - **Locations** — create and arrange places.
 - **Shop** — toggle photos for sale, bulk-manage sale status, inspect feature
-  gates, open the private shop preview, upload JPEG masters, submit orders and
-  refund held orders.
+  gates and open the private shop preview.
+- **Shop Orders** — review payment/customer details, upload JPEG masters, run
+  manual fulfilment/tracking, open receipts/invoices, submit Prodigi orders when
+  configured, and refund orders.
 - **Site settings** — visibility, banners and runtime feature switches.
 
 Removing **For sale** immediately removes the product from the shop flow, direct
@@ -73,15 +74,15 @@ immutable item snapshot.
 ## 5. Purchase flow
 
 1. The browser sends photo and product choices to the server.
-2. The server verifies published/for-sale status, SKU and price, obtains live
-   Prodigi shipping, and validates any Stripe Promotion Code.
+2. The server verifies published/for-sale status, SKU and price, uses the fixed
+   verified shipping rate in manual mode (or live Prodigi quote in Prodigi mode),
+   and validates any Stripe Promotion Code.
 3. Stripe's embedded Payment Element collects payment details directly.
 4. Only a verified Stripe webhook creates the order and items atomically.
-5. The order waits 45 minutes and waits for every private full-resolution JPEG.
-6. Supabase Cron submits eligible orders to Prodigi every ten minutes when the
-   fulfilment flag is enabled.
-7. Prodigi callbacks are re-verified against the API; Resend sends confirmation
-   and tracking email.
+5. The order stores an immutable manual/Prodigi provider snapshot.
+6. Manual orders go to Shop Orders for processing, tracking and shipment email.
+7. Only provider-locked Prodigi orders enter the ten-minute Cron queue; callbacks
+   are re-verified against the API. Resend sends merchant/customer notifications.
 
 Use [`Shop Setup/Shop Checkout — Setup Handoff.md`](./Shop%20Setup/Shop%20Checkout%20%E2%80%94%20Setup%20Handoff.md)
 for environment setup, webhook testing and the launch proof checklist.

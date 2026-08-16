@@ -2,7 +2,7 @@
 
 > **Current workflow (updated 2026-08-16):** the private `print-masters` bucket
 > and automated submission path now exist. Upload originals through **Admin →
-> Shop → Orders**; the application verifies JPEG type/resolution and gives Prodigi
+> Shop Orders**; the application verifies JPEG type/resolution and gives Prodigi
 > a short-lived signed URL. Use the normal Stripe test checkout for an end-to-end
 > system test. The manual Prodigi dashboard route below remains useful only when
 > isolating physical print/crop quality from checkout.

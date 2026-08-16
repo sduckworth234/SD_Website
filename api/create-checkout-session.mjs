@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { normaliseCart } from "../server/shop/catalogue.mjs";
-import { checkoutEnabled } from "../server/shop/features.mjs";
+import { checkoutEnabled, fulfilmentProvider, paidInvoicesEnabled } from "../server/shop/features.mjs";
 import { json, methodAllowed, publicOrigin, readJson, safeError } from "../server/shop/http.mjs";
 import { sizeIsAvailable } from "../server/shop/printSizing.mjs";
 import { quoteShippingCents } from "../server/shop/prodigi.mjs";
@@ -73,7 +73,10 @@ export default async function handler(req, res) {
         throw new Error(`${photo.title} isn't available as a ${item.mounted ? "mounted " : ""}${item.size} print — the source image isn't high enough resolution for that size.`);
       }
     }
-    const shipping = await quoteShippingCents(cart);
+    const provider = fulfilmentProvider();
+    // Manual mode makes no Prodigi request even if a stale API key remains in
+    // the deployment. Checkout stays live using the verified catalogue rate.
+    const shipping = await quoteShippingCents(cart, { useProdigi: provider === "prodigi" });
     const promoText = clean(body.promotionCode, 64).toUpperCase();
     let promotion = null;
     if (promoText) {
@@ -102,6 +105,7 @@ export default async function handler(req, res) {
       cart_count: String(cart.length),
       quote_source: shipping.source,
       promotion_code: promoText,
+      fulfilment_provider: provider,
     };
     cart.forEach((item, index) => {
       const photo = photos.get(item.photoId);
@@ -140,6 +144,13 @@ export default async function handler(req, res) {
         },
         metadata: { shop: "framed-editions" },
       },
+      invoice_creation: paidInvoicesEnabled() ? {
+        enabled: true,
+        invoice_data: {
+          description: "Fine-art photographic print order",
+          footer: "Thank you for supporting independent Australian photography.",
+        },
+      } : undefined,
       metadata,
       return_url: `${publicOrigin(req)}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       expires_at: Math.floor(Date.now() / 1000) + 30 * 60,

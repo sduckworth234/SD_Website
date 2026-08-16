@@ -15,8 +15,8 @@ async function prodigi(path, init = {}) {
   return data;
 }
 
-export async function quoteShippingCents(items) {
-  if (!API_KEY) return { cents: estimateShippingCents(items), source: "verified-catalogue-estimate" };
+export async function quoteShippingCents(items, { useProdigi = false } = {}) {
+  if (!useProdigi || !API_KEY) return { cents: estimateShippingCents(items), source: "verified-catalogue-estimate" };
   const data = await prodigi("/quotes", {
     method: "POST",
     body: JSON.stringify({

@@ -295,15 +295,14 @@ export async function getAdminPhotos() {
   if (!supabase) return [];
 
   // Admin-only fetch: includes source_path + captured_at (NOT in the public
-  // query — source_path is a private drive path). Reads the is_admin()-gated
-  // `admin_photos` view (see the authenticated-hardening migration): the
-  // authenticated role's direct column grant on `photos` excludes source_path,
-  // so the view is the only path to it. Location names are joined client-side
-  // (PostgREST can't always embed through a view).
+  // query — source_path is a private drive path). The RPC is SECURITY DEFINER
+  // because authenticated users intentionally lack those column grants, but it
+  // returns rows only when hardened is_admin() validates the caller. Anon has
+  // no execute grant. Location names are joined client-side.
   let data: PhotoRow[] | null;
   let error: { message: string } | null;
   ({ data, error } = (await supabase
-    .from("admin_photos")
+    .rpc("get_admin_photos")
     .select(`${ADMIN_SELECT}, ${ADMIN_PRINT_READINESS_SELECT}`)
     .order("created_at", { ascending: false })) as unknown as { data: PhotoRow[] | null; error: { message: string } | null });
 
@@ -311,16 +310,7 @@ export async function getAdminPhotos() {
   // them until the columns exist.
   if (error) {
     ({ data, error } = (await supabase
-      .from("admin_photos")
-      .select(ADMIN_SELECT)
-      .order("created_at", { ascending: false })) as unknown as { data: PhotoRow[] | null; error: { message: string } | null });
-  }
-
-  // Fallback for the window before the hardening migration is applied: the
-  // view doesn't exist yet, but the old blanket grant still does.
-  if (error) {
-    ({ data, error } = (await supabase
-      .from("photos")
+      .rpc("get_admin_photos")
       .select(ADMIN_SELECT)
       .order("created_at", { ascending: false })) as unknown as { data: PhotoRow[] | null; error: { message: string } | null });
   }

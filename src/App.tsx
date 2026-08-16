@@ -19,6 +19,7 @@ import {
   Heart,
   MapPin,
   MessageCircle,
+  PackageCheck,
   ChevronLeft,
   ChevronRight,
   LoaderCircle,
@@ -4074,14 +4075,15 @@ function NotAdmin({ email }: { email: string }) {
   );
 }
 
-type AdminTab = "photos" | "collections" | "homepage" | "locations" | "shop" | "settings";
+type AdminTab = "photos" | "collections" | "homepage" | "locations" | "shop" | "orders" | "settings";
 
 const ADMIN_TABS: { id: AdminTab; label: string; description: string; icon: ReactNode }[] = [
   { id: "photos", label: "Photos", description: "Upload, publish and edit the archive", icon: <Images size={16} /> },
   { id: "collections", label: "Collections", description: "Build and order gallery collections", icon: <LayoutGrid size={16} /> },
   { id: "homepage", label: "Homepage", description: "Curate the homepage photo feed", icon: <LayoutDashboard size={16} /> },
   { id: "locations", label: "Locations", description: "Arrange places and gallery order", icon: <MapPin size={16} /> },
-  { id: "shop", label: "Shop", description: "Choose sale images and manage orders", icon: <Frame size={16} /> },
+  { id: "shop", label: "Shop", description: "Choose which photographs are for sale", icon: <Frame size={16} /> },
+  { id: "orders", label: "Shop Orders", description: "Payments, fulfilment, tracking and refunds", icon: <PackageCheck size={16} /> },
   { id: "settings", label: "Site settings", description: "Visibility, banners and feature switches", icon: <Eye size={16} /> },
 ];
 
@@ -4435,12 +4437,12 @@ function AdminDashboard({ session }: { session: Session }) {
       {activeTab === "locations" ? <PlacesOrderAdmin locations={locations} photos={adminPhotos} onChanged={refresh} /> : null}
       {activeTab === "settings" ? <VisibilityAdmin photos={adminPhotos} locations={locations} /> : null}
       {activeTab === "shop" ? (
-        <div className="admin-tab-stack">
-          <ShopCatalogueAdmin photos={adminPhotos} onChanged={refresh} setMessage={setMessage} />
-          <Suspense fallback={<p className="loading-note">Loading shop orders…</p>}>
-            <AdminOrders session={session} />
-          </Suspense>
-        </div>
+        <ShopCatalogueAdmin photos={adminPhotos} onChanged={refresh} setMessage={setMessage} />
+      ) : null}
+      {activeTab === "orders" ? (
+        <Suspense fallback={<p className="loading-note">Loading shop orders…</p>}>
+          <AdminOrders session={session} />
+        </Suspense>
       ) : null}
       {activeTab === "photos" ? (
         <>

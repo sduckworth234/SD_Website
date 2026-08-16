@@ -6,7 +6,7 @@
 > for the current operational workflow. The finished system uses live Prodigi
 > shipping quotes, a private JPEG-only `print-masters` bucket, a 45-minute order
 > hold, Supabase Cron every ten minutes, authenticated callbacks with an
-> authoritative Prodigi re-fetch, and Admin → Shop → Orders for master upload,
+> authoritative Prodigi re-fetch, and Admin → Shop Orders for master upload,
 > submit-now and refunds. The research below remains useful for catalogue,
 > resolution, crop and pricing rationale, but proposed build steps are historical.
 
