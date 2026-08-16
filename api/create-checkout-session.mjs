@@ -60,7 +60,7 @@ export default async function handler(req, res) {
     for (const item of cart) {
       const photo = photos.get(item.photoId);
       if (!sizeIsSellable(photo, item.size, item.mounted)) {
-        throw new Error(`${photo.title} isn't available as a ${item.mounted ? "mounted " : ""}${item.size} print — the source image isn't high enough resolution for that size.`);
+        throw new Error(`${photo.title} isn't available as a ${item.mounted ? "mounted " : ""}${item.size} print.`);
       }
     }
     const provider = fulfilmentProvider();

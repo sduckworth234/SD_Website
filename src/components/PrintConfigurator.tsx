@@ -365,7 +365,7 @@ export function PrintConfigurator({
                     className={`pc-size-btn${s.id === size ? " on" : ""}${available ? "" : " unavailable"}`}
                     type="button"
                     disabled={!available}
-                    title={available ? undefined : "This photo's source resolution doesn't support a sharp print at this size."}
+                    title={available ? undefined : "This size isn't offered for this photo."}
                     onClick={() => available && setSize(s.id)}
                   >
                     <b>{s.id}</b>
