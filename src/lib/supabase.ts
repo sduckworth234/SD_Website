@@ -795,8 +795,13 @@ export async function setPhotoShop(
   if (input.shopOrder !== undefined) updates.shop_order = input.shopOrder;
   if (!Object.keys(updates).length) return;
 
-  const { error } = await supabase.from("photos").update(updates).eq("id", photoId);
+  const { data, error } = await supabase
+    .from("photos")
+    .update(updates)
+    .eq("id", photoId)
+    .select("id");
   if (error) throw error;
+  if (!data?.length) throw new Error("The photo sale setting was not updated.");
 }
 
 // ---------------------------------------------------------------------------

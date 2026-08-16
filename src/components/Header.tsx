@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun, UserRound } from "lucide-react";
+import { SHOP_FEATURE_ENABLED } from "../lib/features";
 import { applyTheme, readTheme, type Theme } from "../lib/theme";
 
 // Light/dark switch. index.html has already set <html data-theme> before first
@@ -101,13 +102,15 @@ export function Header({
           Map
         </a>
         <button className="nav-button" onClick={handleAbout} type="button">About Me</button>
-        <a
-          className={`nav-link${path.startsWith("/shop") ? " is-active" : ""}`}
-          href="/shop"
-          onClick={(event) => navTo(event, "/shop")}
-        >
-          Shop
-        </a>
+        {SHOP_FEATURE_ENABLED ? (
+          <a
+            className={`nav-link${path.startsWith("/shop") ? " is-active" : ""}`}
+            href="/shop"
+            onClick={(event) => navTo(event, "/shop")}
+          >
+            Shop
+          </a>
+        ) : null}
         <ThemeToggle />
         <a
           className="nav-icon"

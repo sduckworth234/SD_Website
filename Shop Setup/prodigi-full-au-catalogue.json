@@ -1,0 +1,5637 @@
+[
+  {
+    "sku": "GLOBAL-BFP-12x12",
+    "description": "Budget Framed Poster, 30x30cm / 12x12\"",
+    "attributes": {
+      "frame": [
+        "Budget"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "Silk"
+      ],
+      "substrateWeight": [
+        "150gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3543,
+      "verticalResolution": 3543
+    },
+    "itemAud": "28.64",
+    "shipAud": "90.86",
+    "totalAud": "119.50",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BFP",
+    "size": "12x12"
+  },
+  {
+    "sku": "GLOBAL-BFP-16x16",
+    "description": "Budget Framed Poster, 40x40cm / 16x16\"",
+    "attributes": {
+      "frame": [
+        "Budget"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "Silk"
+      ],
+      "substrateWeight": [
+        "150gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4724,
+      "verticalResolution": 4724
+    },
+    "itemAud": "34.39",
+    "shipAud": "99.07",
+    "totalAud": "133.46",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BFP",
+    "size": "16x16"
+  },
+  {
+    "sku": "GLOBAL-BFP-16x20",
+    "description": "Budget Framed Poster, 40x50cm / 16x20\"",
+    "attributes": {
+      "frame": [
+        "Budget"
+      ],
+      "color": [
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "Silk"
+      ],
+      "substrateWeight": [
+        "150gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4724,
+      "verticalResolution": 5905
+    },
+    "itemAud": "42.01",
+    "shipAud": "146.55",
+    "totalAud": "188.56",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BFP",
+    "size": "16x20"
+  },
+  {
+    "sku": "GLOBAL-BFP-20x20",
+    "description": "Budget Framed Poster, 50x50cm / 20x20\"",
+    "attributes": {
+      "frame": [
+        "Budget"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "Silk"
+      ],
+      "substrateWeight": [
+        "150gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 5905,
+      "verticalResolution": 5905
+    },
+    "itemAud": "47.78",
+    "shipAud": "146.59",
+    "totalAud": "194.37",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BFP",
+    "size": "20x20"
+  },
+  {
+    "sku": "GLOBAL-BFP-20x28",
+    "description": "Budget Framed Poster, 50x70cm / 20x28\"",
+    "attributes": {
+      "frame": [
+        "Budget"
+      ],
+      "color": [
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "Silk"
+      ],
+      "substrateWeight": [
+        "150gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 5905,
+      "verticalResolution": 8267
+    },
+    "itemAud": "53.51",
+    "shipAud": "216.73",
+    "totalAud": "270.24",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BFP",
+    "size": "20x28"
+  },
+  {
+    "sku": "GLOBAL-BFP-24x32",
+    "description": "Budget Framed Poster, 60x80cm / 24x31\"",
+    "attributes": {
+      "frame": [
+        "Budget"
+      ],
+      "color": [
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "Silk"
+      ],
+      "substrateWeight": [
+        "150gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7086,
+      "verticalResolution": 9448
+    },
+    "itemAud": "61.16",
+    "shipAud": "216.68",
+    "totalAud": "277.84",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BFP",
+    "size": "24x32"
+  },
+  {
+    "sku": "GLOBAL-BFP-5x7",
+    "description": "Budget Framed Poster, 13x18cm / 5x7\"",
+    "attributes": {
+      "frame": [
+        "Budget"
+      ],
+      "color": [
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "Silk"
+      ],
+      "substrateWeight": [
+        "150gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 1535,
+      "verticalResolution": 2125
+    },
+    "itemAud": "19.11",
+    "shipAud": "90.86",
+    "totalAud": "109.97",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BFP",
+    "size": "5x7"
+  },
+  {
+    "sku": "GLOBAL-BOX-10x10",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 25x25cm/10x10\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3000,
+      "verticalResolution": 3000
+    },
+    "itemAud": "49.68",
+    "shipAud": "90.88",
+    "totalAud": "140.56",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BOX",
+    "size": "10x10"
+  },
+  {
+    "sku": "GLOBAL-BOX-11x14",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 28x35cm/11x14\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3307,
+      "verticalResolution": 4192
+    },
+    "itemAud": "57.34",
+    "shipAud": "99.10",
+    "totalAud": "156.44",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BOX",
+    "size": "11x14"
+  },
+  {
+    "sku": "GLOBAL-BOX-12x12",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 30x30cm/12x12\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3600,
+      "verticalResolution": 3600
+    },
+    "itemAud": "60.00",
+    "shipAud": "15.10",
+    "totalAud": "75.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "12x12"
+  },
+  {
+    "sku": "GLOBAL-BOX-12x16",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 30x40cm/12x16\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3600,
+      "verticalResolution": 4800
+    },
+    "itemAud": "64.00",
+    "shipAud": "15.10",
+    "totalAud": "79.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "12x16"
+  },
+  {
+    "sku": "GLOBAL-BOX-12x18",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 30x45cm/12x18\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3600,
+      "verticalResolution": 5400
+    },
+    "itemAud": "70.00",
+    "shipAud": "15.10",
+    "totalAud": "85.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "12x18"
+  },
+  {
+    "sku": "GLOBAL-BOX-16x16",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 40x40cm/16x16\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4800,
+      "verticalResolution": 4800
+    },
+    "itemAud": "68.79",
+    "shipAud": "99.07",
+    "totalAud": "167.86",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BOX",
+    "size": "16x16"
+  },
+  {
+    "sku": "GLOBAL-BOX-16x20",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 40x50cm/16x20\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4800,
+      "verticalResolution": 6000
+    },
+    "itemAud": "85.00",
+    "shipAud": "15.10",
+    "totalAud": "100.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "16x20"
+  },
+  {
+    "sku": "GLOBAL-BOX-16x24",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 40x60cm/16x24\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4800,
+      "verticalResolution": 7200
+    },
+    "itemAud": "95.00",
+    "shipAud": "15.10",
+    "totalAud": "110.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "16x24"
+  },
+  {
+    "sku": "GLOBAL-BOX-18x24",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 45x60cm/18x24\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 5400,
+      "verticalResolution": 7200
+    },
+    "itemAud": "100.00",
+    "shipAud": "15.10",
+    "totalAud": "115.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "18x24"
+  },
+  {
+    "sku": "GLOBAL-BOX-20x20",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 50x50cm/20x20\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 6000,
+      "verticalResolution": 6000
+    },
+    "itemAud": "100.00",
+    "shipAud": "15.10",
+    "totalAud": "115.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "20x20"
+  },
+  {
+    "sku": "GLOBAL-BOX-20x28",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 50x70cm/20x28\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 6000,
+      "verticalResolution": 8400
+    },
+    "itemAud": "115.00",
+    "shipAud": "21.55",
+    "totalAud": "136.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "20x28"
+  },
+  {
+    "sku": "GLOBAL-BOX-20x30",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 50x76cm/20x30\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 6000,
+      "verticalResolution": 9000
+    },
+    "itemAud": "107.03",
+    "shipAud": "216.68",
+    "totalAud": "323.71",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BOX",
+    "size": "20x30"
+  },
+  {
+    "sku": "GLOBAL-BOX-24x24",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 60x60cm/24x24\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7200,
+      "verticalResolution": 7200
+    },
+    "itemAud": "115.00",
+    "shipAud": "15.10",
+    "totalAud": "130.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "24x24"
+  },
+  {
+    "sku": "GLOBAL-BOX-24x32",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 60x81cm/24x32\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7200,
+      "verticalResolution": 9600
+    },
+    "itemAud": "114.64",
+    "shipAud": "216.68",
+    "totalAud": "331.32",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BOX",
+    "size": "24x32"
+  },
+  {
+    "sku": "GLOBAL-BOX-24x36",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 61x91cm/24x36\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7200,
+      "verticalResolution": 10800
+    },
+    "itemAud": "140.00",
+    "shipAud": "21.55",
+    "totalAud": "161.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "24x36"
+  },
+  {
+    "sku": "GLOBAL-BOX-28x40",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 70x100cm/28x40\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 8400,
+      "verticalResolution": 12000
+    },
+    "itemAud": "160.00",
+    "shipAud": "108.00",
+    "totalAud": "268.00",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "28x40"
+  },
+  {
+    "sku": "GLOBAL-BOX-30x30",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 76x76cm/30x30\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 9000,
+      "verticalResolution": 9000
+    },
+    "itemAud": "150.00",
+    "shipAud": "21.55",
+    "totalAud": "171.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "30x30"
+  },
+  {
+    "sku": "GLOBAL-BOX-30x40",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 76x101cm/30x40\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 9000,
+      "verticalResolution": 12000
+    },
+    "itemAud": "170.00",
+    "shipAud": "108.00",
+    "totalAud": "278.00",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "30x40"
+  },
+  {
+    "sku": "GLOBAL-BOX-4x6",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 10x15cm/4x6\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / perspex"
+      ],
+      "mount": [
+        "No Mount/Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "style": [
+        "Framed Print / Non-Mounted / Perspex"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2400,
+      "verticalResolution": 3600
+    },
+    "itemAud": "47.77",
+    "shipAud": "90.86",
+    "totalAud": "138.63",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BOX",
+    "size": "4x6"
+  },
+  {
+    "sku": "GLOBAL-BOX-5x7",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 13x18cm/5x7\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 1535,
+      "verticalResolution": 2125
+    },
+    "itemAud": "36.30",
+    "shipAud": "90.86",
+    "totalAud": "127.16",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BOX",
+    "size": "5x7"
+  },
+  {
+    "sku": "GLOBAL-BOX-8x10",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 20x25cm/8x10\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4800,
+      "verticalResolution": 6000
+    },
+    "itemAud": "45.00",
+    "shipAud": "15.10",
+    "totalAud": "60.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "8x10"
+  },
+  {
+    "sku": "GLOBAL-BOX-8x8",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 20x20cm/8x8\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2400,
+      "verticalResolution": 2400
+    },
+    "itemAud": "45.00",
+    "shipAud": "15.10",
+    "totalAud": "60.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "8x8"
+  },
+  {
+    "sku": "GLOBAL-BOX-A1",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 59x84cm/23x33\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a1"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7020,
+      "verticalResolution": 9930
+    },
+    "itemAud": "140.00",
+    "shipAud": "21.55",
+    "totalAud": "161.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "A1"
+  },
+  {
+    "sku": "GLOBAL-BOX-A2",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 42x59cm/17x23\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a2"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 9921,
+      "verticalResolution": 14031
+    },
+    "itemAud": "95.00",
+    "shipAud": "15.10",
+    "totalAud": "110.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "A2"
+  },
+  {
+    "sku": "GLOBAL-BOX-A3",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 29x42cm/11x17\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a3"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7015,
+      "verticalResolution": 9921
+    },
+    "itemAud": "70.00",
+    "shipAud": "15.10",
+    "totalAud": "85.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "A3"
+  },
+  {
+    "sku": "GLOBAL-BOX-A4",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 21x30cm / 8.3x11.7\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a4"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4960,
+      "verticalResolution": 7015
+    },
+    "itemAud": "50.00",
+    "shipAud": "15.10",
+    "totalAud": "65.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "A4"
+  },
+  {
+    "sku": "GLOBAL-BOX-A5",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 14.8x21cm/5.8x8.3\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a5"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 1748,
+      "verticalResolution": 2480
+    },
+    "itemAud": "40.00",
+    "shipAud": "15.10",
+    "totalAud": "55.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOX",
+    "size": "A5"
+  },
+  {
+    "sku": "GLOBAL-BOXM-10x10",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 25x25cm/10x10\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2400,
+      "verticalResolution": 2400
+    },
+    "itemAud": "57.34",
+    "shipAud": "90.86",
+    "totalAud": "148.20",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BOXM",
+    "size": "10x10"
+  },
+  {
+    "sku": "GLOBAL-BOXM-11x14",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 28x35cm/11x14\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2421,
+      "verticalResolution": 3307
+    },
+    "itemAud": "63.05",
+    "shipAud": "99.07",
+    "totalAud": "162.12",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BOXM",
+    "size": "11x14"
+  },
+  {
+    "sku": "GLOBAL-BOXM-12x12",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 30x30cm/12x12\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2700,
+      "verticalResolution": 2700
+    },
+    "itemAud": "70.00",
+    "shipAud": "15.10",
+    "totalAud": "85.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "12x12"
+  },
+  {
+    "sku": "GLOBAL-BOXM-12x16",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 30x40cm/12x16\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2400,
+      "verticalResolution": 3600
+    },
+    "itemAud": "76.00",
+    "shipAud": "15.10",
+    "totalAud": "91.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "12x16"
+  },
+  {
+    "sku": "GLOBAL-BOXM-12x18",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 30x45cm/12x18\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2400,
+      "verticalResolution": 4200
+    },
+    "itemAud": "82.00",
+    "shipAud": "15.10",
+    "totalAud": "97.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "12x18"
+  },
+  {
+    "sku": "GLOBAL-BOXM-16x16",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 40x40cm/16x16\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3600,
+      "verticalResolution": 3600
+    },
+    "itemAud": "80.21",
+    "shipAud": "99.02",
+    "totalAud": "179.23",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BOXM",
+    "size": "16x16"
+  },
+  {
+    "sku": "GLOBAL-BOXM-16x20",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 40x50cm/16x20\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3600,
+      "verticalResolution": 4800
+    },
+    "itemAud": "90.00",
+    "shipAud": "15.10",
+    "totalAud": "105.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "16x20"
+  },
+  {
+    "sku": "GLOBAL-BOXM-16x24",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 40x60cm/16x24\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3600,
+      "verticalResolution": 6000
+    },
+    "itemAud": "100.00",
+    "shipAud": "15.10",
+    "totalAud": "115.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "16x24"
+  },
+  {
+    "sku": "GLOBAL-BOXM-18x24",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 45x60cm/18x24\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4200,
+      "verticalResolution": 6000
+    },
+    "itemAud": "110.00",
+    "shipAud": "15.10",
+    "totalAud": "125.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "18x24"
+  },
+  {
+    "sku": "GLOBAL-BOXM-20x20",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 50x50cm/20x20\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4800,
+      "verticalResolution": 4800
+    },
+    "itemAud": "115.00",
+    "shipAud": "15.10",
+    "totalAud": "130.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "20x20"
+  },
+  {
+    "sku": "GLOBAL-BOXM-20x28",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 50x70cm/20x28\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4800,
+      "verticalResolution": 7200
+    },
+    "itemAud": "122.50",
+    "shipAud": "21.55",
+    "totalAud": "144.05",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "20x28"
+  },
+  {
+    "sku": "GLOBAL-BOXM-20x30",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 50x76cm/20x30\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4800,
+      "verticalResolution": 7800
+    },
+    "itemAud": "118.40",
+    "shipAud": "216.55",
+    "totalAud": "334.95",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BOXM",
+    "size": "20x30"
+  },
+  {
+    "sku": "GLOBAL-BOXM-24x24",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 60x60cm/24x24\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 6000,
+      "verticalResolution": 6000
+    },
+    "itemAud": "125.00",
+    "shipAud": "15.10",
+    "totalAud": "140.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "24x24"
+  },
+  {
+    "sku": "GLOBAL-BOXM-24x32",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 60x80cm/24x32\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 6000,
+      "verticalResolution": 8400
+    },
+    "itemAud": "143.31",
+    "shipAud": "216.68",
+    "totalAud": "359.99",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BOXM",
+    "size": "24x32"
+  },
+  {
+    "sku": "GLOBAL-BOXM-24x36",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 60x90cm/24x36\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 6000,
+      "verticalResolution": 9600
+    },
+    "itemAud": "170.00",
+    "shipAud": "21.55",
+    "totalAud": "191.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "24x36"
+  },
+  {
+    "sku": "GLOBAL-BOXM-28x40",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 70x100cm/28x40\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7200,
+      "verticalResolution": 10800
+    },
+    "itemAud": "180.00",
+    "shipAud": "108.00",
+    "totalAud": "288.00",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "28x40"
+  },
+  {
+    "sku": "GLOBAL-BOXM-30x30",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 75x75cm/30x30\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7800,
+      "verticalResolution": 7800
+    },
+    "itemAud": "170.00",
+    "shipAud": "21.55",
+    "totalAud": "191.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "30x30"
+  },
+  {
+    "sku": "GLOBAL-BOXM-30x40",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 75x100cm/30x40\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7800,
+      "verticalResolution": 10800
+    },
+    "itemAud": "185.00",
+    "shipAud": "108.00",
+    "totalAud": "293.00",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "30x40"
+  },
+  {
+    "sku": "GLOBAL-BOXM-4x6",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 10x15cm/4x6\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow White"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "style": [
+        "Framed Print / Mount / Perspex"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 600,
+      "verticalResolution": 1200
+    },
+    "itemAud": "43.95",
+    "shipAud": "90.86",
+    "totalAud": "134.81",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BOXM",
+    "size": "4x6"
+  },
+  {
+    "sku": "GLOBAL-BOXM-5x7",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 13x18cm/5x7\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 944,
+      "verticalResolution": 1535
+    },
+    "itemAud": "38.22",
+    "shipAud": "90.88",
+    "totalAud": "129.10",
+    "lab": "prodigi_gb3",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-BOXM",
+    "size": "5x7"
+  },
+  {
+    "sku": "GLOBAL-BOXM-8x10",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 20x25cm/8x10\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 1800,
+      "verticalResolution": 2400
+    },
+    "itemAud": "65.00",
+    "shipAud": "15.10",
+    "totalAud": "80.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "8x10"
+  },
+  {
+    "sku": "GLOBAL-BOXM-8x8",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 20x20cm/8x8\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 1200,
+      "verticalResolution": 1200
+    },
+    "itemAud": "64.00",
+    "shipAud": "15.10",
+    "totalAud": "79.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "8x8"
+  },
+  {
+    "sku": "GLOBAL-BOXM-A1",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 59x84cm/23x33\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a1"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 5835,
+      "verticalResolution": 8751
+    },
+    "itemAud": "145.00",
+    "shipAud": "21.55",
+    "totalAud": "166.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "A1"
+  },
+  {
+    "sku": "GLOBAL-BOXM-A2",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 42x59cm/17x23\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a2"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3780,
+      "verticalResolution": 5835
+    },
+    "itemAud": "105.00",
+    "shipAud": "15.10",
+    "totalAud": "120.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "A2"
+  },
+  {
+    "sku": "GLOBAL-BOXM-A3",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 29x42cm/12x17\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a3"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2328,
+      "verticalResolution": 3780
+    },
+    "itemAud": "76.00",
+    "shipAud": "15.10",
+    "totalAud": "91.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "A3"
+  },
+  {
+    "sku": "GLOBAL-BOXM-A4",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 21x29cm/8x12\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a4"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 1590,
+      "verticalResolution": 2490
+    },
+    "itemAud": "66.00",
+    "shipAud": "15.10",
+    "totalAud": "81.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "A4"
+  },
+  {
+    "sku": "GLOBAL-BOXM-A5",
+    "description": "Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 14.8x21cm/5.8x8.3\"",
+    "attributes": {
+      "frame": [
+        "Box"
+      ],
+      "color": [
+        "black",
+        "natural",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a5"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 862,
+      "verticalResolution": 1594
+    },
+    "itemAud": "58.00",
+    "shipAud": "15.10",
+    "totalAud": "73.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-BOXM",
+    "size": "A5"
+  },
+  {
+    "sku": "GLOBAL-CAN-10x10",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 10x10\" / 25x25cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3054,
+      "verticalResolution": 3054
+    },
+    "itemAud": "40.00",
+    "shipAud": "15.10",
+    "totalAud": "55.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "10x10"
+  },
+  {
+    "sku": "GLOBAL-CAN-11x14",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 11x14\" / 28x36cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3354,
+      "verticalResolution": 4254
+    },
+    "itemAud": "44.00",
+    "shipAud": "15.10",
+    "totalAud": "59.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "11x14"
+  },
+  {
+    "sku": "GLOBAL-CAN-12x12",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 12x12\" / 31x31cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3654,
+      "verticalResolution": 3654
+    },
+    "itemAud": "44.00",
+    "shipAud": "15.10",
+    "totalAud": "59.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "12x12"
+  },
+  {
+    "sku": "GLOBAL-CAN-12x16",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 12x16\" / 31x41cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3654,
+      "verticalResolution": 4854
+    },
+    "itemAud": "46.00",
+    "shipAud": "15.10",
+    "totalAud": "61.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "12x16"
+  },
+  {
+    "sku": "GLOBAL-CAN-12x18",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 12x18\" / 30x46cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3654,
+      "verticalResolution": 5454
+    },
+    "itemAud": "52.00",
+    "shipAud": "15.10",
+    "totalAud": "67.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "12x18"
+  },
+  {
+    "sku": "GLOBAL-CAN-14x14",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 14x14\" / 36x36cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4254,
+      "verticalResolution": 4254
+    },
+    "itemAud": "50.00",
+    "shipAud": "15.10",
+    "totalAud": "65.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "14x14"
+  },
+  {
+    "sku": "GLOBAL-CAN-16x16",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 16x16\" / 41x41cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4854,
+      "verticalResolution": 4854
+    },
+    "itemAud": "49.00",
+    "shipAud": "15.10",
+    "totalAud": "64.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "16x16"
+  },
+  {
+    "sku": "GLOBAL-CAN-16x20",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 16x20\" / 41x51cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4854,
+      "verticalResolution": 6054
+    },
+    "itemAud": "56.00",
+    "shipAud": "15.10",
+    "totalAud": "71.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "16x20"
+  },
+  {
+    "sku": "GLOBAL-CAN-16x24",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 16x24\" / 41x61cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4854,
+      "verticalResolution": 7254
+    },
+    "itemAud": "60.00",
+    "shipAud": "15.10",
+    "totalAud": "75.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "16x24"
+  },
+  {
+    "sku": "GLOBAL-CAN-18x24",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 18x24\" / 46x61cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 5454,
+      "verticalResolution": 7254
+    },
+    "itemAud": "62.00",
+    "shipAud": "15.10",
+    "totalAud": "77.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "18x24"
+  },
+  {
+    "sku": "GLOBAL-CAN-20x20",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 20x20\" / 51x51cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 6054,
+      "verticalResolution": 6054
+    },
+    "itemAud": "62.00",
+    "shipAud": "15.10",
+    "totalAud": "77.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "20x20"
+  },
+  {
+    "sku": "GLOBAL-CAN-20x28",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 20x28\" / 51x71cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 6054,
+      "verticalResolution": 8454
+    },
+    "itemAud": "75.00",
+    "shipAud": "21.55",
+    "totalAud": "96.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "20x28"
+  },
+  {
+    "sku": "GLOBAL-CAN-20x30",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 20x30\" / 51x76cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 6054,
+      "verticalResolution": 9054
+    },
+    "itemAud": "80.00",
+    "shipAud": "21.55",
+    "totalAud": "101.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "20x30"
+  },
+  {
+    "sku": "GLOBAL-CAN-24x24",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 24x24\" / 61x61cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7254,
+      "verticalResolution": 7254
+    },
+    "itemAud": "75.00",
+    "shipAud": "15.10",
+    "totalAud": "90.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "24x24"
+  },
+  {
+    "sku": "GLOBAL-CAN-24x32",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 24x32\" / 61x81cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7254,
+      "verticalResolution": 9654
+    },
+    "itemAud": "90.00",
+    "shipAud": "21.55",
+    "totalAud": "111.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "24x32"
+  },
+  {
+    "sku": "GLOBAL-CAN-24x36",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 24x36\" / 61x91cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7254,
+      "verticalResolution": 10854
+    },
+    "itemAud": "110.00",
+    "shipAud": "21.55",
+    "totalAud": "131.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "24x36"
+  },
+  {
+    "sku": "GLOBAL-CAN-28x40",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 28x40\" / 71x102cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 8454,
+      "verticalResolution": 12054
+    },
+    "itemAud": "120.00",
+    "shipAud": "108.00",
+    "totalAud": "228.00",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "28x40"
+  },
+  {
+    "sku": "GLOBAL-CAN-30x30",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 30x30\" / 76x76cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 9054,
+      "verticalResolution": 9054
+    },
+    "itemAud": "110.00",
+    "shipAud": "21.55",
+    "totalAud": "131.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "30x30"
+  },
+  {
+    "sku": "GLOBAL-CAN-30x40",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 30x40\" / 76x102cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 9054,
+      "verticalResolution": 12054
+    },
+    "itemAud": "120.00",
+    "shipAud": "108.00",
+    "totalAud": "228.00",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "30x40"
+  },
+  {
+    "sku": "GLOBAL-CAN-4x6",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 4x6\" / 10x15cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 1200,
+      "verticalResolution": 1800
+    },
+    "itemAud": "30.00",
+    "shipAud": "15.10",
+    "totalAud": "45.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "4x6"
+  },
+  {
+    "sku": "GLOBAL-CAN-5X7",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 5x7\"",
+    "attributes": {
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ]
+    },
+    "printAreaPx": null,
+    "itemAud": "19.11",
+    "shipAud": "90.88",
+    "totalAud": "109.99",
+    "lab": "prodigi_gb2",
+    "carrier": "DHL Express",
+    "range": "GLOBAL-CAN",
+    "size": "5X7"
+  },
+  {
+    "sku": "GLOBAL-CAN-6x6",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 6x6\" / 15x15cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 1854,
+      "verticalResolution": 1854
+    },
+    "itemAud": "34.00",
+    "shipAud": "15.10",
+    "totalAud": "49.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "6x6"
+  },
+  {
+    "sku": "GLOBAL-CAN-8x10",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 8x10\" / 20x25cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2454,
+      "verticalResolution": 3054
+    },
+    "itemAud": "38.00",
+    "shipAud": "15.10",
+    "totalAud": "53.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "8x10"
+  },
+  {
+    "sku": "GLOBAL-CAN-8x8",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 8x8\" / 20x20cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2454,
+      "verticalResolution": 2454
+    },
+    "itemAud": "36.00",
+    "shipAud": "15.10",
+    "totalAud": "51.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "8x8"
+  },
+  {
+    "sku": "GLOBAL-CAN-A1",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 23.39x33.11\" / 59x84cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "size": [
+        "a1"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7914,
+      "verticalResolution": 10833
+    },
+    "itemAud": "95.00",
+    "shipAud": "21.55",
+    "totalAud": "116.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "A1"
+  },
+  {
+    "sku": "GLOBAL-CAN-A2",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 16.53x23.38\" / 42x59cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "size": [
+        "a2"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 5859,
+      "verticalResolution": 7914
+    },
+    "itemAud": "62.00",
+    "shipAud": "15.10",
+    "totalAud": "77.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "A2"
+  },
+  {
+    "sku": "GLOBAL-CAN-A3",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 11.69x16.54\" / 30x42cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "size": [
+        "a3"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3561,
+      "verticalResolution": 5013
+    },
+    "itemAud": "48.00",
+    "shipAud": "15.10",
+    "totalAud": "63.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "A3"
+  },
+  {
+    "sku": "GLOBAL-CAN-A4",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 8.27x16.54\" / 21x30cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "size": [
+        "a4"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2535,
+      "verticalResolution": 3561
+    },
+    "itemAud": "40.00",
+    "shipAud": "15.10",
+    "totalAud": "55.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "A4"
+  },
+  {
+    "sku": "GLOBAL-CAN-A5",
+    "description": "Stretched Canvas on a 38mm Standard Stretcher Bar, 5.8x8.27\" / 15x21cm",
+    "attributes": {
+      "edge": [
+        "38mm"
+      ],
+      "frame": [
+        "38mm standard stretcher bar"
+      ],
+      "paperType": [
+        "Standard canvas (SC)"
+      ],
+      "size": [
+        "a5"
+      ],
+      "substrateWeight": [
+        "400gsm"
+      ],
+      "wrap": [
+        "Black",
+        "ImageWrap",
+        "MirrorWrap",
+        "White"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 1803,
+      "verticalResolution": 2535
+    },
+    "itemAud": "36.00",
+    "shipAud": "15.10",
+    "totalAud": "51.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CAN",
+    "size": "A5"
+  },
+  {
+    "sku": "GLOBAL-CFP-11x14",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 28x35cm/11x14\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3307,
+      "verticalResolution": 4192
+    },
+    "itemAud": "50.00",
+    "shipAud": "15.10",
+    "totalAud": "65.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "11x14"
+  },
+  {
+    "sku": "GLOBAL-CFP-12x12",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 30x30cm/12x12\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3600,
+      "verticalResolution": 3600
+    },
+    "itemAud": "48.00",
+    "shipAud": "15.10",
+    "totalAud": "63.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "12x12"
+  },
+  {
+    "sku": "GLOBAL-CFP-12x16",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 30x40cm/12x16\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3614,
+      "verticalResolution": 4795
+    },
+    "itemAud": "60.00",
+    "shipAud": "15.10",
+    "totalAud": "75.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "12x16"
+  },
+  {
+    "sku": "GLOBAL-CFP-12x18",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 30x45cm/12x18\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3600,
+      "verticalResolution": 5400
+    },
+    "itemAud": "62.00",
+    "shipAud": "15.10",
+    "totalAud": "77.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "12x18"
+  },
+  {
+    "sku": "GLOBAL-CFP-14x14",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 36x36cm/14x14\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4251,
+      "verticalResolution": 4251
+    },
+    "itemAud": "60.00",
+    "shipAud": "15.10",
+    "totalAud": "75.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "14x14"
+  },
+  {
+    "sku": "GLOBAL-CFP-16x16",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 40x40cm/16x16\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4800,
+      "verticalResolution": 4800
+    },
+    "itemAud": "65.00",
+    "shipAud": "15.10",
+    "totalAud": "80.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "16x16"
+  },
+  {
+    "sku": "GLOBAL-CFP-16x20",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 40x50cm/16x20\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4800,
+      "verticalResolution": 6000
+    },
+    "itemAud": "75.00",
+    "shipAud": "15.10",
+    "totalAud": "90.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "16x20"
+  },
+  {
+    "sku": "GLOBAL-CFP-16x24",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 40x60cm/16x24\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4800,
+      "verticalResolution": 7200
+    },
+    "itemAud": "80.00",
+    "shipAud": "15.10",
+    "totalAud": "95.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "16x24"
+  },
+  {
+    "sku": "GLOBAL-CFP-18x24",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 45x60cm/18x24\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 5400,
+      "verticalResolution": 7200
+    },
+    "itemAud": "85.00",
+    "shipAud": "15.10",
+    "totalAud": "100.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "18x24"
+  },
+  {
+    "sku": "GLOBAL-CFP-20x20",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 50x50cm/20x20\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 6000,
+      "verticalResolution": 6000
+    },
+    "itemAud": "85.00",
+    "shipAud": "15.10",
+    "totalAud": "100.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "20x20"
+  },
+  {
+    "sku": "GLOBAL-CFP-20x28",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 50x70cm/20x28\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 6000,
+      "verticalResolution": 8400
+    },
+    "itemAud": "95.00",
+    "shipAud": "21.55",
+    "totalAud": "116.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "20x28"
+  },
+  {
+    "sku": "GLOBAL-CFP-20x30",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 50x75cm/20x30\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 6000,
+      "verticalResolution": 9000
+    },
+    "itemAud": "115.00",
+    "shipAud": "21.55",
+    "totalAud": "136.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "20x30"
+  },
+  {
+    "sku": "GLOBAL-CFP-24x24",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 60x60cm/24x24\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7200,
+      "verticalResolution": 7200
+    },
+    "itemAud": "100.00",
+    "shipAud": "15.10",
+    "totalAud": "115.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "24x24"
+  },
+  {
+    "sku": "GLOBAL-CFP-24x32",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 60x80cm/24x32\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7200,
+      "verticalResolution": 9600
+    },
+    "itemAud": "115.00",
+    "shipAud": "21.55",
+    "totalAud": "136.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "24x32"
+  },
+  {
+    "sku": "GLOBAL-CFP-24x36",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 60x90cm/24x36\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7200,
+      "verticalResolution": 10800
+    },
+    "itemAud": "135.00",
+    "shipAud": "21.55",
+    "totalAud": "156.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "24x36"
+  },
+  {
+    "sku": "GLOBAL-CFP-28x40",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 70x100cm/28x40\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 8400,
+      "verticalResolution": 12000
+    },
+    "itemAud": "160.00",
+    "shipAud": "108.00",
+    "totalAud": "268.00",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "28x40"
+  },
+  {
+    "sku": "GLOBAL-CFP-30x30",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 75x75cm/30x30\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 9000,
+      "verticalResolution": 9000
+    },
+    "itemAud": "135.00",
+    "shipAud": "21.55",
+    "totalAud": "156.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "30x30"
+  },
+  {
+    "sku": "GLOBAL-CFP-30x40",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 75x100cm/30x40\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 9000,
+      "verticalResolution": 12000
+    },
+    "itemAud": "170.00",
+    "shipAud": "108.00",
+    "totalAud": "278.00",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "30x40"
+  },
+  {
+    "sku": "GLOBAL-CFP-5x7",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 13x18cm/5x7\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 1535,
+      "verticalResolution": 2125
+    },
+    "itemAud": "36.00",
+    "shipAud": "15.10",
+    "totalAud": "51.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "5x7"
+  },
+  {
+    "sku": "GLOBAL-CFP-8x10",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 20x25cm/8x10\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2400,
+      "verticalResolution": 3000
+    },
+    "itemAud": "42.00",
+    "shipAud": "15.10",
+    "totalAud": "57.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "8x10"
+  },
+  {
+    "sku": "GLOBAL-CFP-8x8",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 20x20cm/8x8\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2400,
+      "verticalResolution": 2400
+    },
+    "itemAud": "42.00",
+    "shipAud": "15.10",
+    "totalAud": "57.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "8x8"
+  },
+  {
+    "sku": "GLOBAL-CFP-A1",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 59.4x84.1cm / 23.4x33.1\" (A1)",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a1"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7020,
+      "verticalResolution": 9930
+    },
+    "itemAud": "115.00",
+    "shipAud": "21.55",
+    "totalAud": "136.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "A1"
+  },
+  {
+    "sku": "GLOBAL-CFP-A2",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 42x59.4cm/16.5x23.4\" (A2)",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a2"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4960,
+      "verticalResolution": 7015
+    },
+    "itemAud": "80.00",
+    "shipAud": "15.10",
+    "totalAud": "95.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "A2"
+  },
+  {
+    "sku": "GLOBAL-CFP-A3",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 29.7x42cm / 11.7x16.5\" (A3)",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a3"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3507,
+      "verticalResolution": 4960
+    },
+    "itemAud": "60.00",
+    "shipAud": "15.10",
+    "totalAud": "75.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "A3"
+  },
+  {
+    "sku": "GLOBAL-CFP-A4",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 21x29.7cm / 8.3x11.7\" (A4)",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a4"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2490,
+      "verticalResolution": 3510
+    },
+    "itemAud": "42.00",
+    "shipAud": "15.10",
+    "totalAud": "57.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "A4"
+  },
+  {
+    "sku": "GLOBAL-CFP-A5",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 14.8x21cm / 5.8x8.3\" (A5)",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "No mount / Mat"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a5"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 1748,
+      "verticalResolution": 2480
+    },
+    "itemAud": "36.00",
+    "shipAud": "15.10",
+    "totalAud": "51.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFP",
+    "size": "A5"
+  },
+  {
+    "sku": "GLOBAL-CFPM-11x14",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 28x35cm/11x14\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2409,
+      "verticalResolution": 3295
+    },
+    "itemAud": "55.00",
+    "shipAud": "15.10",
+    "totalAud": "70.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "11x14"
+  },
+  {
+    "sku": "GLOBAL-CFPM-12x12",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 30x30cm/12x12\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2700,
+      "verticalResolution": 2700
+    },
+    "itemAud": "55.00",
+    "shipAud": "15.10",
+    "totalAud": "70.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "12x12"
+  },
+  {
+    "sku": "GLOBAL-CFPM-12x16",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 30x40cm/12x16\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2400,
+      "verticalResolution": 3600
+    },
+    "itemAud": "62.00",
+    "shipAud": "15.10",
+    "totalAud": "77.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "12x16"
+  },
+  {
+    "sku": "GLOBAL-CFPM-12x18",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 30x45cm/12x18\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2418,
+      "verticalResolution": 4218
+    },
+    "itemAud": "70.00",
+    "shipAud": "15.10",
+    "totalAud": "85.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "12x18"
+  },
+  {
+    "sku": "GLOBAL-CFPM-16x16",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 40x40cm/16x16\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3600,
+      "verticalResolution": 3600
+    },
+    "itemAud": "70.00",
+    "shipAud": "15.10",
+    "totalAud": "85.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "16x16"
+  },
+  {
+    "sku": "GLOBAL-CFPM-16x20",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 40x50cm/16x20\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3600,
+      "verticalResolution": 4800
+    },
+    "itemAud": "85.00",
+    "shipAud": "15.10",
+    "totalAud": "100.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "16x20"
+  },
+  {
+    "sku": "GLOBAL-CFPM-16x24",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 40x60cm/16x24\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3618,
+      "verticalResolution": 6018
+    },
+    "itemAud": "95.00",
+    "shipAud": "15.10",
+    "totalAud": "110.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "16x24"
+  },
+  {
+    "sku": "GLOBAL-CFPM-18x24",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 45x60cm/18x24\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4200,
+      "verticalResolution": 6000
+    },
+    "itemAud": "95.00",
+    "shipAud": "15.10",
+    "totalAud": "110.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "18x24"
+  },
+  {
+    "sku": "GLOBAL-CFPM-20x20",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 50x50cm/20x20\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4800,
+      "verticalResolution": 4800
+    },
+    "itemAud": "95.00",
+    "shipAud": "15.10",
+    "totalAud": "110.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "20x20"
+  },
+  {
+    "sku": "GLOBAL-CFPM-20x28",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 50x70cm/20x28\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4800,
+      "verticalResolution": 7200
+    },
+    "itemAud": "105.00",
+    "shipAud": "21.55",
+    "totalAud": "126.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "20x28"
+  },
+  {
+    "sku": "GLOBAL-CFPM-20x30",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 50x75cm/20x30\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 4800,
+      "verticalResolution": 7800
+    },
+    "itemAud": "130.00",
+    "shipAud": "21.55",
+    "totalAud": "151.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "20x30"
+  },
+  {
+    "sku": "GLOBAL-CFPM-24x24",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 60x60cm/24x24\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 6000,
+      "verticalResolution": 6000
+    },
+    "itemAud": "105.00",
+    "shipAud": "15.10",
+    "totalAud": "120.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "24x24"
+  },
+  {
+    "sku": "GLOBAL-CFPM-24x32",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 60x80cm/24x32\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 6000,
+      "verticalResolution": 8400
+    },
+    "itemAud": "140.00",
+    "shipAud": "21.55",
+    "totalAud": "161.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "24x32"
+  },
+  {
+    "sku": "GLOBAL-CFPM-24x36",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 60x90cm/24x36\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 6000,
+      "verticalResolution": 9600
+    },
+    "itemAud": "150.00",
+    "shipAud": "21.55",
+    "totalAud": "171.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "24x36"
+  },
+  {
+    "sku": "GLOBAL-CFPM-28x40",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 71x101cm/28x40\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7200,
+      "verticalResolution": 10800
+    },
+    "itemAud": "170.00",
+    "shipAud": "108.00",
+    "totalAud": "278.00",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "28x40"
+  },
+  {
+    "sku": "GLOBAL-CFPM-30x30",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 75x75cm/30x30\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7800,
+      "verticalResolution": 7800
+    },
+    "itemAud": "160.00",
+    "shipAud": "21.55",
+    "totalAud": "181.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "30x30"
+  },
+  {
+    "sku": "GLOBAL-CFPM-30x40",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 75x100cm/30x40\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 7800,
+      "verticalResolution": 10800
+    },
+    "itemAud": "180.00",
+    "shipAud": "108.00",
+    "totalAud": "288.00",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "30x40"
+  },
+  {
+    "sku": "GLOBAL-CFPM-5x7",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 13x18cm/5x7\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 944,
+      "verticalResolution": 1535
+    },
+    "itemAud": "42.00",
+    "shipAud": "15.10",
+    "totalAud": "57.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "5x7"
+  },
+  {
+    "sku": "GLOBAL-CFPM-8x10",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 20x25cm/8x10\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 1800,
+      "verticalResolution": 2400
+    },
+    "itemAud": "44.00",
+    "shipAud": "15.10",
+    "totalAud": "59.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "8x10"
+  },
+  {
+    "sku": "GLOBAL-CFPM-8x8",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 20x20cm/8x8\"",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 1800,
+      "verticalResolution": 1800
+    },
+    "itemAud": "44.00",
+    "shipAud": "15.10",
+    "totalAud": "59.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "8x8"
+  },
+  {
+    "sku": "GLOBAL-CFPM-A1",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 59.4x84.1cm/23.4x33.1\" (A1)",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a1"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 5895,
+      "verticalResolution": 8805
+    },
+    "itemAud": "140.00",
+    "shipAud": "21.55",
+    "totalAud": "161.55",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "A1"
+  },
+  {
+    "sku": "GLOBAL-CFPM-A2",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 42x59.4cm/16.5x23.4\" (A2)",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a2"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 3780,
+      "verticalResolution": 5835
+    },
+    "itemAud": "95.00",
+    "shipAud": "15.10",
+    "totalAud": "110.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "A2"
+  },
+  {
+    "sku": "GLOBAL-CFPM-A3",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 29.7x42cm/11.7x16.5\" (A3)",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a3"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 2385,
+      "verticalResolution": 3825
+    },
+    "itemAud": "62.00",
+    "shipAud": "15.10",
+    "totalAud": "77.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "A3"
+  },
+  {
+    "sku": "GLOBAL-CFPM-A4",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 21x29.7cm/8.3x11.7\" (A4)",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a4"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 1594,
+      "verticalResolution": 2622
+    },
+    "itemAud": "42.00",
+    "shipAud": "15.10",
+    "totalAud": "57.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "A4"
+  },
+  {
+    "sku": "GLOBAL-CFPM-A5",
+    "description": "Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 14.8x21cm/5.8x8.3\" (A5)",
+    "attributes": {
+      "frame": [
+        "Classic"
+      ],
+      "color": [
+        "black",
+        "brown",
+        "dark grey",
+        "gold",
+        "light grey",
+        "natural",
+        "silver",
+        "white"
+      ],
+      "glaze": [
+        "Acrylic / Perspex"
+      ],
+      "mount": [
+        "2.4mm"
+      ],
+      "mountColor": [
+        "Snow white"
+      ],
+      "paperType": [
+        "EMA"
+      ],
+      "size": [
+        "a5"
+      ],
+      "substrateWeight": [
+        "200gsm"
+      ]
+    },
+    "printAreaPx": {
+      "horizontalResolution": 1164,
+      "verticalResolution": 1890
+    },
+    "itemAud": "42.00",
+    "shipAud": "15.10",
+    "totalAud": "57.10",
+    "lab": "au6",
+    "carrier": "Australia Post",
+    "range": "GLOBAL-CFPM",
+    "size": "A5"
+  }
+]

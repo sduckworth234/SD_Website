@@ -28,8 +28,6 @@ function thumb(photo: Photo, width: number): string {
 
 const orientOf = (p: Photo) => (p.aspect === "portrait" || p.aspect === "square" ? "portrait" : "landscape");
 
-const PROMO_CODES: Record<string, number> = { PRINT10: 0.10, WELCOME15: 0.15 };
-
 export function PrintConfigurator({
   photo,
   otherShopPhotos,
@@ -44,9 +42,6 @@ export function PrintConfigurator({
   const [mounted, setMounted] = useState(true);
   const [colour, setColour] = useState<ColourId>("natural");
   const [cartOpen, setCartOpen] = useState(false);
-  const [promoInput, setPromoInput] = useState("");
-  const [promo, setPromo] = useState<{ code: string; pct: number } | null>(null);
-  const [promoError, setPromoError] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const [pulseCart, setPulseCart] = useState(false);
 
@@ -112,19 +107,12 @@ export function PrintConfigurator({
     setTimeout(() => setJustAdded(false), 900);
   }
 
-  function applyPromo() {
-    const val = promoInput.trim().toUpperCase();
-    if (PROMO_CODES[val]) {
-      setPromo({ code: val, pct: PROMO_CODES[val] });
-      setPromoError(false);
-    } else {
-      setPromo(null);
-      setPromoError(Boolean(val));
-    }
+  function checkout() {
+    if (!cart.items.length) return;
+    setCartOpen(false);
+    window.history.pushState({}, "", "/checkout");
+    onNavigate("/checkout");
   }
-
-  const discount = promo ? cart.subtotal * promo.pct : 0;
-  const total = cart.subtotal - discount + cart.shipping;
 
   return (
     <main className="pc">
@@ -289,23 +277,16 @@ export function PrintConfigurator({
           )}
         </div>
         <div className="pc-cart-foot">
-          <div className="pc-promo">
-            <input type="text" placeholder="Discount code" value={promoInput} onChange={(e) => setPromoInput(e.target.value)} autoComplete="off" />
-            <button type="button" onClick={applyPromo}>Apply</button>
-          </div>
-          {promo ? <p className="pc-promo-msg ok">{promo.code} applied — {Math.round(promo.pct * 100)}% off</p> : null}
-          {promoError ? <p className="pc-promo-msg err">That code isn't valid.</p> : null}
           {cart.items.length ? (
             <div className="pc-cart-lines">
               <div className="row"><span>Subtotal</span><span>{money(cart.subtotal)}</span></div>
-              {promo ? <div className="row discount"><span>{promo.code}</span><span>−{money(discount)}</span></div> : null}
               <div className="row"><span>Shipping (AU)</span><span>{money(cart.shipping)}</span></div>
-              <div className="row total"><span>Total</span><span>{money(total)}</span></div>
+              <div className="row total"><span>Estimated total</span><span>{money(cart.subtotal + cart.shipping)}</span></div>
             </div>
           ) : null}
           <p className="pc-au-note">Shipping within Australia only. Exact cost is confirmed at checkout.</p>
-          <button className="pc-checkout-btn" type="button" onClick={() => cart.items.length && alert("This is a demo — Stripe checkout isn't wired up yet.")}>Checkout</button>
-          <p className="pc-checkout-note">Demo cart — real checkout isn't wired up yet.</p>
+          <button className="pc-checkout-btn" disabled={!cart.items.length} type="button" onClick={checkout}>Secure checkout</button>
+          <p className="pc-checkout-note">Promotion codes are applied securely at checkout.</p>
         </div>
       </div>
     </main>

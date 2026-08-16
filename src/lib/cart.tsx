@@ -1,7 +1,7 @@
 // Shop cart — a real cart, not the placeholder counter in ShopProduct. Backed
 // by localStorage so it survives navigating between /shop and a product page
 // (separate route matches in App(), so separate component trees) and a page
-// refresh. Demo only: no checkout wired up yet, this just gets the shape right.
+// refresh. Stripe checkout revalidates every item and price on the server.
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { ColourId, SizeId } from "./printCatalogue";
@@ -49,7 +49,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     } catch {
       // Storage can fail (private browsing, quota) — the cart just won't
-      // survive a refresh, which is a fine degradation for a demo cart.
+      // survive a refresh; the server still validates every submitted item.
     }
   }, [items]);
 

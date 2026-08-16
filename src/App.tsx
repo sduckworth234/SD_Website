@@ -91,9 +91,15 @@ import { SmartImage } from "./components/SmartImage";
 import { PrintConfigurator } from "./components/PrintConfigurator";
 import { useCart } from "./lib/cart";
 import { money, priceFor } from "./lib/printCatalogue";
+import { SHOP_FEATURE_ENABLED } from "./lib/features";
 
 // Lazy-loaded so MapLibre + the basemap stay out of the main gallery bundle.
 const MapPage = lazy(() => import("./MapPage"));
+// Stripe and the order admin are similarly route-scoped. Gallery visitors
+// should not download payment/admin code unless they actually open that flow.
+const CheckoutPage = lazy(() => import("./components/CheckoutPage").then((module) => ({ default: module.CheckoutPage })));
+const CheckoutSuccessPage = lazy(() => import("./components/CheckoutPage").then((module) => ({ default: module.CheckoutSuccessPage })));
+const AdminOrders = lazy(() => import("./components/AdminOrders").then((module) => ({ default: module.AdminOrders })));
 
 const allLocations = "All work";
 type ActiveLocation = LocationBucket | typeof allLocations;
@@ -318,12 +324,24 @@ function App() {
   }
 
   if (matches("/shop")) {
-    return <ShopPage onNavigate={navigate} />;
+    return SHOP_FEATURE_ENABLED ? <ShopPage onNavigate={navigate} /> : <ShopUnavailable onNavigate={navigate} />;
+  }
+
+  if (matches("/checkout")) {
+    return SHOP_FEATURE_ENABLED
+      ? <Suspense fallback={<main className="co-shell" />}><CheckoutPage onNavigate={navigate} /></Suspense>
+      : <ShopUnavailable onNavigate={navigate} />;
+  }
+
+  if (matches("/checkout/success")) {
+    return <Suspense fallback={<main className="co-shell" />}><CheckoutSuccessPage onNavigate={navigate} /></Suspense>;
   }
 
   if (path.startsWith("/shop/")) {
     const slug = path.slice("/shop/".length).replace(/\/$/, "");
-    return <ShopProductRoute slug={slug} onNavigate={navigate} />;
+    return SHOP_FEATURE_ENABLED
+      ? <ShopProductRoute slug={slug} onNavigate={navigate} />
+      : <ShopUnavailable onNavigate={navigate} />;
   }
 
   if (matches("/galleries")) {
@@ -335,6 +353,21 @@ function App() {
   }
 
   return <NotFound onNavigate={navigate} />;
+}
+
+function ShopUnavailable({ onNavigate }: { onNavigate: (route: string) => void }) {
+  function goHome() {
+    window.history.replaceState({}, "", "/");
+    onNavigate("/");
+  }
+  return (
+    <main className="shop-feature-off">
+      <p className="eyebrow">Framed Editions</p>
+      <h1>The print shop is currently offline.</h1>
+      <p>Photography remains available in the gallery while ordering is prepared.</p>
+      <button className="solid-button" onClick={goHome} type="button">Return to the gallery</button>
+    </main>
+  );
 }
 
 // Rebuild the Recent Work mosaic from photos already in memory. Mirrors the
@@ -672,7 +705,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "collection_cards")} label="Collections">
             <CollectionCards photos={publicPhotos} locations={locations} onOpen={openLocation} onOpenAll={() => goToGalleries()} isAdmin={isAdmin} onEdit={setEditingCollection} />
           </AdminHideable>
-          {heroPortrait ? (
+          {SHOP_FEATURE_ENABLED && heroPortrait ? (
             <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "framed_banner")} label="Framed Editions banner">
               <FramedHero portrait={heroPortrait} landscape={heroLandscape} onShop={goToShop} />
             </AdminHideable>
@@ -695,7 +728,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           origin={origin}
           onViewOnMap={viewPhotoOnMap}
           onViewGallery={(p) => openLocation(p.location)}
-          onOrderPrint={flags.print_configurator === true ? (p) => { window.history.pushState({}, "", `/shop/${p.slug}`); onNavigate(`/shop/${p.slug}`); } : undefined}
+          onOrderPrint={SHOP_FEATURE_ENABLED && flags.print_configurator === true && selectedPhoto.inShop ? (p) => { window.history.pushState({}, "", `/shop/${p.slug}`); onNavigate(`/shop/${p.slug}`); } : undefined}
         />
       ) : null}
       {editingPhoto ? (
@@ -1079,7 +1112,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
           origin={origin}
           onClose={closePhoto}
           onViewOnMap={viewPhotoOnMap}
-          onOrderPrint={flags.print_configurator === true ? (p) => { window.history.pushState({}, "", `/shop/${p.slug}`); onNavigate(`/shop/${p.slug}`); } : undefined}
+          onOrderPrint={SHOP_FEATURE_ENABLED && flags.print_configurator === true && selectedPhoto.inShop ? (p) => { window.history.pushState({}, "", `/shop/${p.slug}`); onNavigate(`/shop/${p.slug}`); } : undefined}
         />
       ) : null}
       {editingPhoto ? (
@@ -1664,15 +1697,13 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
 
 // The real per-photo print product page (/shop/<slug>) — gated on the same
 // print_configurator flag as the ShopProduct card link and the Lightbox's
-// "Order a print" button. Every published photo is orderable this way, not
-// just the curated /shop grid (in_shop only controls what appears in that
-// grid). Bookmarking or sharing this URL while the flag is off (or for a
-// photo that's unpublished) bounces back to /shop rather than rendering a
-// half-built page.
+// "Order a print" button. `in_shop` is authoritative here as well as in the
+// grid and checkout API, so disabling a photo removes direct/bookmarked access.
 function ShopProductRoute({ slug, onNavigate }: { slug: string; onNavigate: (route: string) => void }) {
   const { publicPhotos, flags, isLoading } = useSiteData();
   const configuratorOn = flags.print_configurator === true;
-  const photo = publicPhotos.find((p) => p.slug === slug);
+  const shopPhotos = useMemo(() => publicPhotos.filter((p) => p.inShop), [publicPhotos]);
+  const photo = shopPhotos.find((p) => p.slug === slug);
   const shouldRedirect = !isLoading && (!configuratorOn || !photo);
 
   useEffect(() => {
@@ -1683,7 +1714,7 @@ function ShopProductRoute({ slug, onNavigate }: { slug: string; onNavigate: (rou
   }, [shouldRedirect, onNavigate]);
 
   if (!photo || shouldRedirect) return null;
-  return <PrintConfigurator photo={photo} otherShopPhotos={publicPhotos} onNavigate={onNavigate} />;
+  return <PrintConfigurator photo={photo} otherShopPhotos={shopPhotos} onNavigate={onNavigate} />;
 }
 
 function InstagramRail() {
@@ -4006,7 +4037,118 @@ function NotAdmin({ email }: { email: string }) {
   );
 }
 
+type AdminTab = "photos" | "collections" | "homepage" | "locations" | "shop" | "settings";
+
+const ADMIN_TABS: { id: AdminTab; label: string; description: string; icon: ReactNode }[] = [
+  { id: "photos", label: "Photos", description: "Upload, publish and edit the archive", icon: <Images size={16} /> },
+  { id: "collections", label: "Collections", description: "Build and order gallery collections", icon: <LayoutGrid size={16} /> },
+  { id: "homepage", label: "Homepage", description: "Curate the homepage photo feed", icon: <LayoutDashboard size={16} /> },
+  { id: "locations", label: "Locations", description: "Arrange places and gallery order", icon: <MapPin size={16} /> },
+  { id: "shop", label: "Shop", description: "Choose sale images and manage orders", icon: <Frame size={16} /> },
+  { id: "settings", label: "Site settings", description: "Visibility, banners and feature switches", icon: <Eye size={16} /> },
+];
+
+function ShopCatalogueAdmin({
+  photos,
+  onChanged,
+  setMessage,
+}: {
+  photos: Photo[];
+  onChanged: () => Promise<void>;
+  setMessage: (message: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "sale" | "not_sale">("all");
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const saleCount = photos.filter((photo) => photo.inShop).length;
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return [...photos]
+      .filter((photo) => filter === "all" || (filter === "sale" ? photo.inShop : !photo.inShop))
+      .filter((photo) => !q || photo.title.toLowerCase().includes(q) || photo.location.toLowerCase().includes(q))
+      .sort((a, b) => Number(b.inShop) - Number(a.inShop) || (a.shopOrder ?? 1e9) - (b.shopOrder ?? 1e9) || a.title.localeCompare(b.title));
+  }, [filter, photos, query]);
+
+  async function toggle(photo: Photo) {
+    const next = !photo.inShop;
+    const nextOrder = next
+      ? Math.max(0, ...photos.map((candidate) => candidate.shopOrder ?? 0)) + 1
+      : null;
+    setBusyId(photo.id);
+    try {
+      await setPhotoShop(photo.id, { inShop: next, shopOrder: nextOrder });
+      setMessage(next ? `“${photo.title}” is selected for sale.` : `“${photo.title}” was removed from sale.`);
+      await onChanged();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The sale setting could not be saved.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <section className="shop-catalogue-admin" aria-label="Shop catalogue">
+      <div className="admin-section-intro">
+        <div>
+          <p className="eyebrow">Shop catalogue</p>
+          <h2>Choose what customers can buy.</h2>
+          <p>“For sale” controls the shop grid, direct product links and server-side checkout validation. A photo must also be published.</p>
+        </div>
+        <div className={`admin-feature-state${SHOP_FEATURE_ENABLED ? " is-on" : ""}`}>
+          <b>{SHOP_FEATURE_ENABLED ? "Client shop enabled" : "Client shop disabled"}</b>
+          <span>{SHOP_FEATURE_ENABLED ? "This build can show public shop pages." : "Safe to deploy: public shop routes and links are off."}</span>
+        </div>
+      </div>
+      <div className="shop-catalogue-summary">
+        <span><b>{saleCount}</b> selected for sale</span>
+        <span><b>{photos.filter((photo) => photo.inShop && photo.published).length}</b> currently eligible</span>
+        <span><b>{photos.filter((photo) => photo.inShop && !photo.published).length}</b> selected but draft</span>
+      </div>
+      <div className="admin-search shop-catalogue-tools">
+        <Search size={16} aria-hidden="true" />
+        <input aria-label="Search shop photos" onChange={(event) => setQuery(event.target.value)} placeholder="Search title or location…" type="search" value={query} />
+        <select aria-label="Filter sale status" onChange={(event) => setFilter(event.target.value as typeof filter)} value={filter}>
+          <option value="all">All photos</option>
+          <option value="sale">For sale</option>
+          <option value="not_sale">Not for sale</option>
+        </select>
+      </div>
+      <div className="shop-catalogue-grid">
+        {visible.map((photo) => {
+          const eligible = photo.inShop && photo.published;
+          return (
+            <article className={`shop-catalogue-card${photo.inShop ? " is-sale" : ""}`} key={photo.id}>
+              <img alt="" src={thumbUrl(photo, 420)} />
+              <div>
+                <span>{photo.location}{photo.year ? ` · ${photo.year}` : ""}</span>
+                <strong>{photo.title}</strong>
+                <small className={eligible ? "is-eligible" : ""}>
+                  {eligible ? "Available when the shop gates are on" : photo.inShop ? "Selected for sale · still a draft" : "Not for sale"}
+                </small>
+              </div>
+              <button
+                aria-label={`${photo.inShop ? "Remove" : "Enable"} ${photo.title} ${photo.inShop ? "from" : "for"} sale`}
+                aria-pressed={photo.inShop}
+                className={`sale-toggle${photo.inShop ? " on" : ""}`}
+                disabled={busyId !== null}
+                onClick={() => toggle(photo)}
+                type="button"
+              >
+                <span className="vis-knob" />
+                {busyId === photo.id ? "Saving…" : photo.inShop ? "For sale" : "Not for sale"}
+              </button>
+            </article>
+          );
+        })}
+      </div>
+      {!visible.length ? <p className="admin-card">No photos match this filter.</p> : null}
+    </section>
+  );
+}
+
 function AdminDashboard({ session }: { session: Session }) {
+  const [activeTab, setActiveTab] = useState<AdminTab>("photos");
   const [locations, setLocations] = useState<GalleryLocation[]>([]);
   const [adminPhotos, setAdminPhotos] = useState<Photo[]>([]);
   const [activeLocation, setActiveLocation] =
@@ -4113,6 +4255,21 @@ function AdminDashboard({ session }: { session: Session }) {
     }, "Could not update photos.");
   }
 
+  async function bulkSale(inShop: boolean) {
+    const ids = [...selectedPhotoIds];
+    if (!ids.length) return;
+    await run(async () => {
+      let order = Math.max(0, ...adminPhotos.map((photo) => photo.shopOrder ?? 0));
+      for (const id of ids) {
+        order += inShop ? 1 : 0;
+        await setPhotoShop(id, { inShop, shopOrder: inShop ? order : null });
+      }
+      setSelectedPhotoIds(new Set());
+      setMessage(`${inShop ? "Enabled" : "Removed"} ${ids.length} photo${ids.length === 1 ? "" : "s"} ${inShop ? "for" : "from"} sale.`);
+      await refresh();
+    }, "Could not update the shop catalogue.");
+  }
+
   function selectAllFiltered() {
     setSelectedPhotoIds(new Set(visiblePhotos.map((photo) => photo.id)));
   }
@@ -4194,14 +4351,38 @@ function AdminDashboard({ session }: { session: Session }) {
           <LogOut size={15} aria-hidden="true" /> Sign out
         </button>
       </div>
-      <UploadPanel locations={locations} onUploaded={refresh} setMessage={setMessage} />
+      <nav className="admin-tabs" aria-label="Admin sections">
+        {ADMIN_TABS.map((tab) => (
+          <button
+            aria-current={activeTab === tab.id ? "page" : undefined}
+            className={activeTab === tab.id ? "is-active" : ""}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            type="button"
+          >
+            {tab.icon}
+            <span><b>{tab.label}</b><small>{tab.description}</small></span>
+          </button>
+        ))}
+      </nav>
       {message ? (
         <div className="admin-toast" role="status" onClick={() => setMessage("")}>{message}</div>
       ) : null}
-      <MapFeedAdmin photos={adminPhotos} locations={locations} onChanged={refresh} />
-      <CollectionsAdmin photos={adminPhotos} />
-      <PlacesOrderAdmin locations={locations} photos={adminPhotos} onChanged={refresh} />
-      <VisibilityAdmin photos={adminPhotos} locations={locations} />
+      {activeTab === "collections" ? <CollectionsAdmin photos={adminPhotos} /> : null}
+      {activeTab === "homepage" ? <MapFeedAdmin photos={adminPhotos} locations={locations} onChanged={refresh} /> : null}
+      {activeTab === "locations" ? <PlacesOrderAdmin locations={locations} photos={adminPhotos} onChanged={refresh} /> : null}
+      {activeTab === "settings" ? <VisibilityAdmin photos={adminPhotos} locations={locations} /> : null}
+      {activeTab === "shop" ? (
+        <div className="admin-tab-stack">
+          <ShopCatalogueAdmin photos={adminPhotos} onChanged={refresh} setMessage={setMessage} />
+          <Suspense fallback={<p className="loading-note">Loading shop orders…</p>}>
+            <AdminOrders session={session} />
+          </Suspense>
+        </div>
+      ) : null}
+      {activeTab === "photos" ? (
+        <>
+      <UploadPanel locations={locations} onUploaded={refresh} setMessage={setMessage} />
       <LocationRail
         activeLocation={activeLocation}
         locations={locations}
@@ -4236,6 +4417,12 @@ function AdminDashboard({ session }: { session: Session }) {
         </button>
         <button className="text-button" onClick={() => bulkUpdate({ published: false })} type="button" disabled={working || !selectedPhotoIds.size}>
           Unpublish
+        </button>
+        <button className="text-button" onClick={() => bulkSale(true)} type="button" disabled={working || !selectedPhotoIds.size}>
+          Enable sale
+        </button>
+        <button className="text-button" onClick={() => bulkSale(false)} type="button" disabled={working || !selectedPhotoIds.size}>
+          Remove from sale
         </button>
       </section>
       <section className="admin-bulk-edit" aria-label="Bulk edit selected">
@@ -4338,10 +4525,31 @@ function AdminDashboard({ session }: { session: Session }) {
                   />
                   Published
                 </label>
+                <label>
+                  <input
+                    checked={Boolean(photo.inShop)}
+                    disabled={working}
+                    onChange={(event) => {
+                      const inShop = event.target.checked;
+                      const nextOrder = inShop
+                        ? Math.max(0, ...adminPhotos.map((candidate) => candidate.shopOrder ?? 0)) + 1
+                        : null;
+                      void run(async () => {
+                        await setPhotoShop(photo.id, { inShop, shopOrder: nextOrder });
+                        setMessage(inShop ? `“${photo.title}” is selected for sale.` : `“${photo.title}” was removed from sale.`);
+                        await refresh();
+                      }, "Could not update the sale setting.");
+                    }}
+                    type="checkbox"
+                  />
+                  For sale
+                </label>
             </div>
           </article>
         ))}
       </section>
+        </>
+      ) : null}
       {editingPhoto ? (
         <PhotoEditOverlay
           full

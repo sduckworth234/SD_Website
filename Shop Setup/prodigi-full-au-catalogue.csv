@@ -1,0 +1,142 @@
+sku,range,size,description,itemAud,shipAud,totalAud,lab,carrier,printAreaPx
+GLOBAL-BFP-5x7,GLOBAL-BFP,5x7,"Budget Framed Poster, 13x18cm / 5x7""",19.11,90.86,109.97,prodigi_gb3,DHL Express,1535x2125
+GLOBAL-BFP-12x12,GLOBAL-BFP,12x12,"Budget Framed Poster, 30x30cm / 12x12""",28.64,90.86,119.50,prodigi_gb3,DHL Express,3543x3543
+GLOBAL-BFP-16x16,GLOBAL-BFP,16x16,"Budget Framed Poster, 40x40cm / 16x16""",34.39,99.07,133.46,prodigi_gb3,DHL Express,4724x4724
+GLOBAL-BFP-16x20,GLOBAL-BFP,16x20,"Budget Framed Poster, 40x50cm / 16x20""",42.01,146.55,188.56,prodigi_gb3,DHL Express,4724x5905
+GLOBAL-BFP-20x20,GLOBAL-BFP,20x20,"Budget Framed Poster, 50x50cm / 20x20""",47.78,146.59,194.37,prodigi_gb3,DHL Express,5905x5905
+GLOBAL-BFP-20x28,GLOBAL-BFP,20x28,"Budget Framed Poster, 50x70cm / 20x28""",53.51,216.73,270.24,prodigi_gb3,DHL Express,5905x8267
+GLOBAL-BFP-24x32,GLOBAL-BFP,24x32,"Budget Framed Poster, 60x80cm / 24x31""",61.16,216.68,277.84,prodigi_gb3,DHL Express,7086x9448
+GLOBAL-BOX-A5,GLOBAL-BOX,A5,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 14.8x21cm/5.8x8.3""",40.00,15.10,55.10,au6,Australia Post,1748x2480
+GLOBAL-BOX-8x10,GLOBAL-BOX,8x10,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 20x25cm/8x10""",45.00,15.10,60.10,au6,Australia Post,4800x6000
+GLOBAL-BOX-8x8,GLOBAL-BOX,8x8,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 20x20cm/8x8""",45.00,15.10,60.10,au6,Australia Post,2400x2400
+GLOBAL-BOX-A4,GLOBAL-BOX,A4,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 21x30cm / 8.3x11.7""",50.00,15.10,65.10,au6,Australia Post,4960x7015
+GLOBAL-BOX-12x12,GLOBAL-BOX,12x12,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 30x30cm/12x12""",60.00,15.10,75.10,au6,Australia Post,3600x3600
+GLOBAL-BOX-12x16,GLOBAL-BOX,12x16,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 30x40cm/12x16""",64.00,15.10,79.10,au6,Australia Post,3600x4800
+GLOBAL-BOX-12x18,GLOBAL-BOX,12x18,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 30x45cm/12x18""",70.00,15.10,85.10,au6,Australia Post,3600x5400
+GLOBAL-BOX-A3,GLOBAL-BOX,A3,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 29x42cm/11x17""",70.00,15.10,85.10,au6,Australia Post,7015x9921
+GLOBAL-BOX-16x20,GLOBAL-BOX,16x20,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 40x50cm/16x20""",85.00,15.10,100.10,au6,Australia Post,4800x6000
+GLOBAL-BOX-16x24,GLOBAL-BOX,16x24,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 40x60cm/16x24""",95.00,15.10,110.10,au6,Australia Post,4800x7200
+GLOBAL-BOX-A2,GLOBAL-BOX,A2,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 42x59cm/17x23""",95.00,15.10,110.10,au6,Australia Post,9921x14031
+GLOBAL-BOX-18x24,GLOBAL-BOX,18x24,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 45x60cm/18x24""",100.00,15.10,115.10,au6,Australia Post,5400x7200
+GLOBAL-BOX-20x20,GLOBAL-BOX,20x20,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 50x50cm/20x20""",100.00,15.10,115.10,au6,Australia Post,6000x6000
+GLOBAL-BOX-5x7,GLOBAL-BOX,5x7,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 13x18cm/5x7""",36.30,90.86,127.16,prodigi_gb3,DHL Express,1535x2125
+GLOBAL-BOX-24x24,GLOBAL-BOX,24x24,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 60x60cm/24x24""",115.00,15.10,130.10,au6,Australia Post,7200x7200
+GLOBAL-BOX-20x28,GLOBAL-BOX,20x28,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 50x70cm/20x28""",115.00,21.55,136.55,au6,Australia Post,6000x8400
+GLOBAL-BOX-4x6,GLOBAL-BOX,4x6,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 10x15cm/4x6""",47.77,90.86,138.63,prodigi_gb3,DHL Express,2400x3600
+GLOBAL-BOX-10x10,GLOBAL-BOX,10x10,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 25x25cm/10x10""",49.68,90.88,140.56,prodigi_gb3,DHL Express,3000x3000
+GLOBAL-BOX-11x14,GLOBAL-BOX,11x14,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 28x35cm/11x14""",57.34,99.10,156.44,prodigi_gb3,DHL Express,3307x4192
+GLOBAL-BOX-24x36,GLOBAL-BOX,24x36,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 61x91cm/24x36""",140.00,21.55,161.55,au6,Australia Post,7200x10800
+GLOBAL-BOX-A1,GLOBAL-BOX,A1,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 59x84cm/23x33""",140.00,21.55,161.55,au6,Australia Post,7020x9930
+GLOBAL-BOX-16x16,GLOBAL-BOX,16x16,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 40x40cm/16x16""",68.79,99.07,167.86,prodigi_gb3,DHL Express,4800x4800
+GLOBAL-BOX-30x30,GLOBAL-BOX,30x30,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 76x76cm/30x30""",150.00,21.55,171.55,au6,Australia Post,9000x9000
+GLOBAL-BOX-28x40,GLOBAL-BOX,28x40,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 70x100cm/28x40""",160.00,108.00,268.00,au6,Australia Post,8400x12000
+GLOBAL-BOX-30x40,GLOBAL-BOX,30x40,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 76x101cm/30x40""",170.00,108.00,278.00,au6,Australia Post,9000x12000
+GLOBAL-BOX-20x30,GLOBAL-BOX,20x30,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 50x76cm/20x30""",107.03,216.68,323.71,prodigi_gb3,DHL Express,6000x9000
+GLOBAL-BOX-24x32,GLOBAL-BOX,24x32,"Box Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 60x81cm/24x32""",114.64,216.68,331.32,prodigi_gb3,DHL Express,7200x9600
+GLOBAL-BOXM-A5,GLOBAL-BOXM,A5,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 14.8x21cm/5.8x8.3""",58.00,15.10,73.10,au6,Australia Post,862x1594
+GLOBAL-BOXM-8x8,GLOBAL-BOXM,8x8,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 20x20cm/8x8""",64.00,15.10,79.10,au6,Australia Post,1200x1200
+GLOBAL-BOXM-8x10,GLOBAL-BOXM,8x10,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 20x25cm/8x10""",65.00,15.10,80.10,au6,Australia Post,1800x2400
+GLOBAL-BOXM-A4,GLOBAL-BOXM,A4,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 21x29cm/8x12""",66.00,15.10,81.10,au6,Australia Post,1590x2490
+GLOBAL-BOXM-12x12,GLOBAL-BOXM,12x12,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 30x30cm/12x12""",70.00,15.10,85.10,au6,Australia Post,2700x2700
+GLOBAL-BOXM-12x16,GLOBAL-BOXM,12x16,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 30x40cm/12x16""",76.00,15.10,91.10,au6,Australia Post,2400x3600
+GLOBAL-BOXM-A3,GLOBAL-BOXM,A3,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 29x42cm/12x17""",76.00,15.10,91.10,au6,Australia Post,2328x3780
+GLOBAL-BOXM-12x18,GLOBAL-BOXM,12x18,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 30x45cm/12x18""",82.00,15.10,97.10,au6,Australia Post,2400x4200
+GLOBAL-BOXM-16x20,GLOBAL-BOXM,16x20,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 40x50cm/16x20""",90.00,15.10,105.10,au6,Australia Post,3600x4800
+GLOBAL-BOXM-16x24,GLOBAL-BOXM,16x24,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 40x60cm/16x24""",100.00,15.10,115.10,au6,Australia Post,3600x6000
+GLOBAL-BOXM-A2,GLOBAL-BOXM,A2,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 42x59cm/17x23""",105.00,15.10,120.10,au6,Australia Post,3780x5835
+GLOBAL-BOXM-18x24,GLOBAL-BOXM,18x24,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 45x60cm/18x24""",110.00,15.10,125.10,au6,Australia Post,4200x6000
+GLOBAL-BOXM-5x7,GLOBAL-BOXM,5x7,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 13x18cm/5x7""",38.22,90.88,129.10,prodigi_gb3,DHL Express,944x1535
+GLOBAL-BOXM-20x20,GLOBAL-BOXM,20x20,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 50x50cm/20x20""",115.00,15.10,130.10,au6,Australia Post,4800x4800
+GLOBAL-BOXM-4x6,GLOBAL-BOXM,4x6,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 10x15cm/4x6""",43.95,90.86,134.81,prodigi_gb3,DHL Express,600x1200
+GLOBAL-BOXM-24x24,GLOBAL-BOXM,24x24,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 60x60cm/24x24""",125.00,15.10,140.10,au6,Australia Post,6000x6000
+GLOBAL-BOXM-20x28,GLOBAL-BOXM,20x28,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 50x70cm/20x28""",122.50,21.55,144.05,au6,Australia Post,4800x7200
+GLOBAL-BOXM-10x10,GLOBAL-BOXM,10x10,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 25x25cm/10x10""",57.34,90.86,148.20,prodigi_gb3,DHL Express,2400x2400
+GLOBAL-BOXM-11x14,GLOBAL-BOXM,11x14,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 28x35cm/11x14""",63.05,99.07,162.12,prodigi_gb3,DHL Express,2421x3307
+GLOBAL-BOXM-A1,GLOBAL-BOXM,A1,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 59x84cm/23x33""",145.00,21.55,166.55,au6,Australia Post,5835x8751
+GLOBAL-BOXM-16x16,GLOBAL-BOXM,16x16,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 40x40cm/16x16""",80.21,99.02,179.23,prodigi_gb3,DHL Express,3600x3600
+GLOBAL-BOXM-24x36,GLOBAL-BOXM,24x36,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 60x90cm/24x36""",170.00,21.55,191.55,au6,Australia Post,6000x9600
+GLOBAL-BOXM-30x30,GLOBAL-BOXM,30x30,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 75x75cm/30x30""",170.00,21.55,191.55,au6,Australia Post,7800x7800
+GLOBAL-BOXM-28x40,GLOBAL-BOXM,28x40,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 70x100cm/28x40""",180.00,108.00,288.00,au6,Australia Post,7200x10800
+GLOBAL-BOXM-30x40,GLOBAL-BOXM,30x40,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 75x100cm/30x40""",185.00,108.00,293.00,au6,Australia Post,7800x10800
+GLOBAL-BOXM-20x30,GLOBAL-BOXM,20x30,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 50x76cm/20x30""",118.40,216.55,334.95,prodigi_gb3,DHL Express,4800x7800
+GLOBAL-BOXM-24x32,GLOBAL-BOXM,24x32,"Box Frame, EMA 200gsm Fine Art Print, Mount / Matted, Perspex Glaze, 60x80cm/24x32""",143.31,216.68,359.99,prodigi_gb3,DHL Express,6000x8400
+GLOBAL-CAN-4x6,GLOBAL-CAN,4x6,"Stretched Canvas on a 38mm Standard Stretcher Bar, 4x6"" / 10x15cm",30.00,15.10,45.10,au6,Australia Post,1200x1800
+GLOBAL-CAN-6x6,GLOBAL-CAN,6x6,"Stretched Canvas on a 38mm Standard Stretcher Bar, 6x6"" / 15x15cm",34.00,15.10,49.10,au6,Australia Post,1854x1854
+GLOBAL-CAN-8x8,GLOBAL-CAN,8x8,"Stretched Canvas on a 38mm Standard Stretcher Bar, 8x8"" / 20x20cm",36.00,15.10,51.10,au6,Australia Post,2454x2454
+GLOBAL-CAN-A5,GLOBAL-CAN,A5,"Stretched Canvas on a 38mm Standard Stretcher Bar, 5.8x8.27"" / 15x21cm",36.00,15.10,51.10,au6,Australia Post,1803x2535
+GLOBAL-CAN-8x10,GLOBAL-CAN,8x10,"Stretched Canvas on a 38mm Standard Stretcher Bar, 8x10"" / 20x25cm",38.00,15.10,53.10,au6,Australia Post,2454x3054
+GLOBAL-CAN-10x10,GLOBAL-CAN,10x10,"Stretched Canvas on a 38mm Standard Stretcher Bar, 10x10"" / 25x25cm",40.00,15.10,55.10,au6,Australia Post,3054x3054
+GLOBAL-CAN-A4,GLOBAL-CAN,A4,"Stretched Canvas on a 38mm Standard Stretcher Bar, 8.27x16.54"" / 21x30cm",40.00,15.10,55.10,au6,Australia Post,2535x3561
+GLOBAL-CAN-11x14,GLOBAL-CAN,11x14,"Stretched Canvas on a 38mm Standard Stretcher Bar, 11x14"" / 28x36cm",44.00,15.10,59.10,au6,Australia Post,3354x4254
+GLOBAL-CAN-12x12,GLOBAL-CAN,12x12,"Stretched Canvas on a 38mm Standard Stretcher Bar, 12x12"" / 31x31cm",44.00,15.10,59.10,au6,Australia Post,3654x3654
+GLOBAL-CAN-12x16,GLOBAL-CAN,12x16,"Stretched Canvas on a 38mm Standard Stretcher Bar, 12x16"" / 31x41cm",46.00,15.10,61.10,au6,Australia Post,3654x4854
+GLOBAL-CAN-A3,GLOBAL-CAN,A3,"Stretched Canvas on a 38mm Standard Stretcher Bar, 11.69x16.54"" / 30x42cm",48.00,15.10,63.10,au6,Australia Post,3561x5013
+GLOBAL-CAN-16x16,GLOBAL-CAN,16x16,"Stretched Canvas on a 38mm Standard Stretcher Bar, 16x16"" / 41x41cm",49.00,15.10,64.10,au6,Australia Post,4854x4854
+GLOBAL-CAN-14x14,GLOBAL-CAN,14x14,"Stretched Canvas on a 38mm Standard Stretcher Bar, 14x14"" / 36x36cm",50.00,15.10,65.10,au6,Australia Post,4254x4254
+GLOBAL-CAN-12x18,GLOBAL-CAN,12x18,"Stretched Canvas on a 38mm Standard Stretcher Bar, 12x18"" / 30x46cm",52.00,15.10,67.10,au6,Australia Post,3654x5454
+GLOBAL-CAN-16x20,GLOBAL-CAN,16x20,"Stretched Canvas on a 38mm Standard Stretcher Bar, 16x20"" / 41x51cm",56.00,15.10,71.10,au6,Australia Post,4854x6054
+GLOBAL-CAN-16x24,GLOBAL-CAN,16x24,"Stretched Canvas on a 38mm Standard Stretcher Bar, 16x24"" / 41x61cm",60.00,15.10,75.10,au6,Australia Post,4854x7254
+GLOBAL-CAN-18x24,GLOBAL-CAN,18x24,"Stretched Canvas on a 38mm Standard Stretcher Bar, 18x24"" / 46x61cm",62.00,15.10,77.10,au6,Australia Post,5454x7254
+GLOBAL-CAN-20x20,GLOBAL-CAN,20x20,"Stretched Canvas on a 38mm Standard Stretcher Bar, 20x20"" / 51x51cm",62.00,15.10,77.10,au6,Australia Post,6054x6054
+GLOBAL-CAN-A2,GLOBAL-CAN,A2,"Stretched Canvas on a 38mm Standard Stretcher Bar, 16.53x23.38"" / 42x59cm",62.00,15.10,77.10,au6,Australia Post,5859x7914
+GLOBAL-CAN-24x24,GLOBAL-CAN,24x24,"Stretched Canvas on a 38mm Standard Stretcher Bar, 24x24"" / 61x61cm",75.00,15.10,90.10,au6,Australia Post,7254x7254
+GLOBAL-CAN-20x28,GLOBAL-CAN,20x28,"Stretched Canvas on a 38mm Standard Stretcher Bar, 20x28"" / 51x71cm",75.00,21.55,96.55,au6,Australia Post,6054x8454
+GLOBAL-CAN-20x30,GLOBAL-CAN,20x30,"Stretched Canvas on a 38mm Standard Stretcher Bar, 20x30"" / 51x76cm",80.00,21.55,101.55,au6,Australia Post,6054x9054
+GLOBAL-CAN-5X7,GLOBAL-CAN,5X7,"Stretched Canvas on a 38mm Standard Stretcher Bar, 5x7""",19.11,90.88,109.99,prodigi_gb2,DHL Express,
+GLOBAL-CAN-24x32,GLOBAL-CAN,24x32,"Stretched Canvas on a 38mm Standard Stretcher Bar, 24x32"" / 61x81cm",90.00,21.55,111.55,au6,Australia Post,7254x9654
+GLOBAL-CAN-A1,GLOBAL-CAN,A1,"Stretched Canvas on a 38mm Standard Stretcher Bar, 23.39x33.11"" / 59x84cm",95.00,21.55,116.55,au6,Australia Post,7914x10833
+GLOBAL-CAN-24x36,GLOBAL-CAN,24x36,"Stretched Canvas on a 38mm Standard Stretcher Bar, 24x36"" / 61x91cm",110.00,21.55,131.55,au6,Australia Post,7254x10854
+GLOBAL-CAN-30x30,GLOBAL-CAN,30x30,"Stretched Canvas on a 38mm Standard Stretcher Bar, 30x30"" / 76x76cm",110.00,21.55,131.55,au6,Australia Post,9054x9054
+GLOBAL-CAN-28x40,GLOBAL-CAN,28x40,"Stretched Canvas on a 38mm Standard Stretcher Bar, 28x40"" / 71x102cm",120.00,108.00,228.00,au6,Australia Post,8454x12054
+GLOBAL-CAN-30x40,GLOBAL-CAN,30x40,"Stretched Canvas on a 38mm Standard Stretcher Bar, 30x40"" / 76x102cm",120.00,108.00,228.00,au6,Australia Post,9054x12054
+GLOBAL-CFP-5x7,GLOBAL-CFP,5x7,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 13x18cm/5x7""",36.00,15.10,51.10,au6,Australia Post,1535x2125
+GLOBAL-CFP-A5,GLOBAL-CFP,A5,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 14.8x21cm / 5.8x8.3"" (A5)",36.00,15.10,51.10,au6,Australia Post,1748x2480
+GLOBAL-CFP-8x10,GLOBAL-CFP,8x10,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 20x25cm/8x10""",42.00,15.10,57.10,au6,Australia Post,2400x3000
+GLOBAL-CFP-8x8,GLOBAL-CFP,8x8,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 20x20cm/8x8""",42.00,15.10,57.10,au6,Australia Post,2400x2400
+GLOBAL-CFP-A4,GLOBAL-CFP,A4,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 21x29.7cm / 8.3x11.7"" (A4)",42.00,15.10,57.10,au6,Australia Post,2490x3510
+GLOBAL-CFP-12x12,GLOBAL-CFP,12x12,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 30x30cm/12x12""",48.00,15.10,63.10,au6,Australia Post,3600x3600
+GLOBAL-CFP-11x14,GLOBAL-CFP,11x14,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 28x35cm/11x14""",50.00,15.10,65.10,au6,Australia Post,3307x4192
+GLOBAL-CFP-12x16,GLOBAL-CFP,12x16,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 30x40cm/12x16""",60.00,15.10,75.10,au6,Australia Post,3614x4795
+GLOBAL-CFP-14x14,GLOBAL-CFP,14x14,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 36x36cm/14x14""",60.00,15.10,75.10,au6,Australia Post,4251x4251
+GLOBAL-CFP-A3,GLOBAL-CFP,A3,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 29.7x42cm / 11.7x16.5"" (A3)",60.00,15.10,75.10,au6,Australia Post,3507x4960
+GLOBAL-CFP-12x18,GLOBAL-CFP,12x18,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 30x45cm/12x18""",62.00,15.10,77.10,au6,Australia Post,3600x5400
+GLOBAL-CFP-16x16,GLOBAL-CFP,16x16,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 40x40cm/16x16""",65.00,15.10,80.10,au6,Australia Post,4800x4800
+GLOBAL-CFP-16x20,GLOBAL-CFP,16x20,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 40x50cm/16x20""",75.00,15.10,90.10,au6,Australia Post,4800x6000
+GLOBAL-CFP-16x24,GLOBAL-CFP,16x24,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 40x60cm/16x24""",80.00,15.10,95.10,au6,Australia Post,4800x7200
+GLOBAL-CFP-A2,GLOBAL-CFP,A2,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 42x59.4cm/16.5x23.4"" (A2)",80.00,15.10,95.10,au6,Australia Post,4960x7015
+GLOBAL-CFP-18x24,GLOBAL-CFP,18x24,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 45x60cm/18x24""",85.00,15.10,100.10,au6,Australia Post,5400x7200
+GLOBAL-CFP-20x20,GLOBAL-CFP,20x20,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 50x50cm/20x20""",85.00,15.10,100.10,au6,Australia Post,6000x6000
+GLOBAL-CFP-24x24,GLOBAL-CFP,24x24,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 60x60cm/24x24""",100.00,15.10,115.10,au6,Australia Post,7200x7200
+GLOBAL-CFP-20x28,GLOBAL-CFP,20x28,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 50x70cm/20x28""",95.00,21.55,116.55,au6,Australia Post,6000x8400
+GLOBAL-CFP-20x30,GLOBAL-CFP,20x30,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 50x75cm/20x30""",115.00,21.55,136.55,au6,Australia Post,6000x9000
+GLOBAL-CFP-24x32,GLOBAL-CFP,24x32,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 60x80cm/24x32""",115.00,21.55,136.55,au6,Australia Post,7200x9600
+GLOBAL-CFP-A1,GLOBAL-CFP,A1,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 59.4x84.1cm / 23.4x33.1"" (A1)",115.00,21.55,136.55,au6,Australia Post,7020x9930
+GLOBAL-CFP-24x36,GLOBAL-CFP,24x36,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 60x90cm/24x36""",135.00,21.55,156.55,au6,Australia Post,7200x10800
+GLOBAL-CFP-30x30,GLOBAL-CFP,30x30,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 75x75cm/30x30""",135.00,21.55,156.55,au6,Australia Post,9000x9000
+GLOBAL-CFP-28x40,GLOBAL-CFP,28x40,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 70x100cm/28x40""",160.00,108.00,268.00,au6,Australia Post,8400x12000
+GLOBAL-CFP-30x40,GLOBAL-CFP,30x40,"Classic Frame, EMA 200gsm Fine Art Print, No Mount / No Mat, Perspex Glaze, 75x100cm/30x40""",170.00,108.00,278.00,au6,Australia Post,9000x12000
+GLOBAL-CFPM-5x7,GLOBAL-CFPM,5x7,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 13x18cm/5x7""",42.00,15.10,57.10,au6,Australia Post,944x1535
+GLOBAL-CFPM-A4,GLOBAL-CFPM,A4,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 21x29.7cm/8.3x11.7"" (A4)",42.00,15.10,57.10,au6,Australia Post,1594x2622
+GLOBAL-CFPM-A5,GLOBAL-CFPM,A5,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 14.8x21cm/5.8x8.3"" (A5)",42.00,15.10,57.10,au6,Australia Post,1164x1890
+GLOBAL-CFPM-8x10,GLOBAL-CFPM,8x10,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 20x25cm/8x10""",44.00,15.10,59.10,au6,Australia Post,1800x2400
+GLOBAL-CFPM-8x8,GLOBAL-CFPM,8x8,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 20x20cm/8x8""",44.00,15.10,59.10,au6,Australia Post,1800x1800
+GLOBAL-CFPM-11x14,GLOBAL-CFPM,11x14,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 28x35cm/11x14""",55.00,15.10,70.10,au6,Australia Post,2409x3295
+GLOBAL-CFPM-12x12,GLOBAL-CFPM,12x12,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 30x30cm/12x12""",55.00,15.10,70.10,au6,Australia Post,2700x2700
+GLOBAL-CFPM-12x16,GLOBAL-CFPM,12x16,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 30x40cm/12x16""",62.00,15.10,77.10,au6,Australia Post,2400x3600
+GLOBAL-CFPM-A3,GLOBAL-CFPM,A3,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 29.7x42cm/11.7x16.5"" (A3)",62.00,15.10,77.10,au6,Australia Post,2385x3825
+GLOBAL-CFPM-12x18,GLOBAL-CFPM,12x18,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 30x45cm/12x18""",70.00,15.10,85.10,au6,Australia Post,2418x4218
+GLOBAL-CFPM-16x16,GLOBAL-CFPM,16x16,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 40x40cm/16x16""",70.00,15.10,85.10,au6,Australia Post,3600x3600
+GLOBAL-CFPM-16x20,GLOBAL-CFPM,16x20,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 40x50cm/16x20""",85.00,15.10,100.10,au6,Australia Post,3600x4800
+GLOBAL-CFPM-16x24,GLOBAL-CFPM,16x24,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 40x60cm/16x24""",95.00,15.10,110.10,au6,Australia Post,3618x6018
+GLOBAL-CFPM-18x24,GLOBAL-CFPM,18x24,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 45x60cm/18x24""",95.00,15.10,110.10,au6,Australia Post,4200x6000
+GLOBAL-CFPM-20x20,GLOBAL-CFPM,20x20,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 50x50cm/20x20""",95.00,15.10,110.10,au6,Australia Post,4800x4800
+GLOBAL-CFPM-A2,GLOBAL-CFPM,A2,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 42x59.4cm/16.5x23.4"" (A2)",95.00,15.10,110.10,au6,Australia Post,3780x5835
+GLOBAL-CFPM-24x24,GLOBAL-CFPM,24x24,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 60x60cm/24x24""",105.00,15.10,120.10,au6,Australia Post,6000x6000
+GLOBAL-CFPM-20x28,GLOBAL-CFPM,20x28,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 50x70cm/20x28""",105.00,21.55,126.55,au6,Australia Post,4800x7200
+GLOBAL-CFPM-20x30,GLOBAL-CFPM,20x30,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 50x75cm/20x30""",130.00,21.55,151.55,au6,Australia Post,4800x7800
+GLOBAL-CFPM-24x32,GLOBAL-CFPM,24x32,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 60x80cm/24x32""",140.00,21.55,161.55,au6,Australia Post,6000x8400
+GLOBAL-CFPM-A1,GLOBAL-CFPM,A1,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 59.4x84.1cm/23.4x33.1"" (A1)",140.00,21.55,161.55,au6,Australia Post,5895x8805
+GLOBAL-CFPM-24x36,GLOBAL-CFPM,24x36,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 60x90cm/24x36""",150.00,21.55,171.55,au6,Australia Post,6000x9600
+GLOBAL-CFPM-30x30,GLOBAL-CFPM,30x30,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 75x75cm/30x30""",160.00,21.55,181.55,au6,Australia Post,7800x7800
+GLOBAL-CFPM-28x40,GLOBAL-CFPM,28x40,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 71x101cm/28x40""",170.00,108.00,278.00,au6,Australia Post,7200x10800
+GLOBAL-CFPM-30x40,GLOBAL-CFPM,30x40,"Classic Frame, EMA 200gsm Fine Art Print, Mounted / Matted, Perspex Glaze, 75x100cm/30x40""",180.00,108.00,288.00,au6,Australia Post,7800x10800

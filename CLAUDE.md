@@ -5,14 +5,16 @@ built, how we ship, and how photos get from the drive onto the live site.
 
 ## What this is
 
-A minimalist photography gallery for **Sam Duckworth** (Northern Beaches drone +
-travel work). React/Vite SPA, Supabase backend (Postgres + Storage + Auth),
-deployed on Vercel at **https://samduckworth.com**.
+A minimalist photography gallery and framed-print shop for **Sam Duckworth**
+(Northern Beaches drone + travel work). React/Vite SPA, Supabase backend
+(Postgres + Storage + Auth + Cron), deployed on Vercel at
+**https://samduckworth.com**.
 
-- **Stack:** React 19, Vite 6, TypeScript, `@supabase/supabase-js`,
-  `lucide-react` (icons), plain CSS (no Tailwind). `maplibre-gl` powers the `/map`
-  page and is **lazy-loaded** (kept out of the main gallery bundle). `sharp` +
-  `exif-reader` are used only by the Node import scripts, not the app bundle.
+- **Stack:** React 19, Vite 6, TypeScript, `@supabase/supabase-js`, Stripe
+  Checkout Sessions + embedded Payment Element, Prodigi, Resend, `lucide-react`
+  (icons), plain CSS (no Tailwind). `maplibre-gl` powers the `/map` page and is
+  **lazy-loaded**. `sharp` is also used server-side to validate print masters;
+  `exif-reader` is used by the Node import scripts.
 - **Hosting:** Vercel, auto-deploys on push to `main`. The gallery reads
   Supabase at runtime, so **published data changes go live with no redeploy**.
 
@@ -33,20 +35,26 @@ deployed on Vercel at **https://samduckworth.com**.
 ```
 index.html            meta/title/favicon/OG tags + Google font (Bebas Neue)
 src/
-  App.tsx             gallery (/) + admin (/admin); hand-rolled router in App()
+  App.tsx             public pages + tabbed admin; hand-rolled router in App()
   MapPage.tsx         the /map page (MapLibre); lazy-loaded
-  components/         shared bits: Header.tsx (nav), SmartImage.tsx
+  components/         shared UI, checkout, print configurator and order admin
+  lib/features.ts     build-time public shop gate (defaults off)
   lib/supabase.ts     all Supabase data access (read + write helpers)
   types.ts            Photo, GalleryLocation types
   data/photos.ts      fallback data when Supabase env is absent
   styles.css          all styling
 public/               favicon.svg, apple-touch-icon.png, og-image.png
-supabase/migrations/  DB schema + RLS + storage bucket
+api/                  Vercel checkout, webhook, fulfilment and admin endpoints
+server/shop/          shared server-only pricing, Prodigi, email and DB logic
+supabase/migrations/  DB schema + RLS + Storage + Cron
 scripts/              import / geo / altitude / coords / ops pipeline (Node ESM .mjs)
+Shop Setup/           shop activation handoff and historical research
 ```
 
 Routing is hand-rolled in `App()` (reads `window.location.pathname`, `popstate`,
-`history.pushState`): `/admin` → AdminApp, `/map` → lazy MapPage, else PublicGallery.
+`history.pushState`): `/` → Home, `/galleries` → GalleriesPage, `/map` → lazy
+MapPage, `/shop` + `/shop/<slug>` → shop/configurator, `/checkout` + success →
+Stripe flow, and `/admin` → AdminApp. Unknown paths render NotFound.
 
 ### Components
 - **PublicGallery** (`/`): Hero (rotating location ticker), RecentWork mosaic,
@@ -60,8 +68,13 @@ Routing is hand-rolled in `App()` (reads `window.location.pathname`, `popstate`,
   regions like Europe together and split on zoom; cluster-click dives in; close up
   the bubble dissolves into individual photo pins; clicking a pin opens a lightbox
   of that image with a button to its gallery. Frame-to-extent on load.
-- **AdminApp** (`/admin`): login → AdminDashboard (upload, bulk publish/rename/
-  move, per-photo edit/delete/feature, create location).
+- **AdminApp** (`/admin`): login → six-tab AdminDashboard: Photos, Collections,
+  Homepage, Locations, Shop and Site settings. Shop includes per-photo/bulk
+  **For sale** controls plus order inspection, JPEG master upload, submit-now and
+  refund controls.
+- **CheckoutPage** (`/checkout`): custom page containing Stripe's embedded
+  Payment Element. The browser submits product choices; the server validates the
+  catalogue, reprices, obtains Prodigi shipping and creates the Checkout Session.
 - **GallerySkeleton / RecentWorkSkeleton / LocationRailSkeleton**: minimal shimmer
   placeholders mirroring the real layout during load.
 - **SmartImage** (`components/`): shimmer skeleton + fade-in. **Header**
@@ -75,7 +88,8 @@ Routing is hand-rolled in `App()` (reads `window.location.pathname`, `popstate`,
 `ratio` (exact width/height, 4dp — reserves each gallery tile's true shape so
 the masonry never reflows; backfill via `scripts/ratio-backfill.mjs`),
 `storage_bucket`, `storage_path`, `source_path`, `is_featured`, `is_published`,
-`sort_order`, `relative_altitude_m` (drone height above takeoff, nullable),
+`sort_order`, `in_shop`, `shop_order`, `collection_order`,
+`relative_altitude_m` (drone height above takeoff, nullable),
 `latitude` / `longitude` (capture coords, nullable). The altitude/coords are
 backfilled from the original JPGs (see the altitude/coords scripts) since WebP
 compression strips EXIF/XMP.
@@ -106,6 +120,11 @@ Conventions the gallery relies on:
 - **`title` = the precise place** shown on the photo (e.g. `Positano`,
   `Freshwater`). For local work title often equals the location.
 - **`is_published`** controls public visibility. Unpublished = drafts.
+- **`in_shop`** is the authoritative per-photo sale gate. A photo must be both
+  published and `in_shop = true` to appear in product routes or pass server-side
+  checkout validation. Removing it from sale invalidates stale carts too.
+- **`shop_order`** controls the shop grid order; `collection_order` is the
+  separate homepage collection-card order.
 - **`is_featured` + `sort_order` 1–5** = the "Recent Work" mosaic slots
   (`assignRecentSlot`); empty slots auto-fill with most-recent published.
 - **"Unsorted"** (null `location_id`) is hidden from the public gallery
@@ -125,6 +144,11 @@ Conventions the gallery relies on:
   policies are needed.
 - Admin = add the email to `public.admin_users` + create the Auth user, then
   sign in at `/admin`.
+- Shop money/order tables are service-role only. `orders` and `order_items` have
+  RLS enabled, no browser policies, explicit revoked anon/authenticated grants,
+  and an atomic `create_paid_order` function executable only by service-role.
+- The private `print-masters` bucket accepts JPEG only. Admins may manage masters;
+  only server code creates short-lived download URLs for Prodigi.
 - **Schema changes can't be applied programmatically here.** The service key does
   rows, not DDL (PostgREST), and the `supabase` CLI is logged into a different
   account, so `db push` won't reach this project. Write the migration file in
@@ -134,10 +158,21 @@ Conventions the gallery relies on:
 ## Deploy / domain
 
 - Push to `main` → Vercel builds + deploys.
+- The shop ships safely while disabled. `VITE_SHOP_ENABLED`,
+  `SHOP_CHECKOUT_ENABLED`, and `SHOP_FULFILMENT_ENABLED` all default false when
+  missing; keep them false in Production until the launch proof is complete.
+- Public launch additionally requires the Supabase `shop_public` and
+  `print_configurator` settings. These runtime switches complement rather than
+  replace the environment kill switches.
 - Domain **samduckworth.com** on GoDaddy DNS → Vercel: apex `A @ 216.198.79.1`,
   `CNAME www → <vercel-dns>`; Google Workspace MX records are untouched.
-- Vercel env vars mirror `.env.local`'s `VITE_*`. Keep `VITE_SITE_URL` and the
-  OG tags in `index.html` pointing at the live domain.
+- The complete environment template is `.env.example`. Only browser-safe values
+  use `VITE_`; Stripe secret/webhook, Prodigi, service-role, Cron and Resend values
+  remain server-only. Keep `VITE_SITE_URL` and the OG tags in `index.html`
+  pointing at the live domain.
+- Use `vercel dev` for local checkout because Vite alone does not serve `/api`.
+- Shop activation, Vault secrets, webhook events and test proof live in
+  `Shop Setup/Shop Checkout — Setup Handoff.md`.
 
 ## Photo import & sync pipeline (`scripts/`, all Node ESM)
 
@@ -212,9 +247,16 @@ tight while preserving precise names per photo.
 
 ## Admin capabilities (built)
 
-Publish/unpublish, delete (row + storage file), feature/Recent Work slots,
-send-to-top, bulk rename, bulk move-to-location, create location — from `/admin`
-and (edit/unpublish/send-to-top) inline on the live gallery when signed in.
+The admin is organised into six tabs: **Photos, Collections, Homepage,
+Locations, Shop, Site settings**. Photos covers upload, full metadata editing,
+publish/unpublish, delete, feature/Recent Work slots, send-to-top, bulk rename,
+bulk move and bulk sale status. The Shop catalogue provides focused sale filters,
+individual For sale switches, eligibility counts and Orders. Orders supports
+search, private full-resolution JPEG upload with resolution checks, submit-now,
+refund and tracking. Site settings owns visibility and runtime feature switches.
+
+Inline gallery editing remains available to signed-in admins, but the dedicated
+admin tabs are the source of truth for catalogue and shop operations.
 
 **Instagram feed (bottom of the home page).** A light strip of the latest posts
 from `@sam.duckworth`, cached in Supabase — **the browser never talks to
@@ -258,7 +300,7 @@ because a place tab alone became ambiguous — **Italy spans 2022, 2024 and 2026
 - `src/lib/supabase.ts` **degrades to zero collections if the tables are absent**,
   so the app can ship before the SQL is run.
 
-**2026 Europe hero (`/admin` → Visibility):** the home page's crossfading "2026"
+**2026 Europe hero (`/admin` → Site settings):** the home page's crossfading "2026"
 trip banner, sat between the landing hero and Recent Work and clicking through to
 `/galleries`. Its photos are an **ordered id list in one `site_settings` row**
 (`hero_2026_photos`, a JSON array string — the same trick the shop's `shop_preview`
