@@ -4961,6 +4961,7 @@ body:has(.contact-overlay) {
 .pc-price { font: 600 1.7rem/1 var(--font-sans); color: var(--ink); }
 .pc-add-cart { margin-top: 2px; padding: 15px 18px; background: var(--ink); color: var(--paper); border: 0; border-radius: 3px; display: flex; align-items: center; justify-content: center; gap: 8px; font: 600 12px/1 var(--font-sans); letter-spacing: .04em; text-transform: uppercase; cursor: pointer; transition: transform 120ms ease; }
 .pc-add-cart:active { transform: scale(.98); }
+.pc-add-error { margin: 0; padding: 8px 10px; background: rgba(179, 64, 47, .1); color: var(--danger); font-size: 11px; line-height: 1.4; }
 .pc-ship-note { font-size: 11.5px; line-height: 1.55; color: var(--muted); margin: 0; }
 .pc-ship-note b { color: rgba(var(--ink-rgb), .66); }
 .pc-sku-note { font: 400 9.5px/1 var(--font-mono); color: var(--muted); letter-spacing: .03em; margin: 0; }

@@ -55,6 +55,7 @@ export function PrintConfigurator({
   const [colour, setColour] = useState<ColourId>("natural");
   const [cartOpen, setCartOpen] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const [pulseCart, setPulseCart] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("studio");
   const pairTrackRef = useRef<HTMLDivElement | null>(null);
@@ -74,11 +75,12 @@ export function PrintConfigurator({
   // e.g. switching to a lower-resolution photo, or toggling to unmounted
   // (which needs more pixels for the same size).
   useEffect(() => {
+    setAddError(null);
     if (isSizeAvailable(photo, size, mounted)) return;
     const fallback = [...SIZES].reverse().find((s) => isSizeAvailable(photo, s.id, mounted));
     if (fallback) setSize(fallback.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [photo.id, mounted]);
+  }, [photo.id, size, mounted]);
 
   useLayoutEffect(() => {
     const el = roomWrapRef.current;
@@ -197,6 +199,17 @@ export function PrintConfigurator({
   }
 
   function addToCart() {
+    // Belt-and-braces: the size buttons are already disabled for an
+    // unavailable size, but don't trust that alone (a stale tab still
+    // running pre-gating JS, a disabled attribute stripped some other way).
+    // This is the same check the checkout API enforces server-side —
+    // catching it here just gives a clearer moment to fail than a checkout
+    // error two steps later.
+    if (!isSizeAvailable(photo, size, mounted)) {
+      setAddError(`${size}${mounted ? " mounted" : ""} isn't available for this photo — refresh the page and pick another size.`);
+      return;
+    }
+    setAddError(null);
     cart.add(makeCartItem(photo, thumb(photo, 200), size, mounted, colour));
     setJustAdded(true);
     setPulseCart(false);
@@ -405,6 +418,7 @@ export function PrintConfigurator({
 
           <div className="pc-price-row"><span className="pc-price">{money(price)}</span></div>
           <button className="pc-add-cart" type="button" onClick={addToCart}>{justAdded ? "Added ✓" : "Add to cart"}</button>
+          {addError ? <p className="pc-add-error" role="alert">{addError}</p> : null}
           <p className="pc-ship-note">
             Shipping isn't flat — it's quoted live from the print size (from $15.10, AU only). Add a second A5–A2 print to the same order and shipping adds exactly <b>$5.00</b>, not another full charge. (Two A1 prints together add $10 for the second — they can't share a parcel.)
           </p>
