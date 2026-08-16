@@ -274,12 +274,37 @@ function AltitudeBadge({ photo }: { photo: Photo }) {
   );
 }
 
+// The deployment flag is a public gate, not an admin lockout. Resolve the
+// signed-in user's real admin status once at the router so disabled shop routes
+// can still be mounted for authenticated admins without exposing them publicly.
+function useAdminShopAccess() {
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    const sb = supabase;
+    if (!sb) { setChecked(true); return; }
+    let active = true;
+    const check = async () => {
+      const { data } = await sb.auth.getSession();
+      const allowed = data.session ? await isCurrentUserAdmin() : false;
+      if (active) { setIsAdmin(allowed); setChecked(true); }
+    };
+    check();
+    const { data } = sb.auth.onAuthStateChange(() => check());
+    return () => { active = false; data.subscription.unsubscribe(); };
+  }, []);
+
+  return { isAdmin, checked };
+}
+
 function App() {
   // Route state carries path + query so history moves between e.g.
   // /galleries?location=A and /galleries?location=B re-render the page (the
   // query is read in component initializers; the key below remounts on change).
   const currentHref = () => window.location.pathname + window.location.search;
   const [route, setRoute] = useState(currentHref);
+  const shopAccess = useAdminShopAccess();
 
   // Programmatic navigation: switch page AND jump to the top, so clicking a
   // collection card (etc.) lands at the top of the destination rather than
@@ -318,17 +343,21 @@ function App() {
   if (matches("/map")) {
     return (
       <Suspense fallback={<div className="map-shell map-loading" aria-label="Loading map" />}>
-        <MapPage key={route} onNavigate={navigate} />
+        <MapPage key={route} onNavigate={navigate} showShop={shopAccess.isAdmin} />
       </Suspense>
     );
   }
 
   if (matches("/shop")) {
-    return SHOP_FEATURE_ENABLED ? <ShopPage onNavigate={navigate} /> : <ShopUnavailable onNavigate={navigate} />;
+    if (!SHOP_FEATURE_ENABLED && !shopAccess.checked) return <ShopAccessLoading />;
+    return SHOP_FEATURE_ENABLED || shopAccess.isAdmin
+      ? <ShopPage adminAccess={shopAccess.isAdmin} onNavigate={navigate} />
+      : <ShopUnavailable onNavigate={navigate} />;
   }
 
   if (matches("/checkout")) {
-    return SHOP_FEATURE_ENABLED
+    if (!SHOP_FEATURE_ENABLED && !shopAccess.checked) return <ShopAccessLoading />;
+    return SHOP_FEATURE_ENABLED || shopAccess.isAdmin
       ? <Suspense fallback={<main className="co-shell" />}><CheckoutPage onNavigate={navigate} /></Suspense>
       : <ShopUnavailable onNavigate={navigate} />;
   }
@@ -339,8 +368,9 @@ function App() {
 
   if (path.startsWith("/shop/")) {
     const slug = path.slice("/shop/".length).replace(/\/$/, "");
-    return SHOP_FEATURE_ENABLED
-      ? <ShopProductRoute slug={slug} onNavigate={navigate} />
+    if (!SHOP_FEATURE_ENABLED && !shopAccess.checked) return <ShopAccessLoading />;
+    return SHOP_FEATURE_ENABLED || shopAccess.isAdmin
+      ? <ShopProductRoute adminAccess={shopAccess.isAdmin} slug={slug} onNavigate={navigate} />
       : <ShopUnavailable onNavigate={navigate} />;
   }
 
@@ -353,6 +383,10 @@ function App() {
   }
 
   return <NotFound onNavigate={navigate} />;
+}
+
+function ShopAccessLoading() {
+  return <main className="shop-feature-off"><LoaderCircle className="spin" aria-label="Checking shop access" /></main>;
 }
 
 function ShopUnavailable({ onNavigate }: { onNavigate: (route: string) => void }) {
@@ -668,7 +702,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
 
   return (
     <main>
-      <Header isScrolled={isScrolled} onNavigate={onNavigate} onOpenAbout={() => setIsAboutOpen(true)} />
+      <Header isScrolled={isScrolled} onNavigate={onNavigate} onOpenAbout={() => setIsAboutOpen(true)} showShop={isAdmin} />
       <Hero photo={heroPhoto} locations={locationNames} isAdmin={isAdmin} rotate={heroRotate} onPickHero={() => setHeroPicking(true)} />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
       {isLoading ? (
@@ -705,7 +739,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "collection_cards")} label="Collections">
             <CollectionCards photos={publicPhotos} locations={locations} onOpen={openLocation} onOpenAll={() => goToGalleries()} isAdmin={isAdmin} onEdit={setEditingCollection} />
           </AdminHideable>
-          {SHOP_FEATURE_ENABLED && heroPortrait ? (
+          {(SHOP_FEATURE_ENABLED || isAdmin) && heroPortrait ? (
             <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "framed_banner")} label="Framed Editions banner">
               <FramedHero portrait={heroPortrait} landscape={heroLandscape} onShop={goToShop} />
             </AdminHideable>
@@ -728,7 +762,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           origin={origin}
           onViewOnMap={viewPhotoOnMap}
           onViewGallery={(p) => openLocation(p.location)}
-          onOrderPrint={SHOP_FEATURE_ENABLED && flags.print_configurator === true && selectedPhoto.inShop ? (p) => { window.history.pushState({}, "", `/shop/${p.slug}`); onNavigate(`/shop/${p.slug}`); } : undefined}
+          onOrderPrint={(isAdmin || (SHOP_FEATURE_ENABLED && flags.print_configurator === true)) && selectedPhoto.inShop ? (p) => { window.history.pushState({}, "", `/shop/${p.slug}`); onNavigate(`/shop/${p.slug}`); } : undefined}
         />
       ) : null}
       {editingPhoto ? (
@@ -1025,7 +1059,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
 
   return (
     <main className="gallery-page">
-      <Header isScrolled onNavigate={onNavigate} />
+      <Header isScrolled onNavigate={onNavigate} showShop={isAdmin} />
       <section className="gallery-page-head">
         <h1 className="gallery-page-title">
           {pageHeading}
@@ -1112,7 +1146,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
           origin={origin}
           onClose={closePhoto}
           onViewOnMap={viewPhotoOnMap}
-          onOrderPrint={SHOP_FEATURE_ENABLED && flags.print_configurator === true && selectedPhoto.inShop ? (p) => { window.history.pushState({}, "", `/shop/${p.slug}`); onNavigate(`/shop/${p.slug}`); } : undefined}
+          onOrderPrint={(isAdmin || (SHOP_FEATURE_ENABLED && flags.print_configurator === true)) && selectedPhoto.inShop ? (p) => { window.history.pushState({}, "", `/shop/${p.slug}`); onNavigate(`/shop/${p.slug}`); } : undefined}
         />
       ) : null}
       {editingPhoto ? (
@@ -1478,8 +1512,9 @@ function WallPreview({ ids, photos }: { ids: string[]; photos: Photo[] }) {
   );
 }
 
-function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
-  const { publicPhotos, locations, flags, isAdmin, settingValue, loadGallery } = useSiteData();
+function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; onNavigate: (route: string) => void }) {
+  const { publicPhotos, locations, flags, isAdmin: detectedAdmin, settingValue, loadGallery } = useSiteData();
+  const isAdmin = adminAccess || detectedAdmin;
   const [cart, setCart] = useState(0);
   const realCart = useCart();
   const [filter, setFilter] = useState("All");
@@ -1501,10 +1536,11 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
 
   // Explicit true — so before settings load (flags empty) we default to the
   // safe "not live" preview, never a flash of the transactional shop.
-  const shopLive = flags.shop_public === true;
-  // Same pattern as shop_public: defaults OFF with no row required, so the
-  // true-to-size configurator ships disabled until Admin → Visibility flips it.
-  const configuratorOn = flags.print_configurator === true;
+  const publicShopLive = SHOP_FEATURE_ENABLED && flags.shop_public === true;
+  const shopLive = isAdmin || publicShopLive;
+  // Same pattern as shop_public: defaults OFF with no row required. Admin access
+  // bypasses public visibility so the real configurator remains testable.
+  const configuratorOn = isAdmin || (SHOP_FEATURE_ENABLED && flags.print_configurator === true);
   const cartCount = configuratorOn ? realCart.items.length : cart;
 
   const shopPhotos = useMemo(
@@ -1573,18 +1609,16 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
   return (
     <main className="shop">
       {ShopNav}
-      {isAdmin && !shopLive ? (
-        <div className="shop-admin-note"><EyeOff size={13} aria-hidden="true" /> Preview mode — this is what the public sees. Toggle “Shop page” in Admin → Visibility to open the real shop (prices + cart).</div>
+      {isAdmin && !publicShopLive ? (
+        <div className="shop-admin-note"><EyeOff size={13} aria-hidden="true" /> Admin shop — you can browse and test the full sales flow. The public still sees the shop as offline.</div>
       ) : null}
       <section className="shop-hero">
         <div className="sh-copy">
           <p className="eyebrow">Sam Duckworth Photography</p>
           <h1>Framed<br />Editions</h1>
           <p className="sh-lead">Fine-art aerial &amp; coastal prints, framed in solid oak. From the Northern Beaches to the Mediterranean.</p>
-          {/* While the shop is still in development there's nothing to buy, so
-              the call to action sends people to the galleries rather than to
-              the glimpse wall further down this page. Flipping "Shop page" on
-              in Admin → Visibility restores the real shop link on its own. */}
+          {/* Public visitors get the gallery CTA until the public shop opens;
+              authenticated admins get the real shop action for testing. */}
           {shopLive ? (
             <a className="solid-button" href="#shop-grid">Shop the collection</a>
           ) : (
@@ -1699,9 +1733,9 @@ function ShopPage({ onNavigate }: { onNavigate: (route: string) => void }) {
 // print_configurator flag as the ShopProduct card link and the Lightbox's
 // "Order a print" button. `in_shop` is authoritative here as well as in the
 // grid and checkout API, so disabling a photo removes direct/bookmarked access.
-function ShopProductRoute({ slug, onNavigate }: { slug: string; onNavigate: (route: string) => void }) {
+function ShopProductRoute({ adminAccess = false, slug, onNavigate }: { adminAccess?: boolean; slug: string; onNavigate: (route: string) => void }) {
   const { publicPhotos, flags, isLoading } = useSiteData();
-  const configuratorOn = flags.print_configurator === true;
+  const configuratorOn = adminAccess || (SHOP_FEATURE_ENABLED && flags.print_configurator === true);
   const shopPhotos = useMemo(() => publicPhotos.filter((p) => p.inShop), [publicPhotos]);
   const photo = shopPhotos.find((p) => p.slug === slug);
   const shouldRedirect = !isLoading && (!configuratorOn || !photo);
@@ -4096,8 +4130,9 @@ function ShopCatalogueAdmin({
           <p>“For sale” controls the shop grid, direct product links and server-side checkout validation. A photo must also be published.</p>
         </div>
         <div className={`admin-feature-state${SHOP_FEATURE_ENABLED ? " is-on" : ""}`}>
-          <b>{SHOP_FEATURE_ENABLED ? "Client shop enabled" : "Client shop disabled"}</b>
-          <span>{SHOP_FEATURE_ENABLED ? "This build can show public shop pages." : "Safe to deploy: public shop routes and links are off."}</span>
+          <b>{SHOP_FEATURE_ENABLED ? "Public shop enabled" : "Public shop disabled"}</b>
+          <span>{SHOP_FEATURE_ENABLED ? "This build can show public shop pages." : "Public routes and links are off; authenticated admins retain access."}</span>
+          <a href="/shop">Open admin shop →</a>
         </div>
       </div>
       <div className="shop-catalogue-summary">

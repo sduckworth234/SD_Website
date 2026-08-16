@@ -30,8 +30,7 @@ Create a gitignored `.env.local` from [`.env.example`](./.env.example). Never
 commit real secret keys. Browser-safe variables use the `VITE_` prefix; Stripe,
 Prodigi, Supabase service-role, Cron and Resend secrets are server-only.
 
-The shop has three deployment kill switches. All default to disabled when
-missing:
+The shop has three deployment gates. All default to disabled when missing:
 
 ```dotenv
 VITE_SHOP_ENABLED=false
@@ -41,7 +40,9 @@ SHOP_FULFILMENT_ENABLED=false
 
 Keep them false in Production until the activation checklist and test-mode cycle
 are complete. Supabase settings `shop_public` and `print_configurator` provide a
-second, admin-managed public visibility gate.
+second, admin-managed public visibility gate. A verified signed-in admin can
+still open the shop, products and Stripe test flow while the two public gates are
+false; `SHOP_FULFILMENT_ENABLED=false` always prevents submission to Prodigi.
 
 ## Supabase
 
@@ -88,7 +89,8 @@ then sign in at `/admin`.
 Admin is organised into **Photos, Collections, Homepage, Locations, Shop, and
 Site settings**. The Shop tab controls each photo's **For sale** state and contains
 Orders. A photo is purchasable only when it is both published and marked for sale;
-removing it from sale also makes stale carts fail server validation.
+removing it from sale also makes stale carts fail server validation. The Shop tab
+also links to the admin-only live shop preview when public access is disabled.
 
 ## Checkout and fulfilment
 

@@ -3,7 +3,7 @@ import { normaliseCart } from "../server/shop/catalogue.mjs";
 import { checkoutEnabled } from "../server/shop/features.mjs";
 import { json, methodAllowed, publicOrigin, readJson, safeError } from "../server/shop/http.mjs";
 import { quoteShippingCents } from "../server/shop/prodigi.mjs";
-import { fetchShopPhotos, shopRuntimeEnabled } from "../server/shop/supabase.mjs";
+import { fetchShopPhotos, requireAdmin, shopRuntimeEnabled } from "../server/shop/supabase.mjs";
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 const rateBuckets = new Map();
@@ -44,12 +44,19 @@ function customerFrom(body) {
 
 export default async function handler(req, res) {
   if (!methodAllowed(req, res, ["POST"])) return;
-  if (!checkoutEnabled()) return json(res, 503, { error: "The print shop is not accepting orders yet." });
-  if (rateLimited(req)) return json(res, 429, { error: "Too many checkout attempts. Please wait a minute and try again." });
-  if (!stripe) return json(res, 503, { error: "Stripe test mode is not configured yet." });
 
   try {
-    if (!await shopRuntimeEnabled()) return json(res, 503, { error: "The print shop is not accepting orders yet." });
+    const environmentEnabled = checkoutEnabled();
+    const runtimeEnabled = environmentEnabled ? await shopRuntimeEnabled() : false;
+    // Admins can exercise the complete Stripe test flow while public checkout
+    // remains closed. The bearer token is verified against Supabase Auth and
+    // public.admin_users; no client-provided boolean can activate this bypass.
+    const admin = environmentEnabled && runtimeEnabled ? null : await requireAdmin(req);
+    if ((!environmentEnabled || !runtimeEnabled) && !admin) {
+      return json(res, 503, { error: "The print shop is not accepting orders yet." });
+    }
+    if (rateLimited(req)) return json(res, 429, { error: "Too many checkout attempts. Please wait a minute and try again." });
+    if (!stripe) return json(res, 503, { error: "Stripe test mode is not configured yet." });
     const body = await readJson(req);
     const cart = normaliseCart(body.cart);
     const customer = customerFrom(body);

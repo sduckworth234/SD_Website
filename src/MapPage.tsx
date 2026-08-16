@@ -81,7 +81,7 @@ function buildPhotoFeatures(photos: Photo[]): GeoJSON.Feature<GeoJSON.Point, Pho
   return features;
 }
 
-export default function MapPage({ onNavigate }: { onNavigate: (route: string) => void }) {
+export default function MapPage({ onNavigate, showShop = false }: { onNavigate: (route: string) => void; showShop?: boolean }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const [ready, setReady] = useState(false);
@@ -332,7 +332,7 @@ export default function MapPage({ onNavigate }: { onNavigate: (route: string) =>
 
   return (
     <main className="map-shell">
-      <Header isScrolled onNavigate={onNavigate} />
+      <Header isScrolled onNavigate={onNavigate} showShop={showShop} />
       <section className="map-stage" aria-label="Map of photo locations">
         <div className="map-intro">
           <p className="eyebrow">Where I have shot</p>

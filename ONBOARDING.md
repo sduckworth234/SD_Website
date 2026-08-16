@@ -24,6 +24,9 @@ Copy the variable names from [`.env.example`](./.env.example) into a gitignored
 - Keep `VITE_SHOP_ENABLED`, `SHOP_CHECKOUT_ENABLED`, and
   `SHOP_FULFILMENT_ENABLED` false in Production until launch is deliberately
   approved. Missing flags are false.
+- Signed-in admins retain shop/product access and may create Stripe test Checkout
+  Sessions while the public UI/checkout gates are false. Prodigi fulfilment has
+  no admin bypass.
 - Supabase runtime settings `shop_public` and `print_configurator` are an
   additional public visibility gate controlled in Admin.
 - Supabase row changes are live immediately; code and `VITE_` changes require a
@@ -58,7 +61,8 @@ can enter the sales flow. A photo must satisfy both to be purchasable.
 - **Homepage** — curate homepage imagery.
 - **Locations** — create and arrange places.
 - **Shop** — toggle photos for sale, bulk-manage sale status, inspect feature
-  gates, upload JPEG masters, submit orders and refund held orders.
+  gates, open the private shop preview, upload JPEG masters, submit orders and
+  refund held orders.
 - **Site settings** — visibility, banners and runtime feature switches.
 
 Removing **For sale** immediately removes the product from the shop flow, direct

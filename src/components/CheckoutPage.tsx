@@ -4,6 +4,7 @@ import { ArrowLeft, Check, LoaderCircle, Lock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useCart } from "../lib/cart";
 import { colourById, money } from "../lib/printCatalogue";
+import { supabase } from "../lib/supabase";
 
 const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
 const stripePromise = publishableKey ? loadStripe(publishableKey) : Promise.resolve(null);
@@ -115,9 +116,13 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
     setStarting(true);
     setError("");
     try {
+      const accessToken = supabase ? (await supabase.auth.getSession()).data.session?.access_token : null;
       const response = await fetch("/api/create-checkout-session", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({
           cart: cart.items.map(({ photoId, size, mounted, colour }) => ({ photoId, size, mounted, colour })),
           customer,

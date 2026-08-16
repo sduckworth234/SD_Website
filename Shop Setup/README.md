@@ -37,6 +37,8 @@ SHOP_FULFILMENT_ENABLED=false
 ```
 
 The first gate removes the public shopping flow from the frontend build. The
-second blocks new Stripe Checkout Sessions server-side. The third blocks Prodigi
-submission. Supabase settings `shop_public` and `print_configurator` are an
+second blocks public Stripe Checkout Sessions. A verified signed-in admin can
+still use the shop and create a Checkout Session for test purchases while those
+two public gates are false. The third gate blocks Prodigi submission for everyone,
+including admins. Supabase settings `shop_public` and `print_configurator` are an
 additional admin-controlled public visibility gate.

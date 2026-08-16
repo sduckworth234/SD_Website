@@ -55,15 +55,18 @@ function ThemeToggle() {
 
 // Shared site header / primary nav. "Gallery" → the full /galleries page, "Map" →
 // /map, About opens the overlay when a handler is supplied (home) else returns
-// home. "Shop" is public (the shop page itself shows "Opening soon" to non-admins).
+// home. The Shop link follows the public build gate, with an explicit override
+// for a signed-in admin viewing the public site.
 export function Header({
   isScrolled,
   onNavigate,
   onOpenAbout,
+  showShop = false,
 }: {
   isScrolled: boolean;
   onNavigate: (route: string) => void;
   onOpenAbout?: () => void;
+  showShop?: boolean;
 }) {
   const path = typeof window !== "undefined" ? window.location.pathname : "/";
   const isHome = path === "/";
@@ -102,7 +105,7 @@ export function Header({
           Map
         </a>
         <button className="nav-button" onClick={handleAbout} type="button">About Me</button>
-        {SHOP_FEATURE_ENABLED ? (
+        {SHOP_FEATURE_ENABLED || showShop ? (
           <a
             className={`nav-link${path.startsWith("/shop") ? " is-active" : ""}`}
             href="/shop"

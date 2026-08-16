@@ -161,6 +161,12 @@ Conventions the gallery relies on:
 - The shop ships safely while disabled. `VITE_SHOP_ENABLED`,
   `SHOP_CHECKOUT_ENABLED`, and `SHOP_FULFILMENT_ENABLED` all default false when
   missing; keep them false in Production until the launch proof is complete.
+- `VITE_SHOP_ENABLED` and `SHOP_CHECKOUT_ENABLED` are **public** gates. A user
+  whose Supabase session passes `is_admin()` may still open shop/product/checkout
+  routes and create a Checkout Session for testing. The API verifies the bearer
+  token server-side; this is not a client boolean bypass.
+- `SHOP_FULFILMENT_ENABLED` has no admin bypass. No order reaches Prodigi while
+  it is false, including from the Admin “Submit now” control.
 - Public launch additionally requires the Supabase `shop_public` and
   `print_configurator` settings. These runtime switches complement rather than
   replace the environment kill switches.
@@ -253,7 +259,9 @@ publish/unpublish, delete, feature/Recent Work slots, send-to-top, bulk rename,
 bulk move and bulk sale status. The Shop catalogue provides focused sale filters,
 individual For sale switches, eligibility counts and Orders. Orders supports
 search, private full-resolution JPEG upload with resolution checks, submit-now,
-refund and tracking. Site settings owns visibility and runtime feature switches.
+refund and tracking. The Shop tab links to the full admin-only storefront even
+when public access is disabled. Site settings owns visibility and runtime feature
+switches.
 
 Inline gallery editing remains available to signed-in admins, but the dedicated
 admin tabs are the source of truth for catalogue and shop operations.

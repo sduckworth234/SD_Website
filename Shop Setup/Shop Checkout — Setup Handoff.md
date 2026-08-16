@@ -114,13 +114,14 @@ SHOP_CHECKOUT_ENABLED=false
 SHOP_FULFILMENT_ENABLED=false
 ```
 
-- `VITE_SHOP_ENABLED` hides public shop links and blocks the shop, product and
-  checkout pages in that build.
-- `SHOP_CHECKOUT_ENABLED` prevents the server from creating a Stripe Checkout
-  Session, even if a stale frontend reaches the endpoint.
+- `VITE_SHOP_ENABLED` hides public shop links and blocks public access to shop,
+  product and checkout pages. Verified signed-in admins retain access.
+- `SHOP_CHECKOUT_ENABLED` prevents public creation of Stripe Checkout Sessions.
+  An admin shop request includes its Supabase access token; the server verifies
+  both the Auth user and `admin_users` membership before allowing a test Session.
 - `SHOP_FULFILMENT_ENABLED` prevents the cron/admin from submitting work to
-  Prodigi. Refunds, order inspection and callbacks for existing orders remain
-  available.
+  Prodigi and has no admin bypass. Refunds, order inspection and callbacks for
+  existing orders remain available.
 
 Keep all three `false` in Vercel Production while deploying and testing the
 rest of the site. Preview/Development may use `true` with Stripe test and
@@ -128,11 +129,11 @@ Prodigi sandbox credentials. Launch still requires the database visibility
 flags `shop_public` and `print_configurator`; these are a second, admin-managed
 gate rather than a replacement for the environment kill switches.
 
-| Environment | Public UI | Checkout | Prodigi fulfilment |
-|---|---:|---:|---:|
-| Production during rollout | `false` | `false` | `false` |
-| Preview/local test mode | `true` | `true` | `true` with sandbox keys |
-| Production launch | deliberate `true` | deliberate `true` | enable only after end-to-end proof |
+| Environment | Public UI | Public checkout | Admin shop/test checkout | Prodigi fulfilment |
+|---|---:|---:|---:|---:|
+| Production during rollout | `false` | `false` | available when signed in | `false` |
+| Preview/local test mode | optional | optional | available when signed in | `true` with sandbox keys only |
+| Production launch | deliberate `true` | deliberate `true` | available | enable only after end-to-end proof |
 
 Changing `VITE_SHOP_ENABLED` requires a new frontend build. The two server flags
 are read by the API runtime. Do not use live Stripe or Prodigi credentials in a
@@ -141,13 +142,16 @@ Preview environment.
 ## Admin workflow
 
 - **Admin → Shop → Shop catalogue:** toggle individual photos or use Photos bulk
-  actions to mark them For sale/Not for sale.
+  actions to mark them For sale/Not for sale. “Open admin shop” enters the full
+  storefront even while public access is disabled.
 - A product is eligible only when it is both published and For sale. Turning For
   sale off removes it from the shop, direct product route, lightbox order action,
   related products and server checkout validation.
 - **Admin → Shop → Orders:** review paid orders, upload the original full-resolution
   JPEG when needed, check the reported resolution, submit immediately or refund
   before Prodigi submission.
+- Admin test purchases may create paid/held orders while public checkout is off,
+  but they remain queued until `SHOP_FULFILMENT_ENABLED=true`.
 - Removing a photo from sale never mutates a paid order; paid line items are
   immutable snapshots and remain fulfilment-ready.
 
