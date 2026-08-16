@@ -77,6 +77,7 @@ type PhotoRow = {
   raw_match_notes?: string | null;
   source_width?: number | null;
   source_height?: number | null;
+  created_at?: string | null;
   locations: {
     id: string;
     slug: string;
@@ -283,7 +284,7 @@ async function getGalleryDataInner() {
 }
 
 const ADMIN_SELECT =
-  "id, title, slug, description, location_id, kind, year_taken, captured_at, aspect, storage_bucket, storage_path, source_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, collection_order, in_shop, shop_order";
+  "id, title, slug, description, location_id, kind, year_taken, captured_at, aspect, storage_bucket, storage_path, source_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, collection_order, in_shop, shop_order, created_at";
 // Print-readiness columns ship ahead of their migrations (20260816010000,
 // 20260816020000) — same "ships ahead" pattern as `ratio` in the public
 // query. Requested separately so a stale DB (columns not applied yet)
@@ -299,22 +300,28 @@ export async function getAdminPhotos() {
   // because authenticated users intentionally lack those column grants, but it
   // returns rows only when hardened is_admin() validates the caller. Anon has
   // no execute grant. Location names are joined client-side.
+  //
+  // IMPORTANT: don't chain .order() onto this RPC call. PostgREST mishandles
+  // `select=` and `order=` combined against this specific setof-table RPC —
+  // each works fine alone, but together they throw a bogus "column
+  // photos.created_at does not exist" (confirmed against a real authenticated
+  // session, 2026-08-16). The RPC returns every row in one call anyway (no
+  // pagination to lose), so sort client-side below instead.
   let data: PhotoRow[] | null;
   let error: { message: string } | null;
   ({ data, error } = (await supabase
     .rpc("get_admin_photos")
-    .select(`${ADMIN_SELECT}, ${ADMIN_PRINT_READINESS_SELECT}`)
-    .order("created_at", { ascending: false })) as unknown as { data: PhotoRow[] | null; error: { message: string } | null });
+    .select(`${ADMIN_SELECT}, ${ADMIN_PRINT_READINESS_SELECT}`)) as unknown as { data: PhotoRow[] | null; error: { message: string } | null });
 
   // Print-readiness columns ship ahead of their migration — retry without
   // them until the columns exist.
   if (error) {
     ({ data, error } = (await supabase
       .rpc("get_admin_photos")
-      .select(ADMIN_SELECT)
-      .order("created_at", { ascending: false })) as unknown as { data: PhotoRow[] | null; error: { message: string } | null });
+      .select(ADMIN_SELECT)) as unknown as { data: PhotoRow[] | null; error: { message: string } | null });
   }
   if (error) throw error;
+  data = (data ?? []).slice().sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
 
   const { data: locations, error: locationError } = await supabase
     .from("locations")
