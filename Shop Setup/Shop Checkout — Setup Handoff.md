@@ -6,9 +6,10 @@ the short account-side checklist needed to activate them.
 
 **Code status (2026-08-16):** production build and dependency audit pass; the
 desktop/mobile checkout and default-off states have been checked without console
-errors. Deployment is safe with the environment gates below left false. Account
-activation and a complete Stripe test-mode/webhook/Prodigi sandbox cycle are still
-required before public launch.
+errors. A real Stripe test-card payment, signed webhook, atomic Supabase order and
+same-event replay have passed. The resulting A5 order is safely `awaiting_master`
+with Prodigi disabled. Decline/3DS, master upload, Prodigi sandbox, callback and
+email proof are still required before public launch.
 
 ## Purchase and fulfilment workflow
 
@@ -51,11 +52,24 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_SECRET_KEY=sk_test_...
 VITE_SHOP_ENABLED=true
 SHOP_CHECKOUT_ENABLED=true
-SHOP_FULFILMENT_ENABLED=true
+SHOP_FULFILMENT_ENABLED=false
 ```
 
-Run the app through `vercel dev`, not only `npm run dev`, because checkout calls
-the serverless endpoints under `/api`.
+Export the local variables, then run the app through the development-only Vercel
+config—not only `npm run dev`—because checkout calls the serverless endpoints
+under `/api`:
+
+```sh
+set -a
+source .env.local
+set +a
+npx vercel dev -A vercel.dev.json
+```
+
+The development config deliberately omits the production SPA rewrite so Vite's
+internal modules remain reachable; Vite supplies its own local history fallback.
+Keep fulfilment false for payment/webhook testing, then enable it only when the
+Prodigi sandbox key and a verified print-master JPEG are ready.
 
 For local webhook testing, install/login to Stripe CLI and run:
 
@@ -64,7 +78,7 @@ stripe listen --forward-to localhost:3000/api/stripe-webhook
 ```
 
 Copy the temporary `whsec_...` value into `.env.local` as
-`STRIPE_WEBHOOK_SECRET`, restart `vercel dev`, then use Stripe test card
+`STRIPE_WEBHOOK_SECRET`, restart the command above, then use Stripe test card
 `4242 4242 4242 4242`, any future date, any CVC.
 
 ## 2. Supabase migration (applied)
@@ -202,10 +216,10 @@ logged as skipped.
 
 ## 7. Required proof before launch
 
-1. Successful test card creates one order, despite replaying the webhook.
-2. Declined and 3-D Secure test cards show recoverable errors.
-3. Upload a full-resolution JPEG in Admin → Shop → Orders.
-4. Let the 45-minute hold expire; confirm one sandbox Prodigi order only.
-5. Confirm callback/tracking and both emails.
-6. Replace all test/sandbox keys with live keys.
-7. Place one real order to yourself before enabling the public shop flags.
+- [x] Successful test card creates one order, despite replaying the webhook.
+- [ ] Declined and 3-D Secure test cards show recoverable errors.
+- [ ] Upload a full-resolution JPEG in Admin → Shop → Orders.
+- [ ] Let the 45-minute hold expire; confirm one sandbox Prodigi order only.
+- [ ] Confirm callback/tracking and both emails.
+- [ ] Replace all test/sandbox keys with live keys.
+- [ ] Place one real order to yourself before enabling the public shop flags.

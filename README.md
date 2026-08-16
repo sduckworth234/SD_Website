@@ -23,7 +23,8 @@ transactional email.
 npm install
 npm run dev      # frontend only, http://localhost:5173
 npm run build    # tsc -b && vite build; required before pushing
-vercel dev       # frontend + /api endpoints; use this for checkout testing
+set -a; source .env.local; set +a
+npx vercel dev -A vercel.dev.json  # frontend + /api; checkout testing
 ```
 
 Create a gitignored `.env.local` from [`.env.example`](./.env.example). Never

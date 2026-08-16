@@ -10,7 +10,8 @@ deployed on Vercel. Read [`CLAUDE.md`](./CLAUDE.md) for the deep reference.
 npm install
 npm run dev        # frontend only, http://localhost:5173
 npm run build      # tsc -b && vite build — required before pushing
-vercel dev         # frontend + serverless API; required for checkout testing
+set -a; source .env.local; set +a
+npx vercel dev -A vercel.dev.json  # frontend + API; checkout testing
 ```
 
 Copy the variable names from [`.env.example`](./.env.example) into a gitignored

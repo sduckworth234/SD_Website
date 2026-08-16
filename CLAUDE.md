@@ -176,7 +176,8 @@ Conventions the gallery relies on:
   use `VITE_`; Stripe secret/webhook, Prodigi, service-role, Cron and Resend values
   remain server-only. Keep `VITE_SITE_URL` and the OG tags in `index.html`
   pointing at the live domain.
-- Use `vercel dev` for local checkout because Vite alone does not serve `/api`.
+- For local checkout, export `.env.local` into the function runtime and run
+  `npx vercel dev -A vercel.dev.json`; Vite alone does not serve `/api`.
 - Shop activation, Vault secrets, webhook events and test proof live in
   `Shop Setup/Shop Checkout — Setup Handoff.md`.
 

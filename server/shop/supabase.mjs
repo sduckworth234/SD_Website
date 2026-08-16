@@ -101,11 +101,18 @@ export async function requireAdmin(req) {
   if (!SUPABASE_URL || !PUBLIC_KEY) throw new Error("Missing Supabase auth environment.");
   const authorization = req.headers.authorization ?? "";
   if (!authorization.startsWith("Bearer ")) return null;
-  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-    headers: { apikey: PUBLIC_KEY, authorization },
+  // Ask Postgres to resolve membership from auth.uid(). The hardened
+  // is_admin() function joins the verified Auth user to admin_users by email;
+  // admin_users intentionally has no user_id column.
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/is_admin`, {
+    method: "POST",
+    headers: {
+      apikey: PUBLIC_KEY,
+      authorization,
+      "content-type": "application/json",
+    },
+    body: "{}",
   });
   if (!response.ok) return null;
-  const user = await response.json();
-  const admins = await supabaseRest(`admin_users?user_id=eq.${encodeURIComponent(user.id)}&select=user_id&limit=1`);
-  return admins?.length ? user : null;
+  return (await response.json()) === true ? { verified: true } : null;
 }
