@@ -4,7 +4,7 @@
 // it can ship disabled until it's ready; see ShopProduct in App.tsx for the
 // fallback to the old inline picker when the flag is off.
 import { ChevronLeft, ChevronRight, ShoppingCart, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { getTransformedPublicUrl, photoBucket } from "../lib/supabase";
 import type { Photo } from "../types";
 import {
@@ -64,7 +64,14 @@ export function PrintConfigurator({
   const pairTrackRef = useRef<HTMLDivElement | null>(null);
 
   const roomWrapRef = useRef<HTMLDivElement | null>(null);
-  const [frameStyle, setFrameStyle] = useState<{ width: number; height: number; left: number; top: number } | null>(null);
+  const [frameStyle, setFrameStyle] = useState<{
+    width: number;
+    height: number;
+    left: number;
+    top: number;
+    bandPx: number;
+    matPx: number;
+  } | null>(null);
 
   // Snap to the largest available size whenever the photo or mount option
   // changes and the currently-selected size is no longer offered for it —
@@ -77,7 +84,7 @@ export function PrintConfigurator({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [photo.id, mounted]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = roomWrapRef.current;
     if (!el) return;
     const recompute = () => {
@@ -100,6 +107,8 @@ export function PrintConfigurator({
       const pxPerCm = Math.min(naturalPxPerCm, availableW / outerW, availableH / outerH);
       const width = outerW * pxPerCm;
       const height = outerH * pxPerCm;
+      const nextBandCm = mounted ? MOULDING_CM : UNMOUNTED_BAND_CM;
+      const nextMatCm = mounted ? Math.max(0, sizeById(size).mat - MOULDING_CM) : 0;
       const wantedLeft = el.clientWidth * ROOM.centerX;
       const wantedTop = el.clientHeight * ROOM.centerY;
       const left = Math.min(
@@ -111,13 +120,23 @@ export function PrintConfigurator({
         el.clientHeight - bottomMargin - height / 2,
       );
 
-      setFrameStyle({ width, height, left, top });
+      // Commit the frame, moulding and mat as one animation target. Keeping
+      // these together avoids a one-frame retarget where A1 mat proportions
+      // were briefly calculated against the previous outer frame width.
+      setFrameStyle({
+        width,
+        height,
+        left,
+        top,
+        bandPx: nextBandCm * pxPerCm,
+        matPx: nextMatCm * pxPerCm,
+      });
     };
     recompute();
     const ro = new ResizeObserver(recompute);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [size, photo, previewMode]);
+  }, [size, mounted, photo, previewMode]);
 
   const sizeDef = sizeById(size);
   const colourDef = colourById(colour);
@@ -128,7 +147,6 @@ export function PrintConfigurator({
   // unknown/no restriction don't need a message at all.
   const maxIdeal = maxForMount && maxForMount !== "A1" && SIZES.some((s) => s.id === maxForMount) ? maxForMount : null;
 
-  const pxPerCmForBand = frameStyle ? frameStyle.width / (orientOf(photo) === "landscape" ? sizeDef.outer[1] : sizeDef.outer[0]) : 0;
   const bandCm = mounted ? MOULDING_CM : UNMOUNTED_BAND_CM;
   const matCm = mounted ? Math.max(0, sizeDef.mat - MOULDING_CM) : 0;
   const orientation = orientOf(photo);
@@ -269,10 +287,10 @@ export function PrintConfigurator({
                     className="pc-frame-band"
                     style={{
                       background: colourDef.grain ? `${colourDef.grain}, ${colourDef.css}` : colourDef.css,
-                      padding: bandCm * pxPerCmForBand,
+                      padding: frameStyle.bandPx,
                     }}
                   >
-                    <div className="pc-frame-mat" style={{ padding: matCm * pxPerCmForBand }}>
+                    <div className="pc-frame-mat" style={{ padding: frameStyle.matPx }}>
                       <div className="pc-frame-window">
                         <img src={thumb(photo, 1200)} alt={`${photo.title}, ${photo.location}, framed`} />
                         <div className="pc-frame-glass" aria-hidden="true" />
