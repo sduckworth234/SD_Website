@@ -4489,8 +4489,15 @@ body:has(.contact-overlay) {
 .shop-filters { display: flex; gap: 8px; flex-wrap: wrap; margin: 22px 0 28px; }
 .chip { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 8px 15px; font: inherit; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); cursor: pointer; }
 .chip.active { background: var(--ink); color: var(--foam); border-color: var(--ink); }
-.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: clamp(28px, 3vw, 52px); align-items: end; }
-.shop-card { display: flex; flex-direction: column; }
+/* Masonry, not a row grid — same technique as .gallery.view-flow. A plain
+ * grid sizes every row to its tallest card, and portrait frames run ~1.9x
+ * taller than landscape ones at the same column width (OakFrame's window is
+ * a fixed ratio, just rotated), so a portrait next to landscapes left a
+ * jagged, gappy row. Columns flow independently instead — a landscape card
+ * naturally pairs with another before the next portrait, with no row to
+ * stay level with. */
+.shop-grid { columns: 3; column-gap: clamp(28px, 3vw, 52px); }
+.shop-card { display: flex; flex-direction: column; break-inside: avoid; margin-bottom: clamp(28px, 3vw, 52px); }
 .shop-card-frame { display: flex; align-items: flex-end; justify-content: center; }
 .shop-card-info { margin-top: 16px; }
 .sc-ttl { font-family: var(--font-sans);
@@ -4725,12 +4732,13 @@ body:has(.contact-overlay) {
   .shop-logo { font-size: 1.2rem; letter-spacing: 0.12em; }
   .shop-nav-links { width: 100%; justify-content: space-between; gap: 14px; font-size: 0.68rem; }
   .shop-section, .shop-hero { padding-left: clamp(16px, 4vw, 24px); padding-right: clamp(16px, 4vw, 24px); }
-  .shop-grid { grid-template-columns: 1fr 1fr; gap: 18px; }
+  .shop-grid { columns: 2; column-gap: 18px; }
+  .shop-card { margin-bottom: 18px; }
   .sc-ttl { font-size: 0.92rem; }
   .add-btn { padding: 8px 11px; font-size: 0.62rem; }
 }
 @media (max-width: 380px) {
-  .shop-grid { grid-template-columns: 1fr; }
+  .shop-grid { columns: 1; }
 }
 
 /* Framed banner: tighten the frame stage on phones. */
