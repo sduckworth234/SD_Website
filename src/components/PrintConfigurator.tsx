@@ -29,6 +29,21 @@ function thumb(photo: Photo, width: number): string {
 const orientOf = (p: Photo) => (p.aspect === "portrait" || p.aspect === "square" ? "portrait" : "landscape");
 type PreviewMode = "studio" | "detail";
 
+/** Largest size this photo's `maxSellable*` field allows for a given mount
+ * option, or Infinity (no restriction) when the field is absent — e.g. the
+ * gating columns haven't been backfilled for this photo, or ship ahead of
+ * their migration. Fails open: an unknown photo isn't blocked from any size. */
+function sizeRank(id: SizeId): number {
+  return SIZES.findIndex((s) => s.id === id);
+}
+
+function isSizeAvailable(photo: Photo, size: SizeId, mounted: boolean): boolean {
+  const maxId = mounted ? photo.maxSellableMounted : photo.maxSellableUnmounted;
+  if (maxId == null) return true; // no gating data yet — don't block
+  if (!SIZES.some((s) => s.id === maxId)) return true; // unrecognised value — fail open
+  return sizeRank(size) <= sizeRank(maxId as SizeId);
+}
+
 export function PrintConfigurator({
   photo,
   otherShopPhotos,
@@ -50,6 +65,17 @@ export function PrintConfigurator({
 
   const roomWrapRef = useRef<HTMLDivElement | null>(null);
   const [frameStyle, setFrameStyle] = useState<{ width: number; height: number } | null>(null);
+
+  // Snap to the largest available size whenever the photo or mount option
+  // changes and the currently-selected size is no longer offered for it —
+  // e.g. switching to a lower-resolution photo, or toggling to unmounted
+  // (which needs more pixels for the same size).
+  useEffect(() => {
+    if (isSizeAvailable(photo, size, mounted)) return;
+    const fallback = [...SIZES].reverse().find((s) => isSizeAvailable(photo, s.id, mounted));
+    if (fallback) setSize(fallback.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photo.id, mounted]);
 
   useEffect(() => {
     const el = roomWrapRef.current;
@@ -73,6 +99,10 @@ export function PrintConfigurator({
   const colourDef = colourById(colour);
   const price = priceFor(size, mounted);
   const sku = skuFor(size, mounted);
+  const maxForMount = mounted ? photo.maxSellableMounted : photo.maxSellableUnmounted;
+  // Only worth a note when it's an actual limitation — A1 (the top size) or
+  // unknown/no restriction don't need a message at all.
+  const maxIdeal = maxForMount && maxForMount !== "A1" && SIZES.some((s) => s.id === maxForMount) ? maxForMount : null;
 
   const pxPerCmForBand = frameStyle ? frameStyle.width / (orientOf(photo) === "landscape" ? sizeDef.outer[1] : sizeDef.outer[0]) : 0;
   const bandCm = mounted ? MOULDING_CM : UNMOUNTED_BAND_CM;
@@ -289,13 +319,24 @@ export function PrintConfigurator({
           <div className="pc-group">
             <div className="pc-group-head"><label>Size</label><span className="pc-val">{sizeDef.outer[0].toFixed(1)} × {sizeDef.outer[1].toFixed(1)} cm</span></div>
             <div className="pc-sizes">
-              {SIZES.map((s) => (
-                <button key={s.id} className={`pc-size-btn${s.id === size ? " on" : ""}`} type="button" onClick={() => setSize(s.id)}>
-                  <b>{s.id}</b>
-                  <span>{s.outer[0].toFixed(0)}×{s.outer[1].toFixed(0)}cm</span>
-                </button>
-              ))}
+              {SIZES.map((s) => {
+                const available = isSizeAvailable(photo, s.id, mounted);
+                return (
+                  <button
+                    key={s.id}
+                    className={`pc-size-btn${s.id === size ? " on" : ""}${available ? "" : " unavailable"}`}
+                    type="button"
+                    disabled={!available}
+                    title={available ? undefined : "This photo's source resolution doesn't support a sharp print at this size."}
+                    onClick={() => available && setSize(s.id)}
+                  >
+                    <b>{s.id}</b>
+                    <span>{s.outer[0].toFixed(0)}×{s.outer[1].toFixed(0)}cm</span>
+                  </button>
+                );
+              })}
             </div>
+            {maxIdeal ? <p className="pc-quality-note">Best print quality up to {maxIdeal}{mounted ? " mounted" : ""} for this image.</p> : null}
           </div>
 
           <div className="pc-group">

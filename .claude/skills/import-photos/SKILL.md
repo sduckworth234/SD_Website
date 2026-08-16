@@ -47,6 +47,16 @@ EXIF/XMP — and derives:
   (admin-only) so the gallery photo links back to the full-res file. Editable
   later in the `/admin` full editor; backfill old rows with
   `scripts/source-path-backfill.mjs`.
+- **Print-shop readiness** — the decoded source JPG's true pixel dimensions
+  go to `source_width`/`source_height`, and the largest print size it clears
+  Prodigi's 200dpi floor at (per `server/shop/printSizing.mjs`) goes to
+  `max_sellable_mounted`/`max_sellable_unmounted` — this is what gates sizes
+  in the shop's size picker and what the admin Shop tab shows. If `RAW_DIR` is
+  given (see below), the raw file's own (usually much higher) resolution is
+  used instead wherever a unique exact-timestamp match is found, and
+  `raw_source_path`/`raw_width`/`raw_height` are set too. `in_shop` itself
+  stays a manual call — this just tells you upfront what size a photo could
+  honestly be sold at.
 
 Then it compresses (sharp `rotate → fit-inside 2400px → WebP q78`), uploads to the
 `photos` bucket (`upsert`), inserts a published row, and **warms the transform
@@ -69,6 +79,15 @@ published photo's variants).
   "Northern Beaches", overseas → the geocoded region/country).
 - `PUBLISH=0` — insert as drafts instead of publishing.
 - `LIMIT=n` — only the first n photos (smoke test).
+- `RAW_DIR="/path/to/Photos Original"` — an optional sibling folder of
+  untouched camera originals (DNG/RAW/TIFF/JPG) for this same shoot. When
+  given, each imported photo is matched to a file in it by exact-second EXIF
+  capture time (same technique as the 2026-08-16 drive-wide raw/print-master
+  audit) and its true dimensions (read via macOS `sips`, which decodes
+  DNG/raw correctly — sharp/exifr often only see an embedded thumbnail) drive
+  the sellable-size calculation instead of the JPG export's own resolution.
+  Optional — plenty of shoots (phone drops, a folder that's already the only
+  copy) genuinely have no separate raw folder, and that's fine.
 
 ## Procedure
 
@@ -111,10 +130,14 @@ it's interrupted you can re-run the exact command to finish.
 ### 5. Report
 - State what landed: N photos published across which locations (flag any NEW ones),
   any no-GPS photos parked as Unsorted drafts, altitude coverage.
+- Include the **max sellable size breakdown** from the summary (e.g. "18 could
+  sell up to A1, 4 only to A3") so Sam knows print-shop readiness without
+  opening `/admin`. If `RAW_DIR` was used, say how many matched.
 - Remind Sam it's **already live** at samduckworth.com (no deploy needed), shows on
   the **/map** for geolocated photos, and that he can curate from `/admin` or inline
   on the gallery — set Recent-Work slots, send-to-top, rename, or fix any
   mis-geocoded location/title. No-GPS drafts need a location set before they show.
+  Adding a photo to the shop (`in_shop`) is still a manual step in the Shop tab.
 
 ## Notes & gotchas
 - **No GPS + no `LOCATION`** → photo is parked as an *Unsorted draft* (hidden from
@@ -127,4 +150,8 @@ it's interrupted you can re-run the exact command to finish.
   `import-folders` + the `altitude`/`coords` backfills) for new batches by reading
   all metadata up front. Those scripts remain for reference/history.
 - Schema/DDL changes still need Sam to run SQL by hand — but this skill only writes
-  rows + storage, never DDL, so no migration is involved.
+  rows + storage, never DDL, so no migration is involved *by this skill*. It does,
+  however, write to `source_width`/`source_height`/`raw_*`/`max_sellable_*`, which
+  themselves came from migrations `20260816010000_photo_raw_source.sql` and
+  `20260816020000_photo_source_dims.sql` — those need to be applied once (already
+  done as of 2026-08-16) before those columns exist to write to.

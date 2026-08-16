@@ -130,3 +130,53 @@ export function estimateShipping(sizes: SizeId[]): number {
 }
 
 export const money = (n: number) => `$${n.toFixed(2)}`;
+
+// Print-size gating — mirrored in server/shop/printSizing.mjs (server-only
+// module system, can't share this file directly). Keep both in sync.
+//
+// Required print-area pixel dimensions at 300dpi per SKU, verified against
+// the live Prodigi API (Shop Setup/Prodigi API — Investigation & Setup
+// Plan.md §3). Same numbers AdminOrders.tsx validates a print-master upload
+// against — this is that table's canonical home now.
+export const REQUIRED_PX: Record<SizeId, { cfp: [number, number]; cfpm: [number, number] }> = {
+  A5: { cfp: [1748, 2480], cfpm: [1164, 1890] },
+  A4: { cfp: [2490, 3510], cfpm: [1594, 2622] },
+  A3: { cfp: [3507, 4960], cfpm: [2385, 3825] },
+  A2: { cfp: [4960, 7015], cfpm: [3780, 5835] },
+  A1: { cfp: [7020, 9930], cfpm: [5895, 8805] },
+};
+
+/** Prodigi wants 300dpi, allows ~200dpi as the floor for non-fine-detail work
+ * — but aerial/coastal work is all fine detail, so 200dpi is treated as the
+ * hard floor below which a size isn't offered at all (Shop Setup doc §4). */
+export const MIN_ACCEPTABLE_DPI = 200;
+
+/** Achievable print dpi for a photo of the given pixel size at a given SKU,
+ * per Shop Setup doc's formula: dpi = 300 * sqrt(actualMP / requiredMP@300dpi). */
+export function dpiFor(width: number, height: number, size: SizeId, mounted: boolean): number {
+  const [reqW, reqH] = mounted ? REQUIRED_PX[size].cfpm : REQUIRED_PX[size].cfp;
+  return Math.round(300 * Math.sqrt((width * height) / (reqW * reqH)));
+}
+
+/** The largest size (of A5..A1) this photo can be sold at, at or above the
+ * dpi floor, for a given mount option — or null if even A5 mounted can't
+ * clear the floor. */
+export function maxSellableSize(width: number, height: number, mounted: boolean): SizeId | null {
+  let best: SizeId | null = null;
+  for (const s of SIZES) {
+    if (dpiFor(width, height, s.id, mounted) >= MIN_ACCEPTABLE_DPI) best = s.id;
+  }
+  return best;
+}
+
+/** Per-size availability at both mount options, for rendering the size
+ * picker (disable unavailable options) and admin readiness displays. */
+export function sizeAvailability(width: number, height: number): Record<SizeId, { cfpOk: boolean; cfpmOk: boolean; cfpDpi: number; cfpmDpi: number }> {
+  const out = {} as Record<SizeId, { cfpOk: boolean; cfpmOk: boolean; cfpDpi: number; cfpmDpi: number }>;
+  for (const s of SIZES) {
+    const cfpDpi = dpiFor(width, height, s.id, false);
+    const cfpmDpi = dpiFor(width, height, s.id, true);
+    out[s.id] = { cfpOk: cfpDpi >= MIN_ACCEPTABLE_DPI, cfpmOk: cfpmDpi >= MIN_ACCEPTABLE_DPI, cfpDpi, cfpmDpi };
+  }
+  return out;
+}

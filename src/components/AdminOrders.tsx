@@ -2,18 +2,11 @@ import type { Session } from "@supabase/supabase-js";
 import { ExternalLink, LoaderCircle, PackageCheck, Search, Upload } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { REQUIRED_PX, type SizeId } from "../lib/printCatalogue";
 
 type OrderItem = { id: string; photo_id: string | null; title: string; size: string; mounted: boolean; colour: string; print_master_path: string | null };
 type Order = { id: string; status: string; customer_email: string; customer_name: string; total_cents: number; created_at: string; submit_after: string; prodigi_order_id: string | null; tracking_url: string | null; last_fulfilment_error: string | null; order_items: OrderItem[] };
 type ShopFeatures = { checkoutEnabled: boolean; fulfilmentEnabled: boolean };
-
-const REQUIRED: Record<string, [number, number]> = {
-  "GLOBAL-CFP-A5": [1748, 2480], "GLOBAL-CFPM-A5": [1164, 1890],
-  "GLOBAL-CFP-A4": [2490, 3510], "GLOBAL-CFPM-A4": [1594, 2622],
-  "GLOBAL-CFP-A3": [3507, 4960], "GLOBAL-CFPM-A3": [2385, 3825],
-  "GLOBAL-CFP-A2": [4960, 7015], "GLOBAL-CFPM-A2": [3780, 5835],
-  "GLOBAL-CFP-A1": [7020, 9930], "GLOBAL-CFPM-A1": [5895, 8805],
-};
 
 async function imageSize(file: File) {
   const bitmap = await createImageBitmap(file);
@@ -70,8 +63,7 @@ export function AdminOrders({ session }: { session: Session }) {
     try {
       if (file.type !== "image/jpeg" || !/\.jpe?g$/i.test(file.name)) throw new Error("Export the print master as a JPEG first.");
       const dimensions = await imageSize(file);
-      const sku = `GLOBAL-${item.mounted ? "CFPM" : "CFP"}-${item.size}`;
-      const required = REQUIRED[sku];
+      const required = REQUIRED_PX[item.size as SizeId]?.[item.mounted ? "cfpm" : "cfp"];
       const [short, long] = [dimensions.width, dimensions.height].sort((a, b) => a - b);
       if (required && (short < required[0] || long < required[1])) throw new Error(`${item.title} needs at least ${required[0]} × ${required[1]} px for ${item.size}; this file is ${short} × ${long} px.`);
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "-");

@@ -4085,6 +4085,29 @@ const ADMIN_TABS: { id: AdminTab; label: string; description: string; icon: Reac
   { id: "settings", label: "Site settings", description: "Visibility, banners and feature switches", icon: <Eye size={16} /> },
 ];
 
+// Print-quality readiness, shown wherever admin decides what to sell or edits
+// a photo's details. Prefers the raw master's dimensions, falls back to the
+// export's — see server/shop/printSizing.mjs / src/lib/printCatalogue.ts for
+// the same math, and supabase/migrations/20260816010000_photo_raw_source.sql
+// + 20260816020000_photo_source_dims.sql for where these columns come from.
+function PrintReadinessBadge({ photo }: { photo: Photo }) {
+  const width = photo.rawWidth || photo.sourceWidth;
+  const height = photo.rawHeight || photo.sourceHeight;
+  const isRaw = Boolean(photo.rawWidth);
+
+  if (!width || !height) {
+    return <em className="print-readiness unknown">No resolution data yet</em>;
+  }
+  if (!photo.maxSellableMounted) {
+    return <em className="print-readiness too-small">Too small to print sell · {width}×{height}{isRaw ? " raw" : ""}</em>;
+  }
+  return (
+    <em className="print-readiness ok">
+      Sellable to <b>{photo.maxSellableMounted}</b> mounted · {width}×{height}{isRaw ? " raw" : " export only"}
+    </em>
+  );
+}
+
 function ShopCatalogueAdmin({
   photos,
   onChanged,
@@ -4164,6 +4187,7 @@ function ShopCatalogueAdmin({
                 <small className={eligible ? "is-eligible" : ""}>
                   {eligible ? "Available when the shop gates are on" : photo.inShop ? "Selected for sale · still a draft" : "Not for sale"}
                 </small>
+                <PrintReadinessBadge photo={photo} />
               </div>
               <button
                 aria-label={`${photo.inShop ? "Remove" : "Enable"} ${photo.title} ${photo.inShop ? "from" : "for"} sale`}
@@ -4540,6 +4564,7 @@ function AdminDashboard({ session }: { session: Session }) {
                 ) : (
                   <small className="admin-source-missing">No source file linked</small>
                 )}
+                <PrintReadinessBadge photo={photo} />
                 <div className="card-actions">
                   <button className="text-button edit-button" onClick={() => setEditingPhotoId(photo.id)} type="button">
                     <Pencil size={13} aria-hidden="true" /> Edit details
@@ -4780,6 +4805,14 @@ function PhotoEditForm({
               type="text"
             />
           </label>
+          <div className="edit-print-readiness">
+            <span>Print readiness</span>
+            <PrintReadinessBadge photo={photo} />
+            {photo.rawSourcePath ? (
+              <small className="edit-raw-path" title={photo.rawSourcePath}>Raw: {photo.rawSourcePath}</small>
+            ) : null}
+            {photo.rawMatchNotes ? <small className="edit-raw-notes">{photo.rawMatchNotes}</small> : null}
+          </div>
           <div className="check-row edit-flags">
             <label>
               <input defaultChecked={Boolean(photo.published)} name="isPublished" type="checkbox" /> Published

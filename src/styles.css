@@ -3041,6 +3041,30 @@ body:has(.contact-overlay) {
   gap: 14px;
 }
 
+/* Print-readiness summary (raw/export dims, max sellable size) in the full
+ * admin editor — see PrintReadinessBadge. */
+.edit-print-readiness {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  background: var(--foam);
+}
+.edit-print-readiness > span {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.edit-print-readiness .print-readiness { font-size: 10.5px; }
+.edit-raw-path, .edit-raw-notes {
+  font-size: 0.66rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Read-only system facts (storage path / slug / id) at the foot of the form. */
 .edit-readonly {
   display: grid;
@@ -4907,6 +4931,9 @@ body:has(.contact-overlay) {
 .pc-size-btn span { display: block; margin-top: 3px; font: 400 9.5px/1 var(--font-mono); color: var(--muted); }
 .pc-size-btn.on { border-color: var(--ink); background: rgba(var(--ink-rgb), .06); }
 .pc-size-btn.on span { color: rgba(var(--ink-rgb), .66); }
+.pc-size-btn.unavailable { opacity: .35; cursor: not-allowed; }
+.pc-size-btn.unavailable:hover { border-color: var(--line); }
+.pc-quality-note { margin: 8px 0 0; font-size: 10.5px; line-height: 1.4; color: var(--muted); }
 
 .pc-swatches { display: flex; gap: 9px; flex-wrap: wrap; }
 .pc-swatch-btn { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 44px; background: none; border: 0; cursor: pointer; padding: 0; }
@@ -5095,6 +5122,12 @@ body:has(.contact-overlay) {
 .shop-catalogue-card span, .shop-catalogue-card small { color: var(--muted); font-size: 9px; }
 .shop-catalogue-card strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .shop-catalogue-card small.is-eligible { color: var(--success); }
+
+.print-readiness { display: block; font: 400 9px/1.4 var(--font-mono); letter-spacing: .01em; margin-top: 2px; }
+.print-readiness b { font-weight: 600; }
+.print-readiness.ok { color: var(--success); }
+.print-readiness.too-small { color: var(--danger); }
+.print-readiness.unknown { color: var(--muted); }
 .sale-toggle { grid-column: 1 / -1; position: relative; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; padding: 6px 10px; border: 1px solid var(--line); background: var(--paper-deep); color: var(--muted); cursor: pointer; font: 600 9px var(--font-mono); text-transform: uppercase; }
 .sale-toggle .vis-knob { width: 16px; height: 16px; border-radius: 50%; background: var(--muted); }
 .sale-toggle.on { border-color: rgba(var(--success-rgb), .55); color: var(--success); background: rgba(var(--success-rgb), .07); }

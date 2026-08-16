@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import { normaliseCart } from "../server/shop/catalogue.mjs";
 import { checkoutEnabled } from "../server/shop/features.mjs";
 import { json, methodAllowed, publicOrigin, readJson, safeError } from "../server/shop/http.mjs";
+import { sizeIsAvailable } from "../server/shop/printSizing.mjs";
 import { quoteShippingCents } from "../server/shop/prodigi.mjs";
 import { fetchShopPhotos, requireAdmin, shopRuntimeEnabled } from "../server/shop/supabase.mjs";
 
@@ -61,6 +62,17 @@ export default async function handler(req, res) {
     const cart = normaliseCart(body.cart);
     const customer = customerFrom(body);
     const photos = await fetchShopPhotos(cart.map((item) => item.photoId));
+    // Reject any size the photo's known resolution can't support at a
+    // reasonable print quality — the size picker already hides these, this
+    // is the real enforcement in case that's ever bypassed. Fail closed: a
+    // photo with no known dimensions (backfill gap) can't be ordered at any
+    // size, same as one that's genuinely too small.
+    for (const item of cart) {
+      const photo = photos.get(item.photoId);
+      if (!sizeIsAvailable(photo.width, photo.height, item.size, item.mounted)) {
+        throw new Error(`${photo.title} isn't available as a ${item.mounted ? "mounted " : ""}${item.size} print — the source image isn't high enough resolution for that size.`);
+      }
+    }
     const shipping = await quoteShippingCents(cart);
     const promoText = clean(body.promotionCode, 64).toUpperCase();
     let promotion = null;
@@ -143,7 +155,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     const message = safeError(error);
-    const status = /not valid|Enter |Cart |no longer available|unsupported|between 1/i.test(message) ? 400 : 500;
+    const status = /not valid|Enter |Cart |no longer available|unsupported|between 1|isn't available as a/i.test(message) ? 400 : 500;
     if (status === 500) console.error("create checkout session:", message);
     json(res, status, { error: status === 500 ? "Checkout could not be started. Please try again." : message });
   }

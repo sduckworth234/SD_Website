@@ -68,6 +68,15 @@ type PhotoRow = {
   collection_order: number | null;
   in_shop: boolean;
   shop_order: number | null;
+  max_sellable_mounted?: string | null;
+  max_sellable_unmounted?: string | null;
+  raw_source_path?: string | null;
+  raw_width?: number | null;
+  raw_height?: number | null;
+  raw_match_confidence?: string | null;
+  raw_match_notes?: string | null;
+  source_width?: number | null;
+  source_height?: number | null;
   locations: {
     id: string;
     slug: string;
@@ -135,6 +144,15 @@ function mapPhoto(row: PhotoRow): Photo {
     collectionOrder: row.collection_order ?? null,
     inShop: row.in_shop ?? false,
     shopOrder: row.shop_order ?? null,
+    maxSellableMounted: row.max_sellable_mounted ?? null,
+    maxSellableUnmounted: row.max_sellable_unmounted ?? null,
+    rawSourcePath: row.raw_source_path ?? null,
+    rawWidth: row.raw_width ?? null,
+    rawHeight: row.raw_height ?? null,
+    rawMatchConfidence: row.raw_match_confidence ?? null,
+    rawMatchNotes: row.raw_match_notes ?? null,
+    sourceWidth: row.source_width ?? null,
+    sourceHeight: row.source_height ?? null,
   };
 }
 
@@ -237,10 +255,10 @@ async function getGalleryDataInner() {
         .select("id, slug, name, region, description, sort_order, map_feed_order")
         .eq("is_visible", true)
         .order("sort_order", { ascending: true }),
-      // `ratio` ships ahead of its migration — retry without it until the
-      // column exists (otherwise the whole site would fall back to bundled
-      // data over one missing column).
-      photoQuery(`ratio, ${PUBLIC_PHOTO_COLUMNS}`),
+      // `ratio` and the max_sellable_* columns ship ahead of their migration —
+      // retry without them until the columns exist (otherwise the whole site
+      // would fall back to bundled data over columns that don't exist yet).
+      photoQuery(`ratio, max_sellable_mounted, max_sellable_unmounted, ${PUBLIC_PHOTO_COLUMNS}`),
       fetchCollections(),
     ]);
   if (photoError) {
@@ -266,6 +284,12 @@ async function getGalleryDataInner() {
 
 const ADMIN_SELECT =
   "id, title, slug, description, location_id, kind, year_taken, captured_at, aspect, storage_bucket, storage_path, source_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, collection_order, in_shop, shop_order";
+// Print-readiness columns ship ahead of their migrations (20260816010000,
+// 20260816020000) — same "ships ahead" pattern as `ratio` in the public
+// query. Requested separately so a stale DB (columns not applied yet)
+// degrades to "no readiness data" instead of breaking the whole admin panel.
+const ADMIN_PRINT_READINESS_SELECT =
+  "max_sellable_mounted, max_sellable_unmounted, raw_source_path, raw_width, raw_height, raw_match_confidence, raw_match_notes, source_width, source_height";
 
 export async function getAdminPhotos() {
   if (!supabase) return [];
@@ -276,18 +300,29 @@ export async function getAdminPhotos() {
   // authenticated role's direct column grant on `photos` excludes source_path,
   // so the view is the only path to it. Location names are joined client-side
   // (PostgREST can't always embed through a view).
-  let { data, error } = await supabase
+  let data: PhotoRow[] | null;
+  let error: { message: string } | null;
+  ({ data, error } = (await supabase
     .from("admin_photos")
-    .select(ADMIN_SELECT)
-    .order("created_at", { ascending: false });
+    .select(`${ADMIN_SELECT}, ${ADMIN_PRINT_READINESS_SELECT}`)
+    .order("created_at", { ascending: false })) as unknown as { data: PhotoRow[] | null; error: { message: string } | null });
+
+  // Print-readiness columns ship ahead of their migration — retry without
+  // them until the columns exist.
+  if (error) {
+    ({ data, error } = (await supabase
+      .from("admin_photos")
+      .select(ADMIN_SELECT)
+      .order("created_at", { ascending: false })) as unknown as { data: PhotoRow[] | null; error: { message: string } | null });
+  }
 
   // Fallback for the window before the hardening migration is applied: the
   // view doesn't exist yet, but the old blanket grant still does.
   if (error) {
-    ({ data, error } = await supabase
+    ({ data, error } = (await supabase
       .from("photos")
       .select(ADMIN_SELECT)
-      .order("created_at", { ascending: false }));
+      .order("created_at", { ascending: false })) as unknown as { data: PhotoRow[] | null; error: { message: string } | null });
   }
   if (error) throw error;
 

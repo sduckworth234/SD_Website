@@ -12,6 +12,16 @@
 // as needed. Idempotent: skips any storage_path already in `photos`, and the
 // storage upload upserts — safe to re-run on the same folder.
 //
+// Also derives print-shop readiness (added 2026-08-16, alongside the
+// drive-wide raw/print-master audit — see imports/DELETE/raw-source-audit-scratch
+// for that one-off run's working notes): source_width/source_height from the
+// decoded source JPG, and max_sellable_mounted/max_sellable_unmounted (the
+// largest print size this photo clears the 200dpi floor for — see
+// server/shop/printSizing.mjs) from the best available dimensions (a matched
+// RAW_DIR raw, when given, else the source JPG itself). `in_shop` is still a
+// manual curation decision, same as always — this just tells you upfront, in
+// the import log, what size a newly imported photo could honestly be sold at.
+//
 // Usage: node --env-file=.env.local scripts/import-shoot.mjs "/path/to/dump"
 //   DRY_RUN=1            plan only — read + geocode + compress, no upload / no DB
 //   LOCATION="Manly"     force every photo into one location (skip geocoding the
@@ -22,13 +32,27 @@
 //   LIMIT=n              process only the first n photos (smoke test)
 //   SORT_BASE=500        sort_order base for new rows (appended after curated work)
 //   DELAY_MS=1200        Nominatim rate-limit between distinct geocode calls
+//   RAW_DIR="/path/to/Photos Original"   optional sibling folder of untouched
+//                        camera originals (DNG/RAW/TIFF/JPG) for this same
+//                        shoot — if given, each imported photo is matched to
+//                        a file in here by exact-second EXIF capture time
+//                        (same technique as the 2026-08-16 drive-wide raw
+//                        audit) and raw_source_path/raw_width/raw_height are
+//                        set from it. Optional because plenty of shoots
+//                        genuinely have no separate raw folder.
 import { createHash } from "node:crypto";
+import { execFile } from "node:child_process";
 import { openSync, readSync, closeSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
+import { promisify } from "node:util";
 import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 import exifReader from "exif-reader";
+import exifr from "exifr";
+import { maxSellableSize } from "../server/shop/printSizing.mjs";
+
+const execFileAsync = promisify(execFile);
 
 // ---- config ----------------------------------------------------------------
 const DIR = process.argv[2];
@@ -46,6 +70,7 @@ const regionOverride = process.env.REGION?.trim() || null;
 const limit = process.env.LIMIT ? Number(process.env.LIMIT) : Infinity;
 const sortBase = process.env.SORT_BASE ? Number(process.env.SORT_BASE) : 500;
 const DELAY_MS = Number(process.env.DELAY_MS ?? 1200);
+const rawDir = process.env.RAW_DIR?.trim() || null;
 
 const VALID_KINDS = new Set(["Drone", "Landscape", "Travel"]);
 if (forceKind && !VALID_KINDS.has(forceKind)) throw new Error(`KIND must be one of ${[...VALID_KINDS].join(", ")}`);
@@ -112,14 +137,16 @@ const round3 = (n) => Math.round(n * 1000) / 1000;
 
 // Read everything we need from the original, in one go.
 async function readSource(buf) {
-  let exif = null;
+  let exif = null, sourceWidth = null, sourceHeight = null;
   try {
     const meta = await sharp(buf).metadata();
+    sourceWidth = meta.width ?? null;
+    sourceHeight = meta.height ?? null;
     if (meta.exif) { try { exif = exifReader(meta.exif); } catch { /* unparseable */ } }
   } catch { /* not readable as image */ }
 
   // year + capture date
-  let year = null, capturedAt = null;
+  let year = null, capturedAt = null, captureLocalNaive = null;
   const dt = exif?.Photo?.DateTimeOriginal || exif?.Image?.DateTime;
   if (dt) {
     const d = new Date(dt);
@@ -128,6 +155,12 @@ async function readSource(buf) {
       year = y;
       capturedAt = d.toISOString().slice(0, 10); // YYYY-MM-DD for captured_at
     }
+    // Local-naive wall-clock string (LOCAL getters, not UTC) for matching
+    // against a RAW_DIR candidate's own EXIF timestamp — same convention as
+    // the 2026-08-16 drive-wide raw audit. Round-trips correctly regardless
+    // of the machine's timezone since both sides use the same getters.
+    const p = (n) => String(n).padStart(2, "0");
+    captureLocalNaive = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
   }
 
   // GPS — EXIF first, then DJI XMP
@@ -151,11 +184,65 @@ async function readSource(buf) {
   const isDrone = djiXmpNum(buf, "RelativeAltitude") != null || /drone-dji:/.test(buf.toString("latin1").slice(0, 65536));
 
   return {
-    year, capturedAt,
+    year, capturedAt, captureLocalNaive,
+    sourceWidth, sourceHeight,
     lat: lat == null ? null : round3(lat),
     lon: lon == null ? null : round3(lon),
     gpsSource, altitude, isDrone,
   };
+}
+
+// ---- optional raw-folder matching (RAW_DIR) ---------------------------------
+// Same technique as the 2026-08-16 drive-wide raw audit: index every raw
+// candidate's EXIF capture time once, then match each imported photo to it by
+// exact-second timestamp. Built lazily so a normal import (no RAW_DIR) pays
+// nothing for it.
+const RAW_EXTS = /\.(dng|raw|nef|cr2|cr3|arw|tif|tiff|jpe?g)$/i;
+let rawIndexPromise = null;
+async function rawIndex() {
+  if (!rawDir) return new Map();
+  if (!rawIndexPromise) {
+    rawIndexPromise = (async () => {
+      const map = new Map(); // localNaive -> [{path}]
+      const entries = [];
+      for await (const f of walk(rawDir)) if (RAW_EXTS.test(f)) entries.push(f);
+      console.log(`RAW_DIR: indexing ${entries.length} candidate(s) in ${rawDir}…`);
+      for (const path of entries) {
+        try {
+          const exif = await exifr.parse(path, { pick: ["DateTimeOriginal"] });
+          if (!exif?.DateTimeOriginal) continue;
+          const d = exif.DateTimeOriginal;
+          const p = (n) => String(n).padStart(2, "0");
+          const key = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+          if (!map.has(key)) map.set(key, []);
+          map.get(key).push(path);
+        } catch { /* unreadable — skip */ }
+      }
+      return map;
+    })();
+  }
+  return rawIndexPromise;
+}
+
+async function sipsDims(path) {
+  try {
+    const { stdout } = await execFileAsync("sips", ["-g", "pixelWidth", "-g", "pixelHeight", path]);
+    const w = /pixelWidth: (\d+)/.exec(stdout);
+    const h = /pixelHeight: (\d+)/.exec(stdout);
+    return w && h ? { width: Number.parseInt(w[1], 10), height: Number.parseInt(h[1], 10) } : null;
+  } catch {
+    return null;
+  }
+}
+
+async function matchRaw(captureLocalNaive) {
+  if (!rawDir || !captureLocalNaive) return null;
+  const index = await rawIndex();
+  const candidates = index.get(captureLocalNaive);
+  if (!candidates || candidates.length !== 1) return null; // no match, or ambiguous — leave for manual review
+  const dims = await sipsDims(candidates[0]);
+  if (!dims) return null;
+  return { path: candidates[0], width: dims.width, height: dims.height };
 }
 
 // ---- reverse geocoding (Nominatim, cached + rate-limited) -------------------
@@ -332,6 +419,12 @@ for (const src of files) {
     if (error) throw new Error(`Upload failed for ${src}: ${error.message}`);
   }
 
+  const raw = await matchRaw(meta.captureLocalNaive);
+  const effWidth = raw?.width || meta.sourceWidth;
+  const effHeight = raw?.height || meta.sourceHeight;
+  const maxMounted = maxSellableSize(effWidth, effHeight, true);
+  const maxUnmounted = maxSellableSize(effWidth, effHeight, false);
+
   rows.push({
     title: title || location || "Untitled",
     slug: `${locSlug}-${hash}`,
@@ -344,6 +437,15 @@ for (const src of files) {
     storage_bucket: bucket,
     storage_path: storagePath,
     source_path: src, // link back to the original full-res file
+    source_width: meta.sourceWidth,
+    source_height: meta.sourceHeight,
+    raw_source_path: raw?.path ?? null,
+    raw_width: raw?.width ?? null,
+    raw_height: raw?.height ?? null,
+    raw_match_confidence: raw ? "exact_timestamp" : (rawDir ? "none" : null),
+    raw_match_notes: raw ? `Matched against RAW_DIR at import time.` : (rawDir ? "No unique exact-timestamp match found in RAW_DIR at import time." : null),
+    max_sellable_mounted: maxMounted,
+    max_sellable_unmounted: maxUnmounted,
     relative_altitude_m: meta.altitude,
     latitude: meta.lat,
     longitude: meta.lon,
@@ -358,6 +460,8 @@ for (const src of files) {
     meta.year ? `${meta.year}` : "", aspect,
     meta.altitude != null ? `${Math.round(meta.altitude)}m` : "",
     meta.gpsSource ? `gps:${meta.gpsSource}` : "no-gps",
+    maxMounted ? `sellable-to:${maxMounted}` : "too-small-to-sell",
+    raw ? "raw-matched" : "",
   ].filter(Boolean);
   console.log("  " + bits.join("  "));
 }
@@ -405,6 +509,13 @@ console.log(`  photos:        ${plan.length} (${skippedJunk} non-jpeg skipped, $
 console.log(`  new rows:      ${rows.length} ${publish ? "(published, live now)" : "(drafts)"}`);
 console.log(`  no GPS:        ${noGps}${noGps && !forceLocation ? "  -> Unsorted drafts (sort in /admin or re-run with LOCATION=...)" : ""}`);
 console.log(`  with altitude: ${withAlt}`);
+if (rawDir) {
+  const rawMatched = rows.filter((r) => r.raw_source_path).length;
+  console.log(`  raw matched:   ${rawMatched}/${rows.length} against RAW_DIR`);
+}
+const sellCounts = {};
+for (const r of rows) sellCounts[r.max_sellable_mounted ?? "none"] = (sellCounts[r.max_sellable_mounted ?? "none"] || 0) + 1;
+console.log(`  max sellable size (mounted): ${Object.entries(sellCounts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k}:${v}`).join("  ")}`);
 console.log(`  locations:`);
 for (const [name, n] of Object.entries(byLoc).sort((a, b) => b[1] - a[1])) {
   const isNew = newLocations.has(name);

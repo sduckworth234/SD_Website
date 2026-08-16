@@ -29,7 +29,7 @@ export async function fetchShopPhotos(photoIds) {
   const ids = [...new Set(photoIds)];
   const filter = ids.map((id) => `"${id}"`).join(",");
   const rows = await supabaseRest(
-    `photos?id=in.(${encodeURIComponent(filter)})&is_published=eq.true&in_shop=eq.true&select=id,title,image_url,storage_bucket,storage_path,locations(name)`,
+    `photos?id=in.(${encodeURIComponent(filter)})&is_published=eq.true&in_shop=eq.true&select=id,title,image_url,storage_bucket,storage_path,locations(name),raw_width,raw_height,source_width,source_height`,
   );
   const map = new Map();
   for (const row of rows ?? []) {
@@ -40,6 +40,8 @@ export async function fetchShopPhotos(photoIds) {
       thumbUrl: row.storage_path
         ? `${SUPABASE_URL}/storage/v1/render/image/public/${row.storage_bucket ?? "photos"}/${row.storage_path}?width=400&quality=80&resize=cover`
         : row.image_url,
+      width: row.raw_width || row.source_width || null,
+      height: row.raw_height || row.source_height || null,
     });
   }
   if (map.size !== ids.length) throw new Error("One or more prints are no longer available in the shop.");
