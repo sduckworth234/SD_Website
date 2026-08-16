@@ -2,7 +2,7 @@ import Stripe from "stripe";
 import { normaliseCart } from "../server/shop/catalogue.mjs";
 import { checkoutEnabled, fulfilmentProvider, paidInvoicesEnabled } from "../server/shop/features.mjs";
 import { json, methodAllowed, publicOrigin, readJson, safeError } from "../server/shop/http.mjs";
-import { sizeIsAvailable } from "../server/shop/printSizing.mjs";
+import { sizeIsSellable } from "../server/shop/printSizing.mjs";
 import { quoteShippingCents } from "../server/shop/prodigi.mjs";
 import { fetchShopPhotos, requireAdmin, shopRuntimeEnabled } from "../server/shop/supabase.mjs";
 
@@ -51,14 +51,15 @@ export default async function handler(req, res) {
     const cart = normaliseCart(body.cart);
     const customer = customerFrom(body);
     const photos = await fetchShopPhotos(cart.map((item) => item.photoId));
-    // Reject any size the photo's known resolution can't support at a
-    // reasonable print quality — the size picker already hides these, this
-    // is the real enforcement in case that's ever bypassed. Fail closed: a
-    // photo with no known dimensions (backfill gap) can't be ordered at any
-    // size, same as one that's genuinely too small.
+    // Reject any size that isn't sellable for this photo — sellable_sizes
+    // already merges computed resolution with any admin override, so this
+    // respects a manual "sell this at A1 anyway" or "don't offer A1 for
+    // this one" call the same way the size picker does. The size picker
+    // already hides these, this is the real enforcement in case that's ever
+    // bypassed. Fail closed: no data at all (backfill gap) blocks every size.
     for (const item of cart) {
       const photo = photos.get(item.photoId);
-      if (!sizeIsAvailable(photo.width, photo.height, item.size, item.mounted)) {
+      if (!sizeIsSellable(photo, item.size, item.mounted)) {
         throw new Error(`${photo.title} isn't available as a ${item.mounted ? "mounted " : ""}${item.size} print — the source image isn't high enough resolution for that size.`);
       }
     }

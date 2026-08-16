@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { fallbackLocations, photos as fallbackPhotos } from "../data/photos";
 import type { Collection, GalleryLocation, InstagramPost, Photo, SiteSetting } from "../types";
+import { computeSellableSizes, maxSellableFromSizes } from "./printCatalogue";
+import type { SellableSizes, SizeId, SizeOverrides } from "./printCatalogue";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabasePublishableKey =
@@ -70,6 +72,8 @@ type PhotoRow = {
   shop_order: number | null;
   max_sellable_mounted?: string | null;
   max_sellable_unmounted?: string | null;
+  sellable_sizes?: SellableSizes | null;
+  size_overrides?: SizeOverrides | null;
   raw_source_path?: string | null;
   raw_width?: number | null;
   raw_height?: number | null;
@@ -147,6 +151,8 @@ function mapPhoto(row: PhotoRow): Photo {
     shopOrder: row.shop_order ?? null,
     maxSellableMounted: row.max_sellable_mounted ?? null,
     maxSellableUnmounted: row.max_sellable_unmounted ?? null,
+    sellableSizes: row.sellable_sizes ?? null,
+    sizeOverrides: row.size_overrides ?? null,
     rawSourcePath: row.raw_source_path ?? null,
     rawWidth: row.raw_width ?? null,
     rawHeight: row.raw_height ?? null,
@@ -256,10 +262,11 @@ async function getGalleryDataInner() {
         .select("id, slug, name, region, description, sort_order, map_feed_order")
         .eq("is_visible", true)
         .order("sort_order", { ascending: true }),
-      // `ratio` and the max_sellable_* columns ship ahead of their migration —
-      // retry without them until the columns exist (otherwise the whole site
-      // would fall back to bundled data over columns that don't exist yet).
-      photoQuery(`ratio, max_sellable_mounted, max_sellable_unmounted, ${PUBLIC_PHOTO_COLUMNS}`),
+      // `ratio` and the max_sellable_*/sellable_sizes columns ship ahead of
+      // their migration — retry without them until the columns exist
+      // (otherwise the whole site would fall back to bundled data over
+      // columns that don't exist yet).
+      photoQuery(`ratio, max_sellable_mounted, max_sellable_unmounted, sellable_sizes, ${PUBLIC_PHOTO_COLUMNS}`),
       fetchCollections(),
     ]);
   if (photoError) {
@@ -290,7 +297,7 @@ const ADMIN_SELECT =
 // query. Requested separately so a stale DB (columns not applied yet)
 // degrades to "no readiness data" instead of breaking the whole admin panel.
 const ADMIN_PRINT_READINESS_SELECT =
-  "max_sellable_mounted, max_sellable_unmounted, raw_source_path, raw_width, raw_height, raw_match_confidence, raw_match_notes, source_width, source_height";
+  "max_sellable_mounted, max_sellable_unmounted, sellable_sizes, size_overrides, raw_source_path, raw_width, raw_height, raw_match_confidence, raw_match_notes, source_width, source_height";
 
 export async function getAdminPhotos() {
   if (!supabase) return [];
@@ -834,6 +841,46 @@ export async function setPhotoShop(
     .select("id");
   if (error) throw error;
   if (!data?.length) throw new Error("The photo sale setting was not updated.");
+}
+
+// Set (or clear) one size/mount override on a photo, recompute the resolved
+// sellable_sizes + max_sellable_mounted/unmounted from it, and save all
+// three in one write — see supabase/migrations/20260816130000_photo_size_overrides.sql.
+// `value` null clears the override (back to auto/computed) for that one cell.
+export async function setPhotoSizeOverride(
+  photo: Photo,
+  size: SizeId,
+  mounted: boolean,
+  value: boolean | null,
+) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const width = photo.rawWidth || photo.sourceWidth || 0;
+  const height = photo.rawHeight || photo.sourceHeight || 0;
+
+  const nextOverrides: SizeOverrides = { ...(photo.sizeOverrides ?? {}) };
+  const cell = { ...(nextOverrides[size] ?? {}) };
+  if (value === null) delete cell[mounted ? "mounted" : "unmounted"];
+  else cell[mounted ? "mounted" : "unmounted"] = value;
+  if (Object.keys(cell).length) nextOverrides[size] = cell;
+  else delete nextOverrides[size];
+
+  const sellable = computeSellableSizes(width, height, nextOverrides);
+  const updates = {
+    size_overrides: Object.keys(nextOverrides).length ? nextOverrides : null,
+    sellable_sizes: sellable,
+    max_sellable_mounted: maxSellableFromSizes(sellable, true),
+    max_sellable_unmounted: maxSellableFromSizes(sellable, false),
+  };
+
+  const { data, error } = await supabase
+    .from("photos")
+    .update(updates)
+    .eq("id", photo.id)
+    .select("id");
+  if (error) throw error;
+  if (!data?.length) throw new Error("The size override was not saved.");
+  return { sellableSizes: sellable, sizeOverrides: updates.size_overrides };
 }
 
 // ---------------------------------------------------------------------------

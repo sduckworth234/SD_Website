@@ -9,11 +9,13 @@ import { getTransformedPublicUrl, photoBucket } from "../lib/supabase";
 import type { Photo } from "../types";
 import {
   COLOURS,
+  CONTACT_EMAIL,
   MOULDING_CM,
   ROOM,
   SIZES,
   UNMOUNTED_BAND_CM,
   colourById,
+  isSizeSellable,
   money,
   priceFor,
   sizeById,
@@ -29,19 +31,13 @@ function thumb(photo: Photo, width: number): string {
 const orientOf = (p: Photo) => (p.aspect === "portrait" || p.aspect === "square" ? "portrait" : "landscape");
 type PreviewMode = "studio" | "detail";
 
-/** Largest size this photo's `maxSellable*` field allows for a given mount
- * option, or Infinity (no restriction) when the field is absent — e.g. the
- * gating columns haven't been backfilled for this photo, or ship ahead of
- * their migration. Fails open: an unknown photo isn't blocked from any size. */
-function sizeRank(id: SizeId): number {
-  return SIZES.findIndex((s) => s.id === id);
-}
-
+/** Is `size`/`mounted` sellable for this photo? Prefers the resolved
+ * sellable_sizes map (computed resolution merged with any admin override —
+ * see supabase/migrations/20260816130000_photo_size_overrides.sql), falls
+ * back to the simple maxSellable label for photos that predate it. Fails
+ * open when there's no gating data at all — never block on missing data. */
 function isSizeAvailable(photo: Photo, size: SizeId, mounted: boolean): boolean {
-  const maxId = mounted ? photo.maxSellableMounted : photo.maxSellableUnmounted;
-  if (maxId == null) return true; // no gating data yet — don't block
-  if (!SIZES.some((s) => s.id === maxId)) return true; // unrecognised value — fail open
-  return sizeRank(size) <= sizeRank(maxId as SizeId);
+  return isSizeSellable(size, mounted, photo.sellableSizes, mounted ? photo.maxSellableMounted : photo.maxSellableUnmounted);
 }
 
 export function PrintConfigurator({
@@ -374,6 +370,7 @@ export function PrintConfigurator({
                   >
                     <b>{s.id}</b>
                     <span>{s.outer[0].toFixed(0)}×{s.outer[1].toFixed(0)}cm</span>
+                    {available ? null : <em>Unavailable</em>}
                   </button>
                 );
               })}
@@ -449,6 +446,16 @@ export function PrintConfigurator({
           </div>
         </section>
       ) : null}
+
+      <section className="pc-help">
+        <div>
+          <b>Not sure which size is right, or have a question about this print?</b>
+          <span>Sam answers these personally — sizing, framing, shipping, anything about {photo.title}.</span>
+        </div>
+        <a className="pc-help-btn" href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Question about "${photo.title}"`)}`}>
+          Email a question
+        </a>
+      </section>
 
       <div className={`pc-scrim${cartOpen ? " open" : ""}`} onClick={() => setCartOpen(false)} />
       <div className={`pc-cart-drawer${cartOpen ? " open" : ""}`} aria-label="Cart">

@@ -33,6 +33,19 @@ export function sizeIsAvailable(width, height, size, mounted) {
   return dpiFor(width, height, size, mounted) >= MIN_ACCEPTABLE_DPI;
 }
 
+/** Real checkout enforcement — prefers the resolved sellable_sizes map
+ * (already merges computed resolution with admin overrides, see
+ * supabase/migrations/20260816130000_photo_size_overrides.sql), falls back
+ * to a live DPI check from raw dims when sellable_sizes hasn't been computed
+ * for this photo yet. Fails closed only when there's truly no data at all —
+ * same posture as the pre-override version of this check. */
+export function sizeIsSellable(photo, size, mounted) {
+  if (photo.sellableSizes) {
+    return Boolean(photo.sellableSizes[size]?.[mounted ? "mounted" : "unmounted"]);
+  }
+  return sizeIsAvailable(photo.width, photo.height, size, mounted);
+}
+
 /** Effective pixel dimensions to use for sizing a given photo row: prefer the
  * raw master, fall back to the export (source_path) dimensions when no raw
  * exists — see supabase/migrations/20260816010000_photo_raw_source.sql and

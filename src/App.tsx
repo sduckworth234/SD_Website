@@ -34,7 +34,7 @@ import {
   X,
 } from "lucide-react";
 import type { CSSProperties, DependencyList, ReactNode } from "react";
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   assignRecentSlot,
   bulkEditPhotos,
@@ -62,6 +62,7 @@ import {
   setLocationFeedOrder,
   setMapFeature,
   setPhotoShop,
+  setPhotoSizeOverride,
   removeUploadedAsset,
   setSiteFlag,
   setSiteSetting,
@@ -91,7 +92,8 @@ import { OakFrame } from "./components/OakFrame";
 import { SmartImage } from "./components/SmartImage";
 import { PrintConfigurator } from "./components/PrintConfigurator";
 import { useCart } from "./lib/cart";
-import { money, priceFor } from "./lib/printCatalogue";
+import { CONTACT_EMAIL, SIZES, money, priceFor } from "./lib/printCatalogue";
+import type { SizeId } from "./lib/printCatalogue";
 import { SHOP_FEATURE_ENABLED } from "./lib/features";
 
 // Lazy-loaded so MapLibre + the basemap stay out of the main gallery bundle.
@@ -4110,6 +4112,66 @@ function PrintReadinessBadge({ photo }: { photo: Photo }) {
   );
 }
 
+// Per-photo manual size gating — 5 sizes x mounted/unmounted, each a 3-state
+// cycle (auto -> on -> off -> auto). Writes size_overrides + the recomputed
+// sellable_sizes/max_sellable_* in one call via setPhotoSizeOverride. See
+// supabase/migrations/20260816130000_photo_size_overrides.sql.
+function SizeOverridePanel({ photo, onSaved, setMessage }: { photo: Photo; onSaved: (patch: Partial<Photo>) => void; setMessage: (message: string) => void }) {
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const hasDims = Boolean((photo.rawWidth || photo.sourceWidth) && (photo.rawHeight || photo.sourceHeight));
+
+  async function cycle(size: SizeId, mounted: boolean) {
+    const key = `${size}-${mounted ? "m" : "u"}`;
+    const current = photo.sizeOverrides?.[size]?.[mounted ? "mounted" : "unmounted"];
+    // true -> false -> null(auto) -> true
+    const next = current === true ? false : current === false ? null : true;
+    setBusyKey(key);
+    try {
+      const result = await setPhotoSizeOverride(photo, size, mounted, next);
+      onSaved(result);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The size override could not be saved.");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  return (
+    <div className="size-override-panel">
+      {!hasDims ? <p className="size-override-warn">No resolution data yet — overrides will apply once raw/export dimensions are known.</p> : null}
+      <div className="size-override-grid">
+        <span />
+        <b>Unmounted</b>
+        <b>Mounted</b>
+        {SIZES.map((s) => (
+          <Fragment key={s.id}>
+            <span>{s.id}</span>
+            {[false, true].map((mounted) => {
+              const key = `${s.id}-${mounted ? "m" : "u"}`;
+              const override = photo.sizeOverrides?.[s.id]?.[mounted ? "mounted" : "unmounted"];
+              const computed = photo.sellableSizes?.[s.id]?.[mounted ? "mounted" : "unmounted"];
+              const state = override === true ? "on" : override === false ? "off" : "auto";
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  className={`size-override-cell ${state}${computed ? " is-computed-ok" : ""}`}
+                  disabled={busyKey !== null}
+                  onClick={() => cycle(s.id, mounted)}
+                  title={state === "auto" ? `Auto (currently ${computed ? "sellable" : "not sellable"} from resolution) — click to force on` : state === "on" ? "Forced on — click to force off" : "Forced off — click to reset to auto"}
+                >
+                  {busyKey === key ? "…" : state === "auto" ? (computed ? "Auto · on" : "Auto · off") : state === "on" ? "Forced on" : "Forced off"}
+                </button>
+              );
+            })}
+          </Fragment>
+        ))}
+      </div>
+      <p className="size-override-hint">Click a cell to cycle: auto → forced on → forced off → auto. Auto follows the photo's actual resolution.</p>
+    </div>
+  );
+}
+
 function ShopCatalogueAdmin({
   photos,
   onChanged,
@@ -4121,16 +4183,31 @@ function ShopCatalogueAdmin({
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "sale" | "not_sale">("all");
+  const [locationFilter, setLocationFilter] = useState("all");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  // Local optimistic patches for size-override saves, keyed by photo id, so
+  // the panel reflects a save immediately without waiting on the parent's
+  // next full refresh (setPhotoSizeOverride already persisted it).
+  const [localPatches, setLocalPatches] = useState<Record<string, Partial<Photo>>>({});
   const saleCount = photos.filter((photo) => photo.inShop).length;
+
+  const locationOptions = useMemo(
+    () => [...new Set(photos.map((p) => p.location).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [photos],
+  );
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return [...photos]
+      .map((photo) => (localPatches[photo.id] ? { ...photo, ...localPatches[photo.id] } : photo))
       .filter((photo) => filter === "all" || (filter === "sale" ? photo.inShop : !photo.inShop))
+      .filter((photo) => locationFilter === "all" || photo.location === locationFilter)
       .filter((photo) => !q || photo.title.toLowerCase().includes(q) || photo.location.toLowerCase().includes(q))
       .sort((a, b) => Number(b.inShop) - Number(a.inShop) || (a.shopOrder ?? 1e9) - (b.shopOrder ?? 1e9) || a.title.localeCompare(b.title));
-  }, [filter, photos, query]);
+  }, [filter, locationFilter, localPatches, photos, query]);
 
   async function toggle(photo: Photo) {
     const next = !photo.inShop;
@@ -4146,6 +4223,42 @@ function ShopCatalogueAdmin({
       setMessage(error instanceof Error ? error.message : "The sale setting could not be saved.");
     } finally {
       setBusyId(null);
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllVisible() {
+    setSelectedIds(new Set(visible.map((p) => p.id)));
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  async function bulkSetSale(next: boolean) {
+    if (!selectedIds.size) return;
+    setBulkBusy(true);
+    let nextOrder = Math.max(0, ...photos.map((p) => p.shopOrder ?? 0)) + 1;
+    try {
+      const targets = photos.filter((p) => selectedIds.has(p.id));
+      for (const photo of targets) {
+        await setPhotoShop(photo.id, { inShop: next, shopOrder: next ? nextOrder++ : null });
+      }
+      setMessage(`${targets.length} photo${targets.length === 1 ? "" : "s"} ${next ? "selected for sale" : "removed from sale"}.`);
+      clearSelection();
+      await onChanged();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The bulk sale update could not be completed.");
+    } finally {
+      setBulkBusy(false);
     }
   }
 
@@ -4176,12 +4289,37 @@ function ShopCatalogueAdmin({
           <option value="sale">For sale</option>
           <option value="not_sale">Not for sale</option>
         </select>
+        <select aria-label="Filter by location" onChange={(event) => setLocationFilter(event.target.value)} value={locationFilter}>
+          <option value="all">All locations</option>
+          {locationOptions.map((loc) => (
+            <option key={loc} value={loc}>{loc}</option>
+          ))}
+        </select>
+      </div>
+      <div className="shop-bulk-bar">
+        <div className="shop-bulk-select">
+          <button className="text-button" type="button" onClick={selectAllVisible}>Select all ({visible.length})</button>
+          <button className="text-button" type="button" onClick={clearSelection} disabled={!selectedIds.size}>Clear</button>
+          <span>{selectedIds.size} selected</span>
+        </div>
+        <div className="shop-bulk-actions">
+          <button className="text-button" type="button" disabled={!selectedIds.size || bulkBusy} onClick={() => bulkSetSale(true)}>
+            {bulkBusy ? "Saving…" : "Enable sale"}
+          </button>
+          <button className="text-button danger" type="button" disabled={!selectedIds.size || bulkBusy} onClick={() => bulkSetSale(false)}>
+            {bulkBusy ? "Saving…" : "Remove from sale"}
+          </button>
+        </div>
       </div>
       <div className="shop-catalogue-grid">
         {visible.map((photo) => {
           const eligible = photo.inShop && photo.published;
+          const expanded = expandedId === photo.id;
           return (
-            <article className={`shop-catalogue-card${photo.inShop ? " is-sale" : ""}`} key={photo.id}>
+            <article className={`shop-catalogue-card${photo.inShop ? " is-sale" : ""}${selectedIds.has(photo.id) ? " is-selected" : ""}`} key={photo.id}>
+              <label className="shop-catalogue-select" title="Select for bulk actions">
+                <input type="checkbox" checked={selectedIds.has(photo.id)} onChange={() => toggleSelect(photo.id)} aria-label={`Select ${photo.title}`} />
+              </label>
               <img alt="" src={thumbUrl(photo, 420)} />
               <div>
                 <span>{photo.location}{photo.year ? ` · ${photo.year}` : ""}</span>
@@ -4191,17 +4329,34 @@ function ShopCatalogueAdmin({
                 </small>
                 <PrintReadinessBadge photo={photo} />
               </div>
-              <button
-                aria-label={`${photo.inShop ? "Remove" : "Enable"} ${photo.title} ${photo.inShop ? "from" : "for"} sale`}
-                aria-pressed={photo.inShop}
-                className={`sale-toggle${photo.inShop ? " on" : ""}`}
-                disabled={busyId !== null}
-                onClick={() => toggle(photo)}
-                type="button"
-              >
-                <span className="vis-knob" />
-                {busyId === photo.id ? "Saving…" : photo.inShop ? "For sale" : "Not for sale"}
-              </button>
+              <div className="shop-catalogue-card-actions">
+                <button
+                  aria-label={`${photo.inShop ? "Remove" : "Enable"} ${photo.title} ${photo.inShop ? "from" : "for"} sale`}
+                  aria-pressed={photo.inShop}
+                  className={`sale-toggle${photo.inShop ? " on" : ""}`}
+                  disabled={busyId !== null}
+                  onClick={() => toggle(photo)}
+                  type="button"
+                >
+                  <span className="vis-knob" />
+                  {busyId === photo.id ? "Saving…" : photo.inShop ? "For sale" : "Not for sale"}
+                </button>
+                <button
+                  className="text-button size-override-toggle"
+                  type="button"
+                  aria-expanded={expanded}
+                  onClick={() => setExpandedId(expanded ? null : photo.id)}
+                >
+                  Sizes {expanded ? "▲" : "▼"}
+                </button>
+              </div>
+              {expanded ? (
+                <SizeOverridePanel
+                  photo={photo}
+                  setMessage={setMessage}
+                  onSaved={(patch) => setLocalPatches((prev) => ({ ...prev, [photo.id]: { ...prev[photo.id], ...patch } }))}
+                />
+              ) : null}
             </article>
           );
         })}
@@ -5495,9 +5650,6 @@ function AboutOverlay({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
-
-// Where enquiry emails go (the contact popup composes a message to this inbox).
-const CONTACT_EMAIL = "samduckworthphoto@gmail.com";
 
 // Small "let's work together" prompt beneath the home print-shop banner.
 function ContactPrompt({ onOpen }: { onOpen: () => void }) {

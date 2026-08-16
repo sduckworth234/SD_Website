@@ -60,6 +60,12 @@ export type Photo = {
   // not even A5 clears the floor. See src/lib/printCatalogue.ts.
   maxSellableMounted?: string | null;
   maxSellableUnmounted?: string | null;
+  // Fully resolved per-size/mount availability (computed resolution merged
+  // with any admin override) — public, same safety rationale as the max
+  // labels above. This is what gates the size picker; see
+  // src/lib/printCatalogue.ts's isSizeSellable. See supabase/migrations/
+  // 20260816130000_photo_size_overrides.sql.
+  sellableSizes?: import("./lib/printCatalogue").SellableSizes | null;
   // Admin-only fields below (never sent to the public gallery query) — the
   // raw-source audit's findings, kept alongside sourcePath for the same
   // "find the file to sell a print" purpose. See supabase/migrations/
@@ -71,6 +77,9 @@ export type Photo = {
   rawMatchNotes?: string | null;
   sourceWidth?: number | null;
   sourceHeight?: number | null;
+  // Admin's raw per-size overrides (the input; sellableSizes above is the
+  // resolved output). Admin-only.
+  sizeOverrides?: import("./lib/printCatalogue").SizeOverrides | null;
 };
 
 // A gallery "Collection" — a trip or body of work, the second filter axis on

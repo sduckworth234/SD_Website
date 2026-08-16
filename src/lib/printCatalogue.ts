@@ -5,6 +5,10 @@
 // Plan.md §6 for why: best resolution economics, best 3:2 ratio fit, and the
 // only range offering all colours at every AU-shippable size.
 
+// Where enquiry emails go — the contact popup (App.tsx) and the shop product
+// page's "need help?" card both compose to this inbox.
+export const CONTACT_EMAIL = "samduckworthphoto@gmail.com";
+
 export type SizeId = "A5" | "A4" | "A3" | "A2" | "A1";
 
 export type PrintSize = {
@@ -179,4 +183,58 @@ export function sizeAvailability(width: number, height: number): Record<SizeId, 
     out[s.id] = { cfpOk: cfpDpi >= MIN_ACCEPTABLE_DPI, cfpmOk: cfpmDpi >= MIN_ACCEPTABLE_DPI, cfpDpi, cfpmDpi };
   }
   return out;
+}
+
+// --- Manual per-size overrides — supabase/migrations/20260816130000_photo_size_overrides.sql ---
+// size_overrides is the admin's raw input; sellable_sizes is the derived,
+// public-safe merge that the shop UI and checkout enforcement actually read.
+// Mirrored in server/shop/printSizing.mjs.
+export type SizeOverride = { unmounted?: boolean | null; mounted?: boolean | null };
+export type SizeOverrides = Partial<Record<SizeId, SizeOverride>>;
+export type SellableSizes = Record<SizeId, { unmounted: boolean; mounted: boolean }>;
+
+/** Merge computed resolution with admin overrides into the single map the
+ * rest of the app reads. Call this whenever dims or overrides change and
+ * persist the result to photos.sellable_sizes (and refresh
+ * max_sellable_mounted/unmounted from it too, for the simple "ideal size"
+ * display). */
+export function computeSellableSizes(width: number, height: number, overrides?: SizeOverrides | null): SellableSizes {
+  const avail = sizeAvailability(width, height);
+  const out = {} as SellableSizes;
+  for (const s of SIZES) {
+    const ov = overrides?.[s.id];
+    out[s.id] = {
+      unmounted: ov?.unmounted ?? avail[s.id].cfpOk,
+      mounted: ov?.mounted ?? avail[s.id].cfpmOk,
+    };
+  }
+  return out;
+}
+
+/** Largest sellable size for a mount option, from an already-resolved
+ * sellable_sizes map — used for the simple "ideal size" label/sort, which
+ * can't represent a non-monotonic override (e.g. A1 on but A2 off) as one
+ * number, so it just reports the highest true. */
+export function maxSellableFromSizes(sizes: SellableSizes | null | undefined, mounted: boolean): SizeId | null {
+  if (!sizes) return null;
+  let best: SizeId | null = null;
+  for (const s of SIZES) if (sizes[s.id]?.[mounted ? "mounted" : "unmounted"]) best = s.id;
+  return best;
+}
+
+/** Is this exact size/mount combo sellable? Prefers the resolved
+ * sellable_sizes map (already override-aware); falls back to the plain
+ * maxSellable label (pre-override data, or ships-ahead of the migration)
+ * when sellable_sizes hasn't been computed for this photo yet; fails open
+ * (true) when there's no gating data at all — never block on missing data. */
+export function isSizeSellable(
+  size: SizeId,
+  mounted: boolean,
+  sellableSizes: SellableSizes | null | undefined,
+  fallbackMax: string | null | undefined,
+): boolean {
+  if (sellableSizes) return Boolean(sellableSizes[size]?.[mounted ? "mounted" : "unmounted"]);
+  if (fallbackMax == null) return true;
+  if (!SIZES.some((s) => s.id === fallbackMax)) return true;
+  return SIZES.findIndex((s) => s.id === size) <= SIZES.findIndex((s) => s.id === fallbackMax);
 }
