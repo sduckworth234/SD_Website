@@ -1735,7 +1735,10 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
 // grid and checkout API, so disabling a photo removes direct/bookmarked access.
 function ShopProductRoute({ adminAccess = false, slug, onNavigate }: { adminAccess?: boolean; slug: string; onNavigate: (route: string) => void }) {
   const { publicPhotos, flags, isLoading } = useSiteData();
-  const configuratorOn = adminAccess || (SHOP_FEATURE_ENABLED && flags.print_configurator === true);
+  // Local development can render the configurator without changing the shared
+  // Supabase visibility flag. `import.meta.env.DEV` is compiled to false in the
+  // production build, where admin/public access remains authoritative.
+  const configuratorOn = import.meta.env.DEV || adminAccess || (SHOP_FEATURE_ENABLED && flags.print_configurator === true);
   const shopPhotos = useMemo(() => publicPhotos.filter((p) => p.inShop), [publicPhotos]);
   const photo = shopPhotos.find((p) => p.slug === slug);
   const shouldRedirect = !isLoading && (!configuratorOn || !photo);

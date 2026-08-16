@@ -3,7 +3,7 @@
 // Gated behind the `print_configurator` visibility flag (Admin → Visibility) so
 // it can ship disabled until it's ready; see ShopProduct in App.tsx for the
 // fallback to the old inline picker when the flag is off.
-import { ShoppingCart, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingCart, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getTransformedPublicUrl, photoBucket } from "../lib/supabase";
 import type { Photo } from "../types";
@@ -27,6 +27,7 @@ function thumb(photo: Photo, width: number): string {
 }
 
 const orientOf = (p: Photo) => (p.aspect === "portrait" || p.aspect === "square" ? "portrait" : "landscape");
+type PreviewMode = "studio" | "detail";
 
 export function PrintConfigurator({
   photo,
@@ -44,14 +45,8 @@ export function PrintConfigurator({
   const [cartOpen, setCartOpen] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const [pulseCart, setPulseCart] = useState(false);
-
-  // Reset the configurator to sane defaults whenever the product itself
-  // changes (switching photo is a real route change — a fresh product).
-  useEffect(() => {
-    setSize("A3");
-    setMounted(true);
-    setColour("natural");
-  }, [photo.id]);
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("studio");
+  const pairTrackRef = useRef<HTMLDivElement | null>(null);
 
   const roomWrapRef = useRef<HTMLDivElement | null>(null);
   const [frameStyle, setFrameStyle] = useState<{ width: number; height: number } | null>(null);
@@ -72,7 +67,7 @@ export function PrintConfigurator({
     const ro = new ResizeObserver(recompute);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [size, photo]);
+  }, [size, photo, previewMode]);
 
   const sizeDef = sizeById(size);
   const colourDef = colourById(colour);
@@ -82,14 +77,36 @@ export function PrintConfigurator({
   const pxPerCmForBand = frameStyle ? frameStyle.width / (orientOf(photo) === "landscape" ? sizeDef.outer[1] : sizeDef.outer[0]) : 0;
   const bandCm = mounted ? MOULDING_CM : UNMOUNTED_BAND_CM;
   const matCm = mounted ? Math.max(0, sizeDef.mat - MOULDING_CM) : 0;
+  const orientation = orientOf(photo);
+  const [shortEdge, longEdge] = sizeDef.outer;
+  const detailOuterW = orientation === "landscape" ? longEdge : shortEdge;
+  const detailOuterH = orientation === "landscape" ? shortEdge : longEdge;
+  const detailBandPct = (bandCm / detailOuterW) * 100;
+  const detailInnerW = Math.max(detailOuterW - bandCm * 2, 0.1);
+  const detailMatPct = (matCm / detailInnerW) * 100;
 
   const pairPhotos = useMemo(() => {
     const others = otherShopPhotos.filter((p) => p.id !== photo.id);
-    // Deterministic-ish shuffle keyed on photo id so it doesn't reshuffle on
-    // every render, but still varies per product.
-    const seed = photo.id.charCodeAt(0) || 1;
-    return [...others].sort((a, b) => ((a.id.charCodeAt(0) * seed) % 97) - ((b.id.charCodeAt(0) * seed) % 97)).slice(0, 4);
-  }, [otherShopPhotos, photo.id]);
+    const score = (candidate: Photo) => {
+      const sameLocation = candidate.locationId && photo.locationId
+        ? candidate.locationId === photo.locationId
+        : candidate.location === photo.location;
+      const sharedCollections = candidate.collectionIds?.filter((id) => photo.collectionIds?.includes(id)).length ?? 0;
+      const sameOrientation = orientOf(candidate) === orientOf(photo);
+
+      return (sameLocation ? 12 : 0)
+        + sharedCollections * 6
+        + (candidate.kind === photo.kind ? 3 : 0)
+        + (sameOrientation ? 1 : 0)
+        + (candidate.year === photo.year ? 1 : 0);
+    };
+
+    return [...others].sort((a, b) =>
+      score(b) - score(a)
+      || (a.shopOrder ?? Number.MAX_SAFE_INTEGER) - (b.shopOrder ?? Number.MAX_SAFE_INTEGER)
+      || a.title.localeCompare(b.title),
+    );
+  }, [otherShopPhotos, photo]);
 
   const switcherPhotos = useMemo(() => otherShopPhotos.filter((p) => p.id !== photo.id).slice(0, 4), [otherShopPhotos, photo.id]);
 
@@ -97,6 +114,18 @@ export function PrintConfigurator({
     window.history.pushState({}, "", `/shop/${p.slug}`);
     onNavigate(`/shop/${p.slug}`);
     window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+  }
+
+  function goToShop() {
+    window.history.pushState({}, "", "/shop#shop-grid");
+    onNavigate("/shop");
+    requestAnimationFrame(() => document.getElementById("shop-grid")?.scrollIntoView({ block: "start" }));
+  }
+
+  function scrollPairs(direction: -1 | 1) {
+    const track = pairTrackRef.current;
+    if (!track) return;
+    track.scrollBy({ left: direction * Math.round(track.clientWidth * 0.82), behavior: "smooth" });
   }
 
   function addToCart() {
@@ -131,41 +160,110 @@ export function PrintConfigurator({
 
       <div className="pc-shop">
         <div className="pc-stage">
-          <div className="pc-room-wrap" ref={roomWrapRef}>
-            <img className="pc-room-img" src={ROOM.src} alt="A framed print hung on a bright, minimal wall" />
-            {frameStyle ? (
+          <div
+            className="pc-preview-tabs"
+            role="tablist"
+            aria-label="Print preview"
+            onKeyDown={(event) => {
+              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+              event.preventDefault();
+              const nextMode: PreviewMode = event.key === "ArrowLeft" || event.key === "Home" ? "studio" : "detail";
+              setPreviewMode(nextMode);
+              requestAnimationFrame(() => document.getElementById(`pc-${nextMode}-tab`)?.focus());
+            }}
+          >
+            <button
+              id="pc-studio-tab"
+              className={previewMode === "studio" ? "on" : ""}
+              type="button"
+              role="tab"
+              aria-controls="pc-studio-panel"
+              aria-selected={previewMode === "studio"}
+              tabIndex={previewMode === "studio" ? 0 : -1}
+              onClick={() => setPreviewMode("studio")}
+            >
+              Studio
+            </button>
+            <button
+              id="pc-detail-tab"
+              className={previewMode === "detail" ? "on" : ""}
+              type="button"
+              role="tab"
+              aria-controls="pc-detail-panel"
+              aria-selected={previewMode === "detail"}
+              tabIndex={previewMode === "detail" ? 0 : -1}
+              onClick={() => setPreviewMode("detail")}
+            >
+              Detail
+            </button>
+          </div>
+
+          {previewMode === "studio" ? (
+            <div className="pc-room-wrap pc-preview-panel" id="pc-studio-panel" role="tabpanel" aria-labelledby="pc-studio-tab" ref={roomWrapRef}>
+              <img className="pc-room-img" src={ROOM.src} alt="A framed print hung on a bright, minimal wall" />
+              {frameStyle ? (
+                <div
+                  className="pc-frame"
+                  style={{
+                    width: frameStyle.width,
+                    height: frameStyle.height,
+                    left: `${ROOM.centerX * 100}%`,
+                    top: `${ROOM.centerY * 100}%`,
+                  }}
+                >
+                  <div
+                    className="pc-frame-band"
+                    style={{
+                      background: colourDef.grain ? `${colourDef.grain}, ${colourDef.css}` : colourDef.css,
+                      padding: bandCm * pxPerCmForBand,
+                    }}
+                  >
+                    <div className="pc-frame-mat" style={{ padding: matCm * pxPerCmForBand }}>
+                      <div className="pc-frame-window">
+                        <img src={thumb(photo, 1200)} alt={`${photo.title}, ${photo.location}, framed`} />
+                        <div className="pc-frame-glass" aria-hidden="true" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              <div className="pc-stage-tag">
+                <p className="pc-k">Framed Editions</p>
+                <h1>{photo.title}</h1>
+                <p className="pc-loc">{photo.location}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="pc-detail-wrap pc-preview-panel" id="pc-detail-panel" role="tabpanel" aria-labelledby="pc-detail-tab">
               <div
-                className="pc-frame"
-                style={{
-                  width: frameStyle.width,
-                  height: frameStyle.height,
-                  left: `${ROOM.centerX * 100}%`,
-                  top: `${ROOM.centerY * 100}%`,
-                }}
+                className={`pc-detail-frame ${orientation}`}
+                style={{ aspectRatio: `${detailOuterW} / ${detailOuterH}` }}
               >
                 <div
                   className="pc-frame-band"
                   style={{
                     background: colourDef.grain ? `${colourDef.grain}, ${colourDef.css}` : colourDef.css,
-                    padding: bandCm * pxPerCmForBand,
+                    padding: `${detailBandPct}%`,
                   }}
                 >
-                  <div className="pc-frame-mat" style={{ padding: matCm * pxPerCmForBand }}>
+                  <div className="pc-frame-mat" style={{ padding: `${detailMatPct}%` }}>
                     <div className="pc-frame-window">
-                      <img src={thumb(photo, 1200)} alt={`${photo.title}, ${photo.location}, framed`} />
+                      <img key={photo.id} className="pc-detail-image" src={thumb(photo, 1600)} alt={`${photo.title}, ${photo.location}, frame detail`} />
                       <div className="pc-frame-glass" aria-hidden="true" />
                     </div>
                   </div>
                 </div>
               </div>
-            ) : null}
-            <div className="pc-stage-tag">
-              <p className="pc-k">Framed Editions</p>
-              <h1>{photo.title}</h1>
-              <p className="pc-loc">{photo.location}</p>
+              <div className="pc-detail-spec" aria-live="polite">
+                <b>{size} · {detailOuterW.toFixed(1)} × {detailOuterH.toFixed(1)} cm</b>
+                <span>
+                  {mounted ? `${matCm.toFixed(1)} cm mat · ${MOULDING_CM.toFixed(1)} cm frame` : "Full-bleed presentation"}
+                  {` · ${orientation}`}
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="pc-scroll-hint">Configure ↓</div>
+          )}
+          {previewMode === "studio" ? <div className="pc-scroll-hint">Configure ↓</div> : null}
         </div>
 
         <div className="pc-panel">
@@ -241,10 +339,23 @@ export function PrintConfigurator({
       </section>
 
       {pairPhotos.length ? (
-        <section className="pc-pairs">
-          <h3>Pairs well with</h3>
+        <section className="pc-pairs" aria-labelledby="pc-similar-title">
+          <div className="pc-pairs-head">
+            <h3 id="pc-similar-title">Similar images</h3>
+            <div className="pc-pairs-actions">
+              <div className="pc-pairs-nav" aria-label="Scroll similar images">
+                <button type="button" onClick={() => scrollPairs(-1)} aria-label="Previous similar images">
+                  <ChevronLeft size={16} aria-hidden="true" />
+                </button>
+                <button type="button" onClick={() => scrollPairs(1)} aria-label="Next similar images">
+                  <ChevronRight size={16} aria-hidden="true" />
+                </button>
+              </div>
+              <button className="pc-pairs-see-all" type="button" onClick={goToShop}>See all prints</button>
+            </div>
+          </div>
           <p className="pc-pairs-callout">Pick one to configure — adding it to the same order usually costs about $5 in shipping, not $15.</p>
-          <div className="pc-pairs-grid">
+          <div className="pc-pairs-track" ref={pairTrackRef}>
             {pairPhotos.map((p) => (
               <button key={p.id} className="pc-pair-card" type="button" onClick={() => goToPhoto(p)}>
                 <div className="pc-pair-photo"><img src={thumb(p, 400)} alt={`${p.title}, ${p.location}`} loading="lazy" /></div>
