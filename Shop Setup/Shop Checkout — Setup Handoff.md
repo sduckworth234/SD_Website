@@ -124,8 +124,8 @@ SUPABASE_SERVICE_ROLE_KEY=...
 CRON_SECRET=<random 32+ character value>
 SITE_URL=https://www.samduckworth.com
 RESEND_API_KEY=re_...
-SHOP_EMAIL_FROM=Sam Duckworth Photography <orders@samduckworth.com>
-SHOP_ALERT_EMAIL=<Sam's email>
+SHOP_EMAIL_FROM=Sam Duckworth Photography <orders@mail.samduckworth.com>
+SHOP_ALERT_EMAIL=samduckworthphoto@gmail.com
 SHOP_INSTAGRAM_URL=https://instagram.com/sam.duckworth
 ```
 
@@ -246,10 +246,13 @@ new-order alert, the customer's branded thank-you/order summary with Instagram
 link, and the dispatch/tracking email. Stripe handles the regulated payment
 proof (receipt, refund receipt and optional paid invoice).
 
-Verify a sending domain/subdomain in Resend, add the DNS records, create the API
-key, and set `SHOP_EMAIL_FROM` plus `SHOP_ALERT_EMAIL`. With no Resend key,
-payment and order creation continue safely and email is logged as skipped; that
-state is safe for testing but not acceptable for public launch.
+The Tokyo-region Resend sending domain `mail.samduckworth.com` was DNS-verified
+on 2026-08-16. Vercel uses `Sam Duckworth Photography
+<orders@mail.samduckworth.com>` with alerts sent to
+`samduckworthphoto@gmail.com`. Both the customer confirmation and merchant alert
+were accepted by Resend in a protected Preview test. With no Resend key, payment
+and order creation continue safely and email is logged as skipped; that state is
+safe for testing but not acceptable for public launch.
 
 Prodigi can remain entirely unconfigured in manual mode. When automation is
 wanted, start with its sandbox key and base URL. The callback URL is included on
@@ -274,10 +277,10 @@ payloads are then re-fetched from Prodigi before any status is trusted.
 
 Do not paste secrets into chat; enter them directly in Vercel/Stripe/Resend.
 
-1. **Customer contact:** the inbox that receives new-order alerts and the public
-   support email customers should use.
-2. **Resend:** access to the domain DNS, the verified sending address (for example
-   `orders@samduckworth.com`) and a Resend API key.
+1. **Customer contact (confirmed):** `samduckworthphoto@gmail.com` receives
+   new-order alerts and is the public support email.
+2. **Resend (complete):** `mail.samduckworth.com` is verified and the deployed
+   sender is `orders@mail.samduckworth.com`.
 3. **Stripe live account:** completed identity/business verification, payout bank
    account, public business/support details, `pk_live`, `sk_live`, and the live
    webhook signing secret. Decide whether normal receipts are enough or paid

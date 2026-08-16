@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const FROM = process.env.SHOP_EMAIL_FROM ?? "Sam Duckworth Photography <orders@samduckworth.com>";
+const FROM = process.env.SHOP_EMAIL_FROM ?? "Sam Duckworth Photography <orders@mail.samduckworth.com>";
 const INSTAGRAM_URL = process.env.SHOP_INSTAGRAM_URL ?? "https://instagram.com/sam.duckworth";
 const SITE_URL = (process.env.SITE_URL ?? process.env.VITE_SITE_URL ?? "https://www.samduckworth.com").replace(/\/$/, "");
 
