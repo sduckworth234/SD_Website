@@ -91,6 +91,7 @@ import { Header } from "./components/Header";
 import { OakFrame } from "./components/OakFrame";
 import { SmartImage } from "./components/SmartImage";
 import { PrintConfigurator } from "./components/PrintConfigurator";
+import { CartDrawer } from "./components/CartDrawer";
 import { useCart } from "./lib/cart";
 import { CONTACT_EMAIL, SIZES, money, priceFor } from "./lib/printCatalogue";
 import type { SizeId } from "./lib/printCatalogue";
@@ -1520,6 +1521,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   const isAdmin = adminAccess || detectedAdmin;
   const [cart, setCart] = useState(0);
   const realCart = useCart();
+  const [cartOpen, setCartOpen] = useState(false);
   const [filter, setFilter] = useState("All");
   // Two independent curations: "shop" = the products for sale (in_shop), "wall" =
   // the coming-soon collection glimpse (its own ordered list in shop_preview).
@@ -1604,7 +1606,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
       <button className="shop-logo" onClick={goHome} type="button">FRAMED EDITIONS</button>
       <div className="shop-nav-links">
         <a href="/" onClick={(e) => { e.preventDefault(); goHome(); }}>← samduckworth.com</a>
-        {shopLive ? <span className="shop-cart">Cart · {cartCount}</span> : null}
+        {shopLive ? <button className="shop-cart" type="button" onClick={() => setCartOpen(true)}>Cart · {cartCount}</button> : null}
       </div>
     </div>
   );
@@ -1706,6 +1708,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
       )}
 
       <Footer />
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onNavigate={onNavigate} />
       {curating === "shop" ? (
         <OrderedPhotoPicker
           title="Prints for sale"

@@ -3,7 +3,7 @@
 // Gated behind the `print_configurator` visibility flag (Admin → Visibility) so
 // it can ship disabled until it's ready; see ShopProduct in App.tsx for the
 // fallback to the old inline picker when the flag is off.
-import { ChevronLeft, ChevronRight, ShoppingCart, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { getTransformedPublicUrl, photoBucket } from "../lib/supabase";
 import type { Photo } from "../types";
@@ -23,6 +23,7 @@ import {
 } from "../lib/printCatalogue";
 import type { ColourId, SizeId } from "../lib/printCatalogue";
 import { makeCartItem, useCart } from "../lib/cart";
+import { CartDrawer } from "./CartDrawer";
 
 function thumb(photo: Photo, width: number): string {
   return photo.storagePath ? getTransformedPublicUrl(photoBucket, photo.storagePath, width) : photo.imageUrl;
@@ -215,13 +216,6 @@ export function PrintConfigurator({
     setPulseCart(false);
     requestAnimationFrame(() => setPulseCart(true));
     setTimeout(() => setJustAdded(false), 900);
-  }
-
-  function checkout() {
-    if (!cart.items.length) return;
-    setCartOpen(false);
-    window.history.pushState({}, "", "/checkout");
-    onNavigate("/checkout");
   }
 
   return (
@@ -471,39 +465,7 @@ export function PrintConfigurator({
         </a>
       </section>
 
-      <div className={`pc-scrim${cartOpen ? " open" : ""}`} onClick={() => setCartOpen(false)} />
-      <div className={`pc-cart-drawer${cartOpen ? " open" : ""}`} aria-label="Cart">
-        <div className="pc-cart-head"><h3>Your cart</h3><button type="button" onClick={() => setCartOpen(false)} aria-label="Close cart"><X size={18} /></button></div>
-        <div className="pc-cart-items">
-          {cart.items.length === 0 ? (
-            <p className="pc-cart-empty">Nothing in your cart yet — configure a print and add it.</p>
-          ) : (
-            cart.items.map((it, i) => (
-              <div className="pc-cart-item" key={`${it.photoId}-${i}`}>
-                <img src={it.thumb} alt={it.title} />
-                <div className="pc-ci-info">
-                  <b>{it.title}</b>
-                  <span>{it.size} · {colourById(it.colour).label} · {it.mounted ? "Mounted" : "Unmounted"}</span>
-                  <span className="pc-ci-remove" role="button" onClick={() => cart.remove(i)}>Remove</span>
-                </div>
-                <div className="pc-ci-price">{money(it.price)}</div>
-              </div>
-            ))
-          )}
-        </div>
-        <div className="pc-cart-foot">
-          {cart.items.length ? (
-            <div className="pc-cart-lines">
-              <div className="row"><span>Subtotal</span><span>{money(cart.subtotal)}</span></div>
-              <div className="row"><span>Shipping (AU)</span><span>{money(cart.shipping)}</span></div>
-              <div className="row total"><span>Estimated total</span><span>{money(cart.subtotal + cart.shipping)}</span></div>
-            </div>
-          ) : null}
-          <p className="pc-au-note">Shipping within Australia only. Exact cost is confirmed at checkout.</p>
-          <button className="pc-checkout-btn" disabled={!cart.items.length} type="button" onClick={checkout}>Secure checkout</button>
-          <p className="pc-checkout-note">Promotion codes are applied securely at checkout.</p>
-        </div>
-      </div>
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onNavigate={onNavigate} />
     </main>
   );
 }

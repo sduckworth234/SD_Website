@@ -51,8 +51,24 @@ function PaymentStep({ onBack }: { onBack: () => void }) {
   const [message, setMessage] = useState("");
   const [promo, setPromo] = useState("");
   const [promoWorking, setPromoWorking] = useState(false);
+  const [loadTimedOut, setLoadTimedOut] = useState(false);
 
-  if (checkoutState.type === "loading") return <div className="co-payment-loading"><LoaderCircle className="spin" /> Loading secure payment…</div>;
+  useEffect(() => {
+    if (checkoutState.type !== "loading") {
+      setLoadTimedOut(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setLoadTimedOut(true), 12_000);
+    return () => window.clearTimeout(timer);
+  }, [checkoutState.type]);
+
+  if (checkoutState.type === "loading") return loadTimedOut ? (
+    <div className="co-payment-failed" role="alert">
+      <p>Secure payment couldn’t load.</p>
+      <span>Please retry. If it happens again, the Stripe test keys need checking.</span>
+      <button type="button" onClick={onBack}>Return to contact details</button>
+    </div>
+  ) : <div className="co-payment-loading"><LoaderCircle className="spin" /> Loading secure payment…</div>;
   if (checkoutState.type === "error") return <p className="co-error">{checkoutState.error.message}</p>;
   const { checkout } = checkoutState;
 
@@ -137,8 +153,15 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
           customer,
         }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Checkout could not be started.");
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || "Checkout could not be started.");
+      if (!data?.clientSecret) throw new Error("Stripe did not return a secure checkout session.");
+      const sessionMode = data.clientSecret.startsWith("cs_test_") ? "test" : data.clientSecret.startsWith("cs_live_") ? "live" : null;
+      const keyMode = publishableKey?.startsWith("pk_test_") ? "test" : publishableKey?.startsWith("pk_live_") ? "live" : null;
+      if (sessionMode && keyMode && sessionMode !== keyMode) {
+        console.error(`Stripe checkout mode mismatch: ${keyMode} publishable key with ${sessionMode} Checkout Session.`);
+        throw new Error("Secure payment is temporarily unavailable because the Stripe client and server modes do not match.");
+      }
       setClientSecret(data.clientSecret);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Checkout could not be started.");
