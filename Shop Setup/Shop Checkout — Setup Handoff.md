@@ -21,9 +21,12 @@ manual to Prodigi, not before launching the manual shop.
 2. The browser cart stores only the customer's choices. On checkout, the server
    validates every photo and SKU, recalculates all prices, requests shipping
    from Prodigi (when configured), and validates any Stripe Promotion Code.
-3. The server creates an embedded Stripe Checkout Session. Stripe's Payment
-   Element receives the card/wallet details directly; the website never handles
-   or stores raw payment credentials.
+3. The server creates an embedded Stripe Checkout Session. Stripe's Shipping
+   Address Element restricts delivery to Australia and uses Stripe-provided
+   Google address autocomplete to populate street, suburb, state and postcode;
+   it needs no separate Maps key. Stripe's Payment Element receives the
+   card/wallet details directly, so the website never handles or stores raw
+   payment credentials.
 4. Stripe authorises and captures the payment, redirects the customer to the
    success page, and independently sends a signed webhook. The redirect is for
    customer experience only and is never trusted to create an order.

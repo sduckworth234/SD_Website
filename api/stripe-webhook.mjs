@@ -29,7 +29,12 @@ async function fulfilSession(sessionId) {
   const invoice = typeof session.invoice === "string"
     ? await stripe.invoices.retrieve(session.invoice)
     : session.invoice;
-  const shipping = intent?.shipping;
+  // Current Checkout Sessions expose addresses collected by the Shipping
+  // Address Element under collected_information. Keep the PaymentIntent
+  // fallback for orders created by the previous native-address checkout.
+  const shipping = session.collected_information?.shipping_details
+    ?? session.shipping_details
+    ?? intent?.shipping;
   if (!shipping?.name || !shipping.address?.line1 || shipping.address.country !== "AU") {
     throw new Error("Paid Checkout Session has no valid Australian shipping address.");
   }
@@ -67,7 +72,7 @@ async function fulfilSession(sessionId) {
     state: shipping.address.state,
     postcode: shipping.address.postal_code,
     country: shipping.address.country,
-    phone: shipping.phone ?? "",
+    phone: session.customer_details?.phone ?? intent?.shipping?.phone ?? session.metadata?.customer_phone ?? "",
   };
   const order = await insertPaidOrder({
     stripe_checkout_session_id: session.id,

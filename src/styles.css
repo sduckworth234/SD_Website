@@ -5054,7 +5054,9 @@ body:has(.contact-overlay) {
 .co-details input:focus, .co-details select:focus, .co-promo-row input:focus { border-color: var(--co-accent); box-shadow: 0 0 0 1px var(--co-accent); }
 .co-fields { display: grid; gap: 14px; }
 .co-fields.two { grid-template-columns: 1fr 1fr; }
-.co-fields.address { grid-template-columns: 1.4fr .65fr .65fr; }
+.co-stripe-block { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--co-line); background: rgba(255,255,255,.012); }
+.co-stripe-block-head p { margin: 0 0 4px; color: var(--co-text); font: 600 13px var(--font-sans); }
+.co-stripe-block-head small { color: var(--co-muted); font-size: 10.5px; line-height: 1.45; }
 .co-continue, .co-pay, .co-empty button, .co-result button { min-height: 52px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; border: 0; border-radius: 3px; background: var(--co-accent); color: #111; padding: 14px 20px; cursor: pointer; font: 650 11px var(--font-sans); letter-spacing: .07em; text-transform: uppercase; }
 .co-continue:disabled, .co-pay:disabled { cursor: wait; opacity: .58; }
 .co-promo-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
@@ -5202,7 +5204,7 @@ body:has(.contact-overlay) {
   .co-header button { font-size: 9px; }
   .co-main { padding: 38px 16px 64px; }
   .co-main > h1 { font-size: 2.8rem; }
-  .co-fields.two, .co-fields.address { grid-template-columns: 1fr; }
+  .co-fields.two { grid-template-columns: 1fr; }
   .co-summary { padding: 24px 16px; }
   .admin-order footer { flex-wrap: wrap; }
   .manual-fulfilment > div { grid-template-columns: 1fr; }

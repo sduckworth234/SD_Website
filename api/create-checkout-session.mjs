@@ -27,19 +27,8 @@ function customerFrom(body) {
     name: clean(body?.customer?.name, 120),
     email: clean(body?.customer?.email, 254).toLowerCase(),
     phone: clean(body?.customer?.phone, 40),
-    address: {
-      line1: clean(body?.customer?.address?.line1, 160),
-      line2: clean(body?.customer?.address?.line2, 160),
-      city: clean(body?.customer?.address?.city, 100),
-      state: clean(body?.customer?.address?.state, 40).toUpperCase(),
-      postal_code: clean(body?.customer?.address?.postalCode, 12),
-      country: "AU",
-    },
   };
   if (!customer.name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) throw new Error("Enter a valid name and email address.");
-  if (!customer.address.line1 || !customer.address.city || !customer.address.state || !/^\d{4}$/.test(customer.address.postal_code)) {
-    throw new Error("Enter a complete Australian shipping address.");
-  }
   return customer;
 }
 
@@ -106,6 +95,8 @@ export default async function handler(req, res) {
       quote_source: shipping.source,
       promotion_code: promoText,
       fulfilment_provider: provider,
+      customer_name: customer.name,
+      customer_phone: customer.phone,
     };
     cart.forEach((item, index) => {
       const photo = photos.get(item.photoId);
@@ -122,6 +113,7 @@ export default async function handler(req, res) {
       mode: "payment",
       customer_email: customer.email,
       line_items: lineItems,
+      shipping_address_collection: { allowed_countries: ["AU"] },
       shipping_options: [{
         shipping_rate_data: {
           type: "fixed_amount",
@@ -137,11 +129,6 @@ export default async function handler(req, res) {
       discounts: promotion ? [{ promotion_code: promotion.id }] : undefined,
       payment_intent_data: {
         receipt_email: customer.email,
-        shipping: {
-          name: customer.name,
-          phone: customer.phone || undefined,
-          address: customer.address,
-        },
         metadata: { shop: "framed-editions" },
       },
       invoice_creation: paidInvoicesEnabled() ? {
