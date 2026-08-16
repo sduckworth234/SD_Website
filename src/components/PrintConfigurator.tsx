@@ -64,7 +64,7 @@ export function PrintConfigurator({
   const pairTrackRef = useRef<HTMLDivElement | null>(null);
 
   const roomWrapRef = useRef<HTMLDivElement | null>(null);
-  const [frameStyle, setFrameStyle] = useState<{ width: number; height: number } | null>(null);
+  const [frameStyle, setFrameStyle] = useState<{ width: number; height: number; left: number; top: number } | null>(null);
 
   // Snap to the largest available size whenever the photo or mount option
   // changes and the currently-selected size is no longer offered for it —
@@ -86,8 +86,32 @@ export function PrintConfigurator({
       const [shortEdge, longEdge] = outerSize;
       const outerW = orient === "landscape" ? longEdge : shortEdge;
       const outerH = orient === "landscape" ? shortEdge : longEdge;
-      const pxPerCm = (el.clientWidth / ROOM.naturalW) * ROOM.pxPerCmAtNative;
-      setFrameStyle({ width: outerW * pxPerCm, height: outerH * pxPerCm });
+      const naturalPxPerCm = (el.clientWidth / ROOM.naturalW) * ROOM.pxPerCmAtNative;
+
+      // Keep the calibrated room scale whenever possible. A portrait A1 can
+      // exceed the usable wall height on short desktop windows, so first move
+      // its centre within the safe wall area and only then scale it down just
+      // enough to keep the complete outer frame visible.
+      const sideMargin = Math.max(14, el.clientWidth * 0.025);
+      const topMargin = 62; // clears the Studio / Detail control
+      const bottomMargin = 18;
+      const availableW = Math.max(1, el.clientWidth - sideMargin * 2);
+      const availableH = Math.max(1, el.clientHeight - topMargin - bottomMargin);
+      const pxPerCm = Math.min(naturalPxPerCm, availableW / outerW, availableH / outerH);
+      const width = outerW * pxPerCm;
+      const height = outerH * pxPerCm;
+      const wantedLeft = el.clientWidth * ROOM.centerX;
+      const wantedTop = el.clientHeight * ROOM.centerY;
+      const left = Math.min(
+        Math.max(wantedLeft, sideMargin + width / 2),
+        el.clientWidth - sideMargin - width / 2,
+      );
+      const top = Math.min(
+        Math.max(wantedTop, topMargin + height / 2),
+        el.clientHeight - bottomMargin - height / 2,
+      );
+
+      setFrameStyle({ width, height, left, top });
     };
     recompute();
     const ro = new ResizeObserver(recompute);
@@ -237,8 +261,8 @@ export function PrintConfigurator({
                   style={{
                     width: frameStyle.width,
                     height: frameStyle.height,
-                    left: `${ROOM.centerX * 100}%`,
-                    top: `${ROOM.centerY * 100}%`,
+                    left: frameStyle.left,
+                    top: frameStyle.top,
                   }}
                 >
                   <div
