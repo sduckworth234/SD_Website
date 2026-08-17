@@ -216,3 +216,13 @@ After the production deployment:
   ordered presentation metadata is stored in the public-safe
   `shop_real_print_gallery` setting. No secret or private order data is stored
   there.
+
+## Shop navigation consistency
+
+- `/shop` now mirrors the main-site navigation order and controls while keeping
+  `FRAMED EDITIONS` as its top-left identity.
+- Gallery, Map, About Me, Shop, theme selection and the complete mobile menu are
+  available without leaving the storefront context.
+- The cart uses the same icon, outlined chip and count badge as the per-print
+  Studio editor; on small screens it remains visible beside the theme and menu
+  controls.

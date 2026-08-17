@@ -4575,10 +4575,9 @@ body:has(.contact-overlay) {
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line);
 }
 .shop-logo { font-family: "Bebas Neue", Impact, sans-serif; font-size: 1.45rem; letter-spacing: .18em; background: none; border: 0; cursor: pointer; color: var(--ink); padding: 0; }
-.shop-nav-links { display: flex; gap: 22px; align-items: center; font-size: .74rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.shop-nav-links a:hover { color: var(--sea); }
-.shop-cart { border: 0; padding: 6px 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
-.shop-cart:hover, .shop-cart:focus-visible { color: var(--sea); }
+.shop-nav-primary { display: flex; align-items: center; gap: clamp(14px,3vw,34px); color: var(--muted); font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; }
+.shop-nav-primary .nav-button.is-active { color: var(--ink); }
+.shop-header-cart { margin-left: clamp(2px,1vw,10px); }
 .shop-menu-toggle, .shop-mobile-nav, .shop-nav-dismiss { display: none; }
 .shop-soon { display: grid; place-content: center; justify-items: center; gap: 16px; min-height: 70vh; text-align: center; }
 .shop-soon h1 { font-family: var(--font-sans);
@@ -4843,7 +4842,6 @@ body:has(.contact-overlay) {
 @media (max-width: 560px) {
   .shop-nav { flex-wrap: wrap; gap: 8px 14px; padding: 12px clamp(14px, 4vw, 20px); }
   .shop-logo { font-size: 1.2rem; letter-spacing: 0.12em; }
-  .shop-nav-links { width: 100%; justify-content: space-between; gap: 14px; font-size: 0.68rem; }
   .shop-section, .shop-hero { padding-left: clamp(16px, 4vw, 24px); padding-right: clamp(16px, 4vw, 24px); }
   .shop-grid { columns: 2; column-gap: 18px; }
   .shop-card { margin-bottom: 18px; }
@@ -5740,9 +5738,12 @@ body:has(.contact-overlay) {
 
   .shop-nav { flex-wrap: nowrap; gap: 12px; min-height: 67px; padding: 11px 14px; }
   .shop-logo { position: relative; z-index: 3; min-width: 0; overflow: hidden; font-size: 1.2rem; letter-spacing: .1em; text-overflow: ellipsis; white-space: nowrap; }
-  .shop-nav-links { position: relative; z-index: 3; width: auto; flex: 0 0 auto; gap: 4px; font-size: .68rem; }
-  .shop-back-link { display: none; }
-  .shop-cart { min-height: 44px; padding: 0 8px; }
+  .shop-nav-primary { position: relative; z-index: 3; flex: 0 0 auto; gap: 4px; }
+  .shop-nav-primary > .nav-link, .shop-nav-primary > .nav-button { display: none; }
+  .shop-nav-primary .theme-toggle { width: 44px; height: 44px; }
+  .shop-header-cart { min-width: 44px; min-height: 44px; margin-left: 0; padding: 8px 10px; }
+  .shop-header-cart { font-size: 0; gap: 0; }
+  .shop-header-cart svg { width: 17px; height: 17px; }
   .shop-menu-toggle { display: grid; width: 44px; height: 44px; padding: 0; place-items: center; border: 0; background: transparent; color: var(--ink); cursor: pointer; }
   .shop-nav-dismiss { position: fixed; inset: 67px 0 0; z-index: 1; display: block; border: 0; background: rgba(var(--scrim-rgb),.34); }
   .shop-mobile-nav { position: fixed; top: 67px; right: 0; left: 0; z-index: 2; display: grid; grid-template-columns: minmax(0, 1fr); max-height: 0; overflow: hidden; overscroll-behavior: contain; background: rgba(var(--paper-rgb),.985); opacity: 0; pointer-events: none; transform: translateY(-8px); transition: max-height 240ms ease, opacity 180ms ease, transform 240ms ease; -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px); }

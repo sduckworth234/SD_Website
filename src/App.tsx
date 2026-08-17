@@ -31,6 +31,7 @@ import {
   Plus,
   RotateCw,
   Search,
+  ShoppingCart,
   Trash2,
   TriangleAlert,
   Upload,
@@ -99,7 +100,7 @@ import type { ExtractedPhotoMeta } from "./lib/ingest";
 import { reverseGeocode } from "./lib/geocode";
 import type { Placement } from "./lib/geocode";
 import { useSeo } from "./lib/seo";
-import { Header } from "./components/Header";
+import { Header, ThemeToggle } from "./components/Header";
 import { OakFrame } from "./components/OakFrame";
 import { SmartImage } from "./components/SmartImage";
 import { SDLoader } from "./components/SDLoader";
@@ -1842,9 +1843,19 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   const ShopNav = (
     <header className={`shop-nav${shopMenuOpen ? " menu-open" : ""}`}>
       <button className="shop-logo" onClick={goShopTop} type="button" aria-label="Framed Editions shop home">FRAMED EDITIONS</button>
-      <div className="shop-nav-links">
-        <a className="shop-back-link" href="/galleries" onClick={(event) => { event.preventDefault(); goGalleries(); }}>← Photography galleries</a>
-        {shopLive ? <button className="shop-cart" type="button" onClick={() => setCartOpen(true)}>Cart · {cartCount}</button> : null}
+      <nav className="shop-nav-primary" aria-label="Primary navigation">
+        <a className="nav-link" href="/galleries" onClick={(event) => { event.preventDefault(); goTo("/galleries"); }}>Gallery</a>
+        <a className="nav-link" href="/map" onClick={(event) => { event.preventDefault(); goTo("/map"); }}>Map</a>
+        <button className="nav-button" type="button" onClick={() => goTo("/?panel=about")}>About Me</button>
+        <button className="nav-button is-active" type="button" onClick={goShopTop}>Shop</button>
+        <ThemeToggle />
+        {shopLive ? (
+          <button className="pc-cart-btn shop-header-cart" type="button" onClick={() => setCartOpen(true)} aria-label={`Open cart with ${cartCount} item${cartCount === 1 ? "" : "s"}`}>
+            <ShoppingCart size={15} aria-hidden="true" />
+            Cart
+            <span className={`pc-cart-count${cartCount === 0 ? " is-empty" : ""}`}>{cartCount}</span>
+          </button>
+        ) : null}
         <button
           className="shop-menu-toggle"
           type="button"
@@ -1855,17 +1866,15 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
         >
           {shopMenuOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
         </button>
-      </div>
+      </nav>
       {shopMenuOpen ? <button className="shop-nav-dismiss" onClick={() => setShopMenuOpen(false)} type="button" aria-label="Close shop navigation" /> : null}
       <nav id="shop-mobile-navigation" className={`shop-mobile-nav${shopMenuOpen ? " is-open" : ""}`} aria-label="Shop mobile navigation" aria-hidden={!shopMenuOpen} inert={!shopMenuOpen}>
-        <span className="shop-mobile-nav-label">Photography</span>
-        <a href="/" onClick={(event) => { event.preventDefault(); goTo("/"); }}>Photography home</a>
+        <a href="/" onClick={(event) => { event.preventDefault(); goTo("/"); }}>Home</a>
         <a href="/galleries" onClick={(event) => { event.preventDefault(); goTo("/galleries"); }}>Gallery</a>
         <a href="/map" onClick={(event) => { event.preventDefault(); goTo("/map"); }}>Map</a>
         <a href="/?panel=about" onClick={(event) => { event.preventDefault(); goTo("/?panel=about"); }}>About Me</a>
+        <a href="/shop" aria-current="page" onClick={(event) => { event.preventDefault(); setShopMenuOpen(false); goShopTop(); }}>Shop</a>
         <a href="/?panel=contact" onClick={(event) => { event.preventDefault(); goTo("/?panel=contact"); }}>Contact</a>
-        <span className="shop-mobile-nav-label">Print shop</span>
-        <a href="/shop" aria-current="page" onClick={(event) => { event.preventDefault(); setShopMenuOpen(false); }}>Framed Editions</a>
         {shopLive ? <button type="button" onClick={() => { setShopMenuOpen(false); setCartOpen(true); }}>Cart <span>{cartCount}</span></button> : null}
       </nav>
     </header>

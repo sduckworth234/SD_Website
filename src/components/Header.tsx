@@ -7,7 +7,7 @@ import { applyTheme, readTheme, type Theme } from "../lib/theme";
 // paint, so this only mirrors that value into React state and writes changes
 // back — it deliberately does not apply a theme on mount, which would undo the
 // pre-paint choice on every navigation.
-function ThemeToggle() {
+export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>(() =>
     typeof document !== "undefined" &&
     document.documentElement.dataset.theme === "dark"
