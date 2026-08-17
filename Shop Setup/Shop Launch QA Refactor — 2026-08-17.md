@@ -44,9 +44,9 @@ checklist in `Shop Checkout — Setup Handoff.md`.
   Australia-wide delivery trust strip.
 - Added the three-step expandable explainer: choose a photograph, preview size and
   frame, then have it printed and delivered from Australia.
-- Added a rotating portrait A1 mounted studio scene using only photographs that can
-  actually be ordered in that configuration. It supports manual selection, pause
-  and reduced-motion preferences.
+- Added a rotating studio scene for portrait and landscape photographs. It is a
+  general presentation preview rather than a promise of one particular print size,
+  and supports manual selection, pause and reduced-motion preferences.
 - Replaced the repetitive catalogue grid with an editorial 12-column selection and
   strong return path to Galleries.
 
@@ -70,8 +70,8 @@ checklist in `Shop Checkout — Setup Handoff.md`.
 - Centred the public gallery footer on desktop and mobile.
 - Tightened the How it works → Studio spacing and changed the studio to a
   continuously looping directional carousel with previous, next, direct selection
-  and pause/play controls. The rotation deliberately alternates eligible portrait
-  and landscape A1 works, resizing the wall frame and labelling the orientation so
+  and pause/play controls. The automatic rotation alternates eligible portrait
+  and landscape works, resizing the wall frame and labelling the orientation so
   the preview does not imply that editions are vertical-only.
 - Replaced the irregular mixed-orientation edition mosaic with a horizontal salon
   rail. Portrait and landscape works share a controlled display height, use their
@@ -80,6 +80,14 @@ checklist in `Shop Checkout — Setup Handoff.md`.
 - Replaced mail-app-only print questions with an in-page Resend contact form. It
   includes required field validation, same-origin enforcement, honeypot and rate-limit
   spam protection, clear success/failure states and a mailto fallback.
+- Added independent Admin → Shop ordered pickers for **Studio rotation** (6) and
+  **Considered Collection** (15). They are presentation-only subsets of the
+  published, sellable catalogue and never alter sale eligibility.
+- Made the curator suitable for a 600+ photo archive with title/location search,
+  location and orientation filters, 60-result progressive loading, transformed
+  thumbnails and a compact ordered selection queue with move/remove controls.
+- Matched the visible vertical height of landscape and portrait oak frames in the
+  Considered Collection on desktop and mobile without page-level overflow.
 - Added an expandable manual-workflow guide inside Admin → Shop Orders describing
   Start fulfilment, Mark shipped, Refund and Receipt at the point of use.
 

@@ -98,7 +98,7 @@ import { LegalPage, ShopLegalFooter, type LegalPageId } from "./components/Legal
 import { ContactOverlay } from "./components/ContactOverlay";
 import { useCart } from "./lib/cart";
 import { trackPageView, trackProductLinkClicked, trackSelectItem } from "./lib/analytics";
-import { SIZES, isSizeSellable, money, priceFor } from "./lib/printCatalogue";
+import { SIZES, money, priceFor } from "./lib/printCatalogue";
 import type { SizeId } from "./lib/printCatalogue";
 import { SHOP_FEATURE_ENABLED } from "./lib/features";
 
@@ -1521,6 +1521,15 @@ function balanceShopOrientations(photos: Photo[]) {
   return balanced;
 }
 
+function parseOrderedSetting(value?: string | null) {
+  try {
+    const parsed = value ? JSON.parse(value) : [];
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 // Live mini-mockup of the glimpse wall: each picked photo in its actual frame,
 // numbered to match the picker — so there's no guessing which goes where.
 function WallPreview({ ids, photos }: { ids: string[]; photos: Photo[] }) {
@@ -1548,9 +1557,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   const realCart = useCart();
   const [cartOpen, setCartOpen] = useState(false);
   const [filter, setFilter] = useState("All");
-  // Two independent curations: "shop" = the products for sale (in_shop), "wall" =
-  // the collection glimpse (its own ordered list in shop_preview).
-  const [curating, setCurating] = useState<null | "shop" | "wall">(null);
+  const [curating, setCurating] = useState<null | "considered" | "wall">(null);
   const [studioIndex, setStudioIndex] = useState(0);
   const [studioPaused, setStudioPaused] = useState(false);
   const [studioDirection, setStudioDirection] = useState<"next" | "prev">("next");
@@ -1581,9 +1588,17 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
     () => publicPhotos.filter((p) => p.inShop).sort((a, b) => (a.shopOrder ?? 1e9) - (b.shopOrder ?? 1e9)),
     [publicPhotos],
   );
-  // Keep the first 15 admin-selected works as the landing edit, then balance
-  // their display order by orientation for a more coherent public rail.
-  const curatedShopPhotos = useMemo(() => balanceShopOrientations(shopPhotos.slice(0, 15)), [shopPhotos]);
+  const consideredIds = useMemo(
+    () => parseOrderedSetting(settingValue.shop_considered_photos),
+    [settingValue.shop_considered_photos],
+  );
+  // The saved showcase is always intersected with the live sale catalogue, so
+  // a stale selection can never re-surface an unpublished/non-sellable work.
+  const curatedShopPhotos = useMemo(() => {
+    const byId = new Map(shopPhotos.map((photo) => [photo.id, photo]));
+    const selected = consideredIds.map((id) => byId.get(id)).filter((photo): photo is Photo => Boolean(photo));
+    return selected.length ? selected.slice(0, 15) : balanceShopOrientations(shopPhotos.slice(0, 15));
+  }, [consideredIds, shopPhotos]);
   const filtered = filter === "All" ? curatedShopPhotos : curatedShopPhotos.filter((p) => region(p) === filter);
   const representedRegions = ["Europe", "Australia"].filter((candidate) => curatedShopPhotos.some((p) => region(p) === candidate));
   const visibleFilters = representedRegions.length > 1 ? ["All", ...representedRegions] : [];
@@ -1591,12 +1606,16 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
     ?? publicPhotos.find((p) => p.aspect === "portrait") ?? publicPhotos[0];
   const heroL = curatedShopPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? curatedShopPhotos[1]
     ?? publicPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? publicPhotos[1];
-  const studioPhotos = useMemo(
-    () => balanceShopOrientations(
-      shopPhotos.filter((p) => p.aspect !== "square" && isSizeSellable("A1", true, p.sellableSizes, p.maxSellableMounted)),
-    ).slice(0, 6),
-    [shopPhotos],
+  const studioIds = useMemo(
+    () => parseOrderedSetting(settingValue.shop_studio_photos),
+    [settingValue.shop_studio_photos],
   );
+  const studioPhotos = useMemo(() => {
+    const eligible = shopPhotos.filter((photo) => photo.aspect !== "square");
+    const byId = new Map(eligible.map((photo) => [photo.id, photo]));
+    const selected = studioIds.map((id) => byId.get(id)).filter((photo): photo is Photo => Boolean(photo));
+    return selected.length ? selected.slice(0, 6) : balanceShopOrientations(eligible).slice(0, 6);
+  }, [shopPhotos, studioIds]);
   const studioPhoto = studioPhotos[studioIndex % Math.max(studioPhotos.length, 1)];
   const studioOrientation = studioPhoto ? orientOf(studioPhoto) : "portrait";
 
@@ -1650,14 +1669,8 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
     return base.filter((p): p is Photo => Boolean(p) && !seen.has(p.id) && Boolean(seen.add(p.id))).slice(0, 5);
   }, [previewIds, publicPhotos]);
 
-  async function saveShop(orderedIds: string[]) {
-    const chosen = new Set(orderedIds);
-    for (const p of shopPhotos) {
-      if (!chosen.has(p.id)) await setPhotoShop(p.id, { inShop: false, shopOrder: null });
-    }
-    for (let i = 0; i < orderedIds.length; i += 1) {
-      await setPhotoShop(orderedIds[i], { inShop: true, shopOrder: i + 1 });
-    }
+  async function saveConsidered(orderedIds: string[]) {
+    await setSiteSetting("shop_considered_photos", orderedIds.length ? JSON.stringify(orderedIds) : null);
     await loadGallery();
     setCurating(null);
   }
@@ -1751,7 +1764,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
               <div className="shop-studio-copy">
                 <p className="eyebrow">Preview the possibilities</p>
                 <h2 id="studio-showcase-title">See it in the studio</h2>
-                <p>A1 editions are framed vertically or horizontally to suit the photograph, each shown at scale with a generous mat. Choose any available work in the galleries to create your own.</p>
+                <p>Each photograph is framed vertically or horizontally to suit its composition, shown at scale with a generous mat. Choose any available work in the galleries to create your own.</p>
                 <a
                   href={`/shop/${studioPhoto.slug}`}
                   onClick={(event) => {
@@ -1771,9 +1784,9 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
                   className={`shop-studio-frame ${studioOrientation} is-${studioDirection}`}
                   src={thumbUrl(studioPhoto, 1200)}
                   orientation={studioOrientation}
-                  alt={`${studioPhoto.title}, ${studioPhoto.location}, shown as an A1 ${studioOrientation} framed print`}
+                  alt={`${studioPhoto.title}, ${studioPhoto.location}, shown as a ${studioOrientation} framed print`}
                 />
-                <p><strong>{studioPhoto.title}</strong><span>{studioPhoto.location} · A1 {studioOrientation}</span></p>
+                <p><strong>{studioPhoto.title}</strong><span>{studioPhoto.location} · {studioOrientation}</span></p>
                 {studioPhotos.length > 1 ? (
                   <div className="shop-studio-controls">
                     <button type="button" onClick={() => moveStudio(-1)} aria-label="Previous studio photograph">
@@ -1818,7 +1831,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
                 <button type="button" onClick={() => scrollEditions(1)} aria-label="Next selected editions"><ChevronRight size={17} aria-hidden="true" /></button>
               </div>
               {isAdmin ? (
-                <button className="sec-edit" type="button" onClick={() => setCurating("shop")} aria-label="Choose the prints for sale" title="Choose the prints for sale">
+                <button className="sec-edit" type="button" onClick={() => setCurating("considered")} aria-label="Edit the considered collection" title="Edit the considered collection">
                   <Pencil size={15} aria-hidden="true" />
                 </button>
               ) : null}
@@ -1897,14 +1910,15 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
 
       <ShopLegalFooter />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onNavigate={onNavigate} />
-      {curating === "shop" ? (
+      {curating === "considered" ? (
         <OrderedPhotoPicker
-          title="Prints for sale"
-          hint="Pick the photos sold in the shop. The first 15 form the landing-page selection; the public rail gently alternates portrait and landscape works while preserving the relative order within each orientation."
-          photos={publicPhotos}
-          initialIds={shopPhotos.map((p) => p.id)}
+          title="Considered Collection"
+          hint="Choose up to 15 photographs from the sellable catalogue. This only changes the storefront showcase — it never removes a photograph from sale."
+          max={15}
+          photos={shopPhotos}
+          initialIds={(consideredIds.length ? consideredIds : curatedShopPhotos.map((photo) => photo.id)).filter((id) => shopPhotos.some((photo) => photo.id === id))}
           onClose={() => setCurating(null)}
-          onSave={saveShop}
+          onSave={saveConsidered}
         />
       ) : null}
       {curating === "wall" ? (
@@ -2233,6 +2247,25 @@ function OrderedPhotoPicker({
 }) {
   const [picks, setPicks] = useState<string[]>(initialIds);
   const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState("");
+  const [location, setLocation] = useState("all");
+  const [orientation, setOrientation] = useState("all");
+  const [visibleCount, setVisibleCount] = useState(60);
+
+  const locations = useMemo(
+    () => [...new Set(photos.map((photo) => photo.location).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [photos],
+  );
+  const filteredPhotos = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return photos.filter((photo) =>
+      (location === "all" || photo.location === location)
+      && (orientation === "all" || orientOf(photo) === orientation)
+      && (!term || photo.title.toLowerCase().includes(term) || photo.location.toLowerCase().includes(term)),
+    );
+  }, [location, orientation, photos, query]);
+
+  useEffect(() => setVisibleCount(60), [query, location, orientation]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -2250,6 +2283,17 @@ function OrderedPhotoPicker({
           ? cur
           : [...cur, id],
     );
+  }
+
+  function movePick(id: string, direction: -1 | 1) {
+    setPicks((current) => {
+      const index = current.indexOf(id);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   }
 
   async function save() {
@@ -2273,8 +2317,48 @@ function OrderedPhotoPicker({
         <p className="eyebrow">{title}</p>
         <p className="picker-hint">{hint}</p>
         {preview ? <div className="picker-preview">{preview(picks)}</div> : null}
+        {picks.length ? (
+          <div className="picker-selection" aria-label="Selected photographs in display order">
+            {picks.map((id, index) => {
+              const photo = photos.find((candidate) => candidate.id === id);
+              if (!photo) return null;
+              return (
+                <div className="picker-selection-item" key={id}>
+                  <span>{index + 1}</span>
+                  <SmartImage src={thumbUrl(photo, 180)} alt="" />
+                  <b title={photo.title}>{photo.title}</b>
+                  <button type="button" disabled={index === 0} onClick={() => movePick(id, -1)} aria-label={`Move ${photo.title} earlier`}>←</button>
+                  <button type="button" disabled={index === picks.length - 1} onClick={() => movePick(id, 1)} aria-label={`Move ${photo.title} later`}>→</button>
+                  <button type="button" onClick={() => toggle(id)} aria-label={`Remove ${photo.title}`}>×</button>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+        <div className="picker-filters">
+          <label>
+            <span>Search</span>
+            <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${photos.length} photographs…`} />
+          </label>
+          <label>
+            <span>Location</span>
+            <select value={location} onChange={(event) => setLocation(event.target.value)}>
+              <option value="all">All locations</option>
+              {locations.map((candidate) => <option value={candidate} key={candidate}>{candidate}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>Orientation</span>
+            <select value={orientation} onChange={(event) => setOrientation(event.target.value)}>
+              <option value="all">All orientations</option>
+              <option value="portrait">Portrait</option>
+              <option value="landscape">Landscape</option>
+            </select>
+          </label>
+        </div>
+        <p className="picker-results">Showing {Math.min(visibleCount, filteredPhotos.length)} of {filteredPhotos.length} matches · {photos.length} eligible</p>
         <div className="picker-grid">
-          {photos.map((photo) => {
+          {filteredPhotos.slice(0, visibleCount).map((photo) => {
             const idx = picks.indexOf(photo.id);
             return (
               <button
@@ -2284,12 +2368,17 @@ function OrderedPhotoPicker({
                 type="button"
                 aria-pressed={idx >= 0}
               >
-                <SmartImage src={photo.imageUrl} alt={`${photo.title}, ${photo.location}`} />
+                <SmartImage src={thumbUrl(photo, 420)} alt={`${photo.title}, ${photo.location}`} />
                 {idx >= 0 ? <span className="picker-badge">{idx + 1}</span> : null}
               </button>
             );
           })}
         </div>
+        {visibleCount < filteredPhotos.length ? (
+          <button className="picker-load-more" type="button" onClick={() => setVisibleCount((count) => count + 60)}>
+            Load 60 more
+          </button>
+        ) : null}
         <div className="picker-actions">
           <span className="picker-count">{picks.length}{max != null ? ` / ${max}` : ""} selected</span>
           <span className="picker-actions-spacer" />
@@ -4424,6 +4513,9 @@ function ShopCatalogueAdmin({
   // next full refresh (setPhotoSizeOverride already persisted it).
   const [localPatches, setLocalPatches] = useState<Record<string, Partial<Photo>>>({});
   const saleCount = photos.filter((photo) => photo.inShop).length;
+  const [storefrontSettings, setStorefrontSettings] = useState({ considered: [] as string[], studio: [] as string[] });
+  const [storefrontPicker, setStorefrontPicker] = useState<"considered" | "studio" | null>(null);
+  const [storefrontLoading, setStorefrontLoading] = useState(true);
 
   type ShopRuntimeState = {
     shopEnabled: boolean;
@@ -4454,6 +4546,24 @@ function ShopCatalogueAdmin({
       .catch((error) => setMessage(error instanceof Error ? error.message : "Shop settings could not be loaded."));
   }, [setMessage, shopSettingsRequest]);
 
+  const loadStorefrontSettings = useCallback(async () => {
+    setStorefrontLoading(true);
+    try {
+      const settings = await getSiteSettings();
+      const values = Object.fromEntries(settings.map((setting) => [setting.key, setting.value ?? undefined]));
+      setStorefrontSettings({
+        considered: parseOrderedSetting(values.shop_considered_photos),
+        studio: parseOrderedSetting(values.shop_studio_photos),
+      });
+    } finally {
+      setStorefrontLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadStorefrontSettings().catch(() => setMessage("Storefront selections could not be loaded."));
+  }, [loadStorefrontSettings, setMessage]);
+
   async function setPublicShop(enabled: boolean) {
     if (enabled && !window.confirm("Open the shop and checkout to the public now?")) return;
     setRuntimeBusy(true);
@@ -4479,6 +4589,33 @@ function ShopCatalogueAdmin({
     } finally {
       setRuntimeBusy(false);
     }
+  }
+
+  const sellablePhotos = useMemo(
+    () => photos
+      .filter((photo) => photo.inShop && photo.published)
+      .sort((a, b) => (a.shopOrder ?? 1e9) - (b.shopOrder ?? 1e9) || a.title.localeCompare(b.title)),
+    [photos],
+  );
+  const studioCandidates = useMemo(() => sellablePhotos.filter((photo) => photo.aspect !== "square"), [sellablePhotos]);
+
+  async function saveStorefrontSelection(kind: "considered" | "studio", ids: string[]) {
+    const candidates = kind === "studio" ? studioCandidates : sellablePhotos;
+    const maximum = kind === "studio" ? 6 : 15;
+    const allowed = new Set(candidates.map((photo) => photo.id));
+    const safeIds = ids.filter((id, index) => allowed.has(id) && ids.indexOf(id) === index).slice(0, maximum);
+    const key = kind === "studio" ? "shop_studio_photos" : "shop_considered_photos";
+    await setSiteSetting(key, safeIds.length ? JSON.stringify(safeIds) : null);
+    setStorefrontSettings((current) => ({ ...current, [kind]: safeIds }));
+    setStorefrontPicker(null);
+    setMessage(`${kind === "studio" ? "Studio rotation" : "Considered Collection"} updated.`);
+  }
+
+  async function resetStorefrontSelection(kind: "considered" | "studio") {
+    const key = kind === "studio" ? "shop_studio_photos" : "shop_considered_photos";
+    await setSiteSetting(key, null);
+    setStorefrontSettings((current) => ({ ...current, [kind]: [] }));
+    setMessage(`${kind === "studio" ? "Studio rotation" : "Considered Collection"} is using the automatic shop-order mix.`);
   }
 
   const locationOptions = useMemo(
@@ -4583,6 +4720,54 @@ function ShopCatalogueAdmin({
           </div>
         )}
       </div>
+      <section className="shop-storefront-curation" aria-labelledby="storefront-curation-title">
+        <div className="shop-runtime-heading">
+          <div>
+            <p className="eyebrow">Storefront presentation</p>
+            <h2 id="storefront-curation-title">Curate the first impression.</h2>
+            <p>These selections only change what is featured on the shop landing page. They never add or remove a photograph from sale.</p>
+          </div>
+          <a href="/shop">Preview storefront →</a>
+        </div>
+        {storefrontLoading ? <p className="loading-note"><LoaderCircle className="spin" size={15} /> Loading storefront selections…</p> : (
+          <div className="shop-curation-grid">
+            {(["studio", "considered"] as const).map((kind) => {
+              const candidates = kind === "studio" ? studioCandidates : sellablePhotos;
+              const maximum = kind === "studio" ? 6 : 15;
+              const saved = storefrontSettings[kind];
+              const selected = (saved.length ? saved.map((id) => candidates.find((photo) => photo.id === id)).filter(Boolean) : candidates.slice(0, maximum)) as Photo[];
+              const portraits = selected.filter((photo) => photo.aspect === "portrait").length;
+              const landscapes = selected.filter((photo) => photo.aspect === "landscape" || photo.aspect === "wide").length;
+              return (
+                <article className="shop-curation-card" key={kind}>
+                  <div>
+                    <span>{kind === "studio" ? "Rotating room preview" : "Horizontal shop rail"}</span>
+                    <h3>{kind === "studio" ? "Studio rotation" : "Considered Collection"}</h3>
+                    <p>{kind === "studio" ? "Choose up to 6 portrait or landscape works. Each keeps its natural orientation in the frame." : "Choose and order up to 15 sellable works for the main shop showcase."}</p>
+                  </div>
+                  <div className="shop-curation-preview" aria-label={`${kind === "studio" ? "Studio rotation" : "Considered Collection"} preview`}>
+                    {selected.slice(0, 6).map((photo, index) => (
+                      <div className={`shop-curation-thumb ${photo.aspect}`} key={photo.id} title={`${index + 1}. ${photo.title}`}>
+                        <SmartImage alt="" src={thumbUrl(photo, 260)} />
+                        <span>{index + 1}</span>
+                      </div>
+                    ))}
+                    {!selected.length ? <p>No eligible photographs yet.</p> : null}
+                  </div>
+                  <div className="shop-curation-meta">
+                    <span>{saved.length ? `${selected.length} selected` : `Automatic mix · first ${Math.min(candidates.length, maximum)}`}</span>
+                    <span>{portraits} portrait · {landscapes} landscape</span>
+                  </div>
+                  <div className="shop-curation-actions">
+                    <button className="solid-button" disabled={!candidates.length} onClick={() => setStorefrontPicker(kind)} type="button">Choose and order</button>
+                    <button className="text-button" disabled={!saved.length} onClick={() => resetStorefrontSelection(kind)} type="button">Use automatic mix</button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
       <div className="admin-section-intro">
         <div>
           <p className="eyebrow">Shop catalogue</p>
@@ -4676,6 +4861,21 @@ function ShopCatalogueAdmin({
         })}
       </div>
       {!visible.length ? <p className="admin-card">No photos match this filter.</p> : null}
+      {storefrontPicker ? (
+        <OrderedPhotoPicker
+          title={storefrontPicker === "studio" ? "Studio rotation" : "Considered Collection"}
+          hint={storefrontPicker === "studio" ? "Choose up to 6 sellable works and drag them into rotation order. Portrait and landscape photographs are both supported." : "Choose up to 15 sellable works and drag them into the order customers will see."}
+          max={storefrontPicker === "studio" ? 6 : 15}
+          photos={storefrontPicker === "studio" ? studioCandidates : sellablePhotos}
+          initialIds={storefrontSettings[storefrontPicker].length
+            ? storefrontSettings[storefrontPicker]
+            : (storefrontPicker === "studio" ? studioCandidates : sellablePhotos)
+              .slice(0, storefrontPicker === "studio" ? 6 : 15)
+              .map((photo) => photo.id)}
+          onClose={() => setStorefrontPicker(null)}
+          onSave={(ids) => saveStorefrontSelection(storefrontPicker, ids)}
+        />
+      ) : null}
     </section>
   );
 }

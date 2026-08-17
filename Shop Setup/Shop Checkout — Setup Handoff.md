@@ -187,6 +187,12 @@ without a deploy. Do not use live Stripe or Prodigi credentials in Preview.
 - **Admin → Shop → Shop catalogue:** toggle individual photos or use Photos bulk
   actions to mark them For sale/Not for sale. “Open admin shop” enters the full
   storefront even while public access is disabled.
+- **Admin → Shop → Storefront presentation:** independently choose and order the
+  Studio rotation (up to 6) and Considered Collection (up to 15). These controls
+  never change sale eligibility. Empty selections use the automatic shop-order mix;
+  saved selections are always intersected with the currently published, sellable set.
+- For a large archive, search/filter the picker and load matches in batches of 60.
+  Use the ordered strip at the top to move or remove the small final selection.
 - A product is eligible only when it is both published and For sale. Turning For
   sale off removes it from the shop, direct product route, lightbox order action,
   related products and server checkout validation.
