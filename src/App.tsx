@@ -1580,7 +1580,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
       </section>
       <div className="shop-strip">
         <span><b>Gallery-quality</b> frames</span><span><b>Archival</b> matte</span>
-        <span><b>Ready</b> to hang</span><span><b>Ships</b> worldwide</span>
+        <span><b>Ready</b> to hang</span><span><b>Ships</b> Australia-wide</span>
       </div>
 
       {shopLive ? (
