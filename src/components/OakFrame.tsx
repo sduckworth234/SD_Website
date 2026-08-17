@@ -14,11 +14,13 @@ export function OakFrame({
   orientation = "portrait",
   alt = "",
   className = "",
+  eager = false,
 }: {
   src: string;
   orientation?: FrameOrientation;
   alt?: string;
   className?: string;
+  eager?: boolean;
 }) {
   const f = FRAME[orientation];
   const [l, t, w, h] = f.win;
@@ -28,10 +30,24 @@ export function OakFrame({
         className="oak-art"
         style={{ left: `${l * 100}%`, top: `${t * 100}%`, width: `${w * 100}%`, height: `${h * 100}%` }}
       >
-        <img src={src} alt={alt} loading="lazy" decoding="async" />
+        <img
+          src={src}
+          alt={alt}
+          loading={eager ? "eager" : "lazy"}
+          fetchPriority={eager ? "high" : "auto"}
+          decoding="async"
+        />
         <span className="oak-glass" aria-hidden="true" />
       </span>
-      <img className="oak-png" src={`/frames/frame-${orientation}.png`} alt="" aria-hidden="true" />
+      <img
+        className="oak-png"
+        src={`/frames/frame-${orientation}.png`}
+        alt=""
+        aria-hidden="true"
+        loading={eager ? "eager" : "lazy"}
+        fetchPriority={eager ? "high" : "auto"}
+        decoding="async"
+      />
     </div>
   );
 }

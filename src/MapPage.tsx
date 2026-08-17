@@ -5,6 +5,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { getGalleryData } from "./lib/supabase";
 import { useSeo } from "./lib/seo";
 import { Header } from "./components/Header";
+import { SDLoader } from "./components/SDLoader";
 import { SmartImage } from "./components/SmartImage";
 import type { Photo } from "./types";
 
@@ -355,10 +356,7 @@ export default function MapPage({ onNavigate, showShop = false }: { onNavigate: 
                 </button>
               </>
             ) : (
-              <>
-                <span className="map-loading-pulse" aria-hidden="true" />
-                <p>Mapping the archive</p>
-              </>
+              <SDLoader label="Mapping the archive" />
             )}
           </div>
         ) : null}

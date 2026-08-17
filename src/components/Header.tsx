@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Moon, Sun, UserRound } from "lucide-react";
+import { Menu, Moon, Sun, X } from "lucide-react";
 import { SHOP_FEATURE_ENABLED } from "../lib/features";
 import { applyTheme, readTheme, type Theme } from "../lib/theme";
 
@@ -68,16 +68,19 @@ export function Header({
   onOpenAbout?: () => void;
   showShop?: boolean;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const path = typeof window !== "undefined" ? window.location.pathname : "/";
   const isHome = path === "/";
 
   function navTo(event: React.MouseEvent, route: string) {
     event.preventDefault();
+    setMenuOpen(false);
     window.history.pushState({}, "", route);
     onNavigate(route);
   }
 
   function handleAbout(event: React.MouseEvent) {
+    setMenuOpen(false);
     if (onOpenAbout) { onOpenAbout(); return; }
     navTo(event, "/");
   }
@@ -115,15 +118,30 @@ export function Header({
           </a>
         ) : null}
         <ThemeToggle />
-        <a
-          className="nav-icon"
-          href="/admin"
-          onClick={(event) => navTo(event, "/admin")}
-          aria-label="Admin sign in"
-          title="Admin"
+        <button
+          className="nav-icon mobile-menu-toggle"
+          type="button"
+          aria-expanded={menuOpen}
+          aria-controls="mobile-primary-navigation"
+          aria-label={menuOpen ? "Close navigation" : "Open navigation"}
+          onClick={() => setMenuOpen((open) => !open)}
         >
-          <UserRound size={18} aria-hidden="true" />
-        </a>
+          {menuOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
+        </button>
+      </nav>
+      <nav
+        id="mobile-primary-navigation"
+        className={`mobile-nav-panel${menuOpen ? " is-open" : ""}`}
+        aria-label="Mobile navigation"
+        aria-hidden={!menuOpen}
+        inert={!menuOpen}
+      >
+        <a href="/galleries" onClick={(event) => navTo(event, "/galleries")}>Gallery</a>
+        <a href="/map" onClick={(event) => navTo(event, "/map")}>Map</a>
+        <button onClick={handleAbout} type="button">About Me</button>
+        {SHOP_FEATURE_ENABLED || showShop ? (
+          <a href="/shop" onClick={(event) => navTo(event, "/shop")}>Shop</a>
+        ) : null}
       </nav>
     </header>
   );

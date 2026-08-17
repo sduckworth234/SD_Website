@@ -5,14 +5,16 @@ manual fulfilment controls, optional Prodigi automation, customer/merchant email
 order admin and reactive print-master upload are implemented. This file is the
 short account-side checklist needed to activate them.
 
-**Code status (2026-08-16):** production build and dependency audit pass; the
-desktop/mobile checkout and default-off states have been checked without console
-errors. A real Stripe test-card payment, signed webhook, atomic Supabase order and
-same-event replay have passed. Existing test orders are locked to `manual`, so a
-future Prodigi toggle cannot submit them. Decline/3DS, master upload, live email
-proof and one real low-value purchase are still required before public launch.
-Prodigi sandbox/callback proof is required only before changing the provider from
-manual to Prodigi, not before launching the manual shop.
+**Code status (2026-08-17):** the complete launch QA/refactor is documented in
+[`Shop Launch QA Refactor — 2026-08-17.md`](./Shop%20Launch%20QA%20Refactor%20%E2%80%94%202026-08-17.md).
+The production build and dependency audit pass; responsive shop, gallery, product,
+cart, checkout, confirmation and policy flows have been checked without application
+console errors. A real Stripe test-card payment, signed webhook, atomic Supabase
+order and same-event replay have passed. Existing test orders are locked to
+`manual`, so a future Prodigi toggle cannot submit them. Decline/3DS, master upload,
+live email proof and one real low-value purchase remain the final account-side
+launch proofs. Prodigi sandbox/callback proof is required only before changing the
+provider from manual to Prodigi, not before launching the manual shop.
 
 ## Purchase and fulfilment workflow
 

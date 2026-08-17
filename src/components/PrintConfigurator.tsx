@@ -6,6 +6,8 @@
 import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { getTransformedPublicUrl, photoBucket } from "../lib/supabase";
+import { trackAddToCart, trackProductLinkClicked, trackProductViewChanged, trackViewItem } from "../lib/analytics";
+import { productStructuredData, useSeo } from "../lib/seo";
 import type { Photo } from "../types";
 import {
   COLOURS,
@@ -19,11 +21,11 @@ import {
   money,
   priceFor,
   sizeById,
-  skuFor,
 } from "../lib/printCatalogue";
 import type { ColourId, SizeId } from "../lib/printCatalogue";
 import { makeCartItem, useCart } from "../lib/cart";
 import { CartDrawer } from "./CartDrawer";
+import { ShopLegalFooter } from "./LegalPages";
 
 function thumb(photo: Photo, width: number): string {
   return photo.storagePath ? getTransformedPublicUrl(photoBucket, photo.storagePath, width) : photo.imageUrl;
@@ -140,7 +142,6 @@ export function PrintConfigurator({
   const sizeDef = sizeById(size);
   const colourDef = colourById(colour);
   const price = priceFor(size, mounted);
-  const sku = skuFor(size, mounted);
   const maxForMount = mounted ? photo.maxSellableMounted : photo.maxSellableUnmounted;
   // Only worth a note when it's an actual limitation — A1 (the top size) or
   // unknown/no restriction don't need a message at all.
@@ -155,6 +156,41 @@ export function PrintConfigurator({
   const detailBandPct = (bandCm / detailOuterW) * 100;
   const detailInnerW = Math.max(detailOuterW - bandCm * 2, 0.1);
   const detailMatPct = (matCm / detailInnerW) * 100;
+  const seoDescription = `${photo.title}, ${photo.location} — a fine-art photography print by Sam Duckworth, framed to order in Australia.`;
+  const seoSchema = useMemo(() => productStructuredData({
+    name: `${photo.title} — Framed photographic print`,
+    description: seoDescription,
+    path: `/shop/${photo.slug}`,
+    image: thumb(photo, 1600),
+    price: priceFor("A5", false),
+    available: true,
+    category: "Fine-art photography print",
+    material: "Archival fine-art paper with professional frame",
+  }), [photo, seoDescription]);
+
+  useSeo(`${photo.title} print — Sam Duckworth Photography`, {
+    description: seoDescription,
+    path: `/shop/${photo.slug}`,
+    image: thumb(photo, 1600),
+    type: "product",
+    structuredData: seoSchema,
+  });
+
+  useEffect(() => {
+    trackViewItem({
+      currency: "AUD",
+      value: priceFor("A5", false),
+      items: [{
+        item_id: photo.id,
+        item_name: photo.title,
+        item_brand: "Sam Duckworth Photography",
+        item_category: "Fine-art print",
+        item_category2: photo.location,
+        price: priceFor("A5", false),
+        quantity: 1,
+      }],
+    });
+  }, [photo.id, photo.location, photo.title]);
 
   const pairPhotos = useMemo(() => {
     const others = otherShopPhotos.filter((p) => p.id !== photo.id);
@@ -176,12 +212,13 @@ export function PrintConfigurator({
       score(b) - score(a)
       || (a.shopOrder ?? Number.MAX_SAFE_INTEGER) - (b.shopOrder ?? Number.MAX_SAFE_INTEGER)
       || a.title.localeCompare(b.title),
-    );
+    ).slice(0, 10);
   }, [otherShopPhotos, photo]);
 
   const switcherPhotos = useMemo(() => otherShopPhotos.filter((p) => p.id !== photo.id).slice(0, 4), [otherShopPhotos, photo.id]);
 
   function goToPhoto(p: Photo) {
+    trackProductLinkClicked({ item_id: p.id, item_name: p.title, source: "similar_images" });
     window.history.pushState({}, "", `/shop/${p.slug}`);
     onNavigate(`/shop/${p.slug}`);
     window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
@@ -212,6 +249,20 @@ export function PrintConfigurator({
     }
     setAddError(null);
     cart.add(makeCartItem(photo, thumb(photo, 200), size, mounted, colour));
+    trackAddToCart({
+      currency: "AUD",
+      value: price,
+      items: [{
+        item_id: photo.id,
+        item_name: photo.title,
+        item_brand: "Sam Duckworth Photography",
+        item_category: "Fine-art print",
+        item_category2: photo.location,
+        item_variant: `${size} · ${colourDef.label} · ${mounted ? "Mounted" : "Unmounted"}`,
+        price,
+        quantity: 1,
+      }],
+    });
     setJustAdded(true);
     setPulseCart(false);
     requestAnimationFrame(() => setPulseCart(true));
@@ -244,6 +295,7 @@ export function PrintConfigurator({
               event.preventDefault();
               const nextMode: PreviewMode = event.key === "ArrowLeft" || event.key === "Home" ? "studio" : "detail";
               setPreviewMode(nextMode);
+              trackProductViewChanged({ item_id: photo.id, item_name: photo.title, view: nextMode });
               requestAnimationFrame(() => document.getElementById(`pc-${nextMode}-tab`)?.focus());
             }}
           >
@@ -255,7 +307,10 @@ export function PrintConfigurator({
               aria-controls="pc-studio-panel"
               aria-selected={previewMode === "studio"}
               tabIndex={previewMode === "studio" ? 0 : -1}
-              onClick={() => setPreviewMode("studio")}
+              onClick={() => {
+                setPreviewMode("studio");
+                trackProductViewChanged({ item_id: photo.id, item_name: photo.title, view: "studio" });
+              }}
             >
               Studio
             </button>
@@ -267,7 +322,10 @@ export function PrintConfigurator({
               aria-controls="pc-detail-panel"
               aria-selected={previewMode === "detail"}
               tabIndex={previewMode === "detail" ? 0 : -1}
-              onClick={() => setPreviewMode("detail")}
+              onClick={() => {
+                setPreviewMode("detail");
+                trackProductViewChanged({ item_id: photo.id, item_name: photo.title, view: "detail" });
+              }}
             >
               Detail
             </button>
@@ -414,16 +472,15 @@ export function PrintConfigurator({
           <button className="pc-add-cart" type="button" onClick={addToCart}>{justAdded ? "Added ✓" : "Add to cart"}</button>
           {addError ? <p className="pc-add-error" role="alert">{addError}</p> : null}
           <p className="pc-ship-note">
-            Shipping isn't flat — it's quoted live from the print size (from $15.10, AU only). Add a second A5–A2 print to the same order and shipping adds exactly <b>$5.00</b>, not another full charge. (Two A1 prints together add $10 for the second — they can't share a parcel.)
+            Tracked Australia-wide delivery is calculated at checkout. Additional prints ship from $5 when they can be packed together.
           </p>
-          <p className="pc-sku-note">SKU {sku}</p>
         </div>
       </div>
 
       <section className="pc-trust">
         <div><b>Printed to order</b><span>Made in Australia when you order — nothing sits in a warehouse.</span></div>
-        <div><b>Archival fine-art paper</b><span>200gsm giclée print, rated to outlast a lifetime on the wall.</span></div>
-        <div><b>Ships in 2–3 days</b><span>Tracked Australia Post, straight from an Australian lab.</span></div>
+        <div><b>Archival fine-art paper</b><span>Gallery-quality giclée print, made to last on your wall.</span></div>
+        <div><b>Typically dispatched in 2–3 business days</b><span>Tracked delivery from an Australian print lab.</span></div>
       </section>
 
       {pairPhotos.length ? (
@@ -442,7 +499,7 @@ export function PrintConfigurator({
               <button className="pc-pairs-see-all" type="button" onClick={goToShop}>See all prints</button>
             </div>
           </div>
-          <p className="pc-pairs-callout">Pick one to configure — adding it to the same order usually costs about $5 in shipping, not $15.</p>
+          <p className="pc-pairs-callout">Explore a curated selection of photographs that pair naturally with this one.</p>
           <div className="pc-pairs-track" ref={pairTrackRef}>
             {pairPhotos.map((p) => (
               <button key={p.id} className="pc-pair-card" type="button" onClick={() => goToPhoto(p)}>
@@ -464,6 +521,8 @@ export function PrintConfigurator({
           Email a question
         </a>
       </section>
+
+      <ShopLegalFooter className="pc-legal-footer" />
 
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onNavigate={onNavigate} />
     </main>

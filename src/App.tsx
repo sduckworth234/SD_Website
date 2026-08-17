@@ -91,10 +91,13 @@ import { useSeo } from "./lib/seo";
 import { Header } from "./components/Header";
 import { OakFrame } from "./components/OakFrame";
 import { SmartImage } from "./components/SmartImage";
+import { SDLoader } from "./components/SDLoader";
 import { PrintConfigurator } from "./components/PrintConfigurator";
 import { CartDrawer } from "./components/CartDrawer";
+import { LegalPage, ShopLegalFooter, type LegalPageId } from "./components/LegalPages";
 import { useCart } from "./lib/cart";
-import { CONTACT_EMAIL, SIZES, money, priceFor } from "./lib/printCatalogue";
+import { trackPageView, trackProductLinkClicked, trackSelectItem } from "./lib/analytics";
+import { CONTACT_EMAIL, SIZES, isSizeSellable, money, priceFor } from "./lib/printCatalogue";
 import type { SizeId } from "./lib/printCatalogue";
 import { SHOP_FEATURE_ENABLED } from "./lib/features";
 
@@ -110,6 +113,8 @@ const allLocations = "All work";
 type ActiveLocation = LocationBucket | typeof allLocations;
 
 type GalleryView = "flow" | "box";
+const GALLERY_PAGE_SIZE_DESKTOP = 36;
+const GALLERY_PAGE_SIZE_MOBILE = 24;
 
 // Pick a pseudo-random landing category, avoiding the one shown last time so
 // reloads cycle through the locations rather than repeating.
@@ -327,6 +332,11 @@ function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => trackPageView(), 0);
+    return () => window.clearTimeout(timer);
+  }, [route]);
+
   // Light deterrent: block right-click "Save image" on photos. The full-res file
   // is never served (only ≤2400px WebP), so this just discourages casual saving.
   useEffect(() => {
@@ -347,7 +357,7 @@ function App() {
 
   if (matches("/map")) {
     return (
-      <Suspense fallback={<div className="map-shell map-loading" aria-label="Loading map" />}>
+      <Suspense fallback={<main className="route-loading"><SDLoader label="Mapping the archive" /></main>}>
         <MapPage key={route} onNavigate={navigate} showShop={shopAccess.isAdmin} />
       </Suspense>
     );
@@ -363,12 +373,17 @@ function App() {
   if (matches("/checkout")) {
     if (!SHOP_FEATURE_ENABLED && !shopAccess.checked) return <ShopAccessLoading />;
     return SHOP_FEATURE_ENABLED || shopAccess.isAdmin
-      ? <Suspense fallback={<main className="co-shell" />}><CheckoutPage onNavigate={navigate} /></Suspense>
+      ? <Suspense fallback={<main className="route-loading is-dark"><SDLoader label="Preparing secure checkout" /></main>}><CheckoutPage onNavigate={navigate} /></Suspense>
       : <ShopUnavailable onNavigate={navigate} />;
   }
 
   if (matches("/checkout/success")) {
-    return <Suspense fallback={<main className="co-shell" />}><CheckoutSuccessPage onNavigate={navigate} /></Suspense>;
+    return <Suspense fallback={<main className="route-loading is-dark"><SDLoader label="Confirming your order" /></main>}><CheckoutSuccessPage onNavigate={navigate} /></Suspense>;
+  }
+
+  const policyMatch = path.match(/^\/shop\/policies\/(shipping|returns|privacy|terms)\/?$/);
+  if (policyMatch) {
+    return <LegalPage page={policyMatch[1] as LegalPageId} />;
   }
 
   if (path.startsWith("/shop/")) {
@@ -770,7 +785,11 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           origin={origin}
           onViewOnMap={viewPhotoOnMap}
           onViewGallery={(p) => openLocation(p.location)}
-          onOrderPrint={(isAdmin || (SHOP_FEATURE_ENABLED && flags.print_configurator === true)) && selectedPhoto.inShop ? (p) => { window.history.pushState({}, "", `/shop/${p.slug}`); onNavigate(`/shop/${p.slug}`); } : undefined}
+          onOrderPrint={(isAdmin || (SHOP_FEATURE_ENABLED && flags.print_configurator === true)) && selectedPhoto.inShop ? (p) => {
+            trackProductLinkClicked({ item_id: p.id, item_name: p.title, source: "gallery" });
+            window.history.pushState({}, "", `/shop/${p.slug}`);
+            onNavigate(`/shop/${p.slug}`);
+          } : undefined}
         />
       ) : null}
       {editingPhoto ? (
@@ -834,6 +853,8 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   const isPhone = useMediaQuery("(max-width: 760px)");
   const [mobileAxis, setMobileAxis] = useState<"collections" | "places">("collections");
   const [view, setView] = useState<GalleryView>("flow");
+  const pageSize = isPhone ? GALLERY_PAGE_SIZE_MOBILE : GALLERY_PAGE_SIZE_DESKTOP;
+  const [visibleCount, setVisibleCount] = useState(GALLERY_PAGE_SIZE_DESKTOP);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
   // Shared shape for the lightbox pre-warm — see lib/viewTransition.ts.
@@ -947,6 +968,14 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
     if (activeLocation === allLocations) return scopedPhotos;
     return scopedPhotos.filter((p) => p.location === activeLocation);
   }, [activeLocation, scopedPhotos]);
+  const visiblePhotos = useMemo(
+    () => filteredPhotos.slice(0, visibleCount),
+    [filteredPhotos, visibleCount],
+  );
+
+  useEffect(() => {
+    setVisibleCount(pageSize);
+  }, [activeCollectionId, activeLocation, pageSize, view]);
 
   // Keep the URL shareable: ?collection=slug&location=Name, both optional.
   useEffect(() => {
@@ -1011,11 +1040,14 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
       "cancelIdleCallback" in window ? (h) => window.cancelIdleCallback(h) : (h) => window.clearTimeout(h);
     const handle = idle(() => {
       const perLocation = new Map<string, number>();
+      let warmed = 0;
       for (const p of publicPhotos) {
+        if (warmed >= 12) break;
         if (p.location === activeLocation || !p.imageUrl) continue;
         const seen = perLocation.get(p.location) ?? 0;
-        if (seen >= 4) continue;
+        if (seen >= 2) continue;
         perLocation.set(p.location, seen + 1);
+        warmed += 1;
         const im = new Image();
         const srcset = srcSetFor(p);
         if (srcset) {
@@ -1057,7 +1089,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
       : { path: "/galleries" },
   );
 
-  useScrollReveal([isLoading, imagesReady, activeLocation, filteredPhotos.length, view]);
+  useScrollReveal([isLoading, imagesReady, activeLocation, visiblePhotos.length, view]);
 
   const showCollections = visibleCollections.length > 0;
   // Desktop shows both rails; a phone shows one at a time behind the switch.
@@ -1143,10 +1175,24 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
           onSendToTop={sendToTop}
           onToggleMapFeature={toggleMapFeature}
           onUnpublish={unpublishPhoto}
-          photos={filteredPhotos}
+          photos={visiblePhotos}
           view={view}
         />
       )}
+      {!isLoading && imagesReady && visiblePhotos.length < filteredPhotos.length ? (
+        <div className="gallery-pagination">
+          <p>
+            Showing {visiblePhotos.length} of {filteredPhotos.length} photographs
+          </p>
+          <button
+            className="solid-button"
+            onClick={() => setVisibleCount((count) => Math.min(count + pageSize, filteredPhotos.length))}
+            type="button"
+          >
+            Show more
+          </button>
+        </div>
+      ) : null}
       <Footer />
       {selectedPhoto ? (
         <Lightbox
@@ -1154,7 +1200,11 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
           origin={origin}
           onClose={closePhoto}
           onViewOnMap={viewPhotoOnMap}
-          onOrderPrint={(isAdmin || (SHOP_FEATURE_ENABLED && flags.print_configurator === true)) && selectedPhoto.inShop ? (p) => { window.history.pushState({}, "", `/shop/${p.slug}`); onNavigate(`/shop/${p.slug}`); } : undefined}
+          onOrderPrint={(isAdmin || (SHOP_FEATURE_ENABLED && flags.print_configurator === true)) && selectedPhoto.inShop ? (p) => {
+            trackProductLinkClicked({ item_id: p.id, item_name: p.title, source: "gallery" });
+            window.history.pushState({}, "", `/shop/${p.slug}`);
+            onNavigate(`/shop/${p.slug}`);
+          } : undefined}
         />
       ) : null}
       {editingPhoto ? (
@@ -1365,7 +1415,7 @@ function FramedHero({ portrait, landscape, onShop }: { portrait?: Photo; landsca
       <div className="fh-copy">
         <p className="eyebrow">Framed Editions</p>
         <h2>Take the view home.</h2>
-        <p className="fh-lead">Fine-art prints, professionally framed — ready to hang.</p>
+        <p className="fh-lead">Photographed by Sam, printed and framed to order in Australia.</p>
         <button className="solid-button" type="button" onClick={onShop}>Shop the collection</button>
       </div>
       <div className="fh-stage">
@@ -1393,7 +1443,24 @@ function ShopProduct({ photo, onAdd, productHref, onOpen }: { photo: Photo; onAd
       <a
         className={`shop-card ${orient}`}
         href={productHref}
-        onClick={(e) => { e.preventDefault(); onOpen?.(); }}
+        onClick={(e) => {
+          e.preventDefault();
+          const item = {
+            item_id: photo.id,
+            item_name: photo.title,
+            item_brand: "Sam Duckworth Photography",
+            item_category: "Fine-art print",
+            item_category2: photo.location,
+            item_list_id: "shop_showcase",
+            item_list_name: "Selected editions",
+            price: priceFor("A5", false),
+            currency: "AUD" as const,
+            quantity: 1,
+          };
+          trackSelectItem({ item_list_id: "shop_showcase", item_list_name: "Selected editions", items: [item] });
+          trackProductLinkClicked({ item_id: photo.id, item_name: photo.title, source: "shop_showcase" });
+          onOpen?.();
+        }}
       >
         <div className="shop-card-frame">
           <OakFrame src={thumbUrl(photo, 820)} orientation={orient} alt={`${photo.title}, ${photo.location}`} />
@@ -1428,9 +1495,10 @@ function ShopProduct({ photo, onAdd, productHref, onOpen }: { photo: Photo; onAd
   );
 }
 
-// The Framed Editions shop. The grid is admin-curated (in_shop); access is
-// gated by the `shop_public` flag — public sees "Opening soon" until it's on,
-// while the admin always sees the full shop and can curate it.
+// The Framed Editions shop. The sale catalogue remains admin-curated (`in_shop`),
+// while the landing page deliberately presents only a small edit of that list.
+// The wider archive is discovered in Galleries, where each available work links
+// back into its own print configurator.
 const orientOf = (p: Photo) => (p.aspect === "portrait" || p.aspect === "square" ? "portrait" : "landscape");
 
 // Live mini-mockup of the glimpse wall: each picked photo in its actual frame,
@@ -1454,18 +1522,20 @@ function WallPreview({ ids, photos }: { ids: string[]; photos: Photo[] }) {
 }
 
 function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; onNavigate: (route: string) => void }) {
-  const { publicPhotos, locations, flags, isAdmin: detectedAdmin, settingValue, loadGallery } = useSiteData();
+  const { publicPhotos, locations, flags, isAdmin: detectedAdmin, isLoading, settingValue, loadGallery } = useSiteData();
   const isAdmin = adminAccess || detectedAdmin;
   const [cart, setCart] = useState(0);
   const realCart = useCart();
   const [cartOpen, setCartOpen] = useState(false);
   const [filter, setFilter] = useState("All");
   // Two independent curations: "shop" = the products for sale (in_shop), "wall" =
-  // the coming-soon collection glimpse (its own ordered list in shop_preview).
+  // the collection glimpse (its own ordered list in shop_preview).
   const [curating, setCurating] = useState<null | "shop" | "wall">(null);
+  const [studioIndex, setStudioIndex] = useState(0);
+  const [studioPaused, setStudioPaused] = useState(false);
 
   useSeo("Framed Editions — Sam Duckworth Photography", {
-    description: "Fine-art aerial and coastal prints, professionally framed — by Sam Duckworth. Launching soon.",
+    description: "Fine-art aerial and coastal photography prints by Sam Duckworth, professionally framed in Australia and delivered Australia-wide.",
     path: "/shop",
   });
 
@@ -1489,11 +1559,35 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
     () => publicPhotos.filter((p) => p.inShop).sort((a, b) => (a.shopOrder ?? 1e9) - (b.shopOrder ?? 1e9)),
     [publicPhotos],
   );
-  const filtered = filter === "All" ? shopPhotos : shopPhotos.filter((p) => region(p) === filter);
-  const heroP = shopPhotos.find((p) => p.aspect === "portrait") ?? shopPhotos[0]
+  // Preserve the exact admin order, but keep the public landing page an edited
+  // showcase rather than loading the entire sale archive at once.
+  const curatedShopPhotos = useMemo(() => shopPhotos.slice(0, 15), [shopPhotos]);
+  const filtered = filter === "All" ? curatedShopPhotos : curatedShopPhotos.filter((p) => region(p) === filter);
+  const representedRegions = ["Europe", "Australia"].filter((candidate) => curatedShopPhotos.some((p) => region(p) === candidate));
+  const visibleFilters = representedRegions.length > 1 ? ["All", ...representedRegions] : [];
+  const heroP = curatedShopPhotos.find((p) => p.aspect === "portrait") ?? curatedShopPhotos[0]
     ?? publicPhotos.find((p) => p.aspect === "portrait") ?? publicPhotos[0];
-  const heroL = shopPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? shopPhotos[1]
+  const heroL = curatedShopPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? curatedShopPhotos[1]
     ?? publicPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? publicPhotos[1];
+  const studioPhotos = useMemo(
+    () => shopPhotos
+      .filter((p) => p.aspect === "portrait" && isSizeSellable("A1", true, p.sellableSizes, p.maxSellableMounted))
+      .slice(0, 6),
+    [shopPhotos],
+  );
+  const studioPhoto = studioPhotos[studioIndex % Math.max(studioPhotos.length, 1)];
+
+  useEffect(() => {
+    setStudioIndex(0);
+  }, [studioPhotos]);
+
+  useEffect(() => {
+    if (studioPaused || studioPhotos.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+    const timer = window.setInterval(() => {
+      setStudioIndex((current) => (current + 1) % studioPhotos.length);
+    }, 4800);
+    return () => window.clearInterval(timer);
+  }, [studioPaused, studioPhotos]);
 
   // The "collection glimpse" wall is curated SEPARATELY from the shop products —
   // its ordered photo ids live in the shop_preview site setting. If unset, fall
@@ -1548,6 +1642,17 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
     </div>
   );
 
+  if (isLoading) {
+    return (
+      <main className="shop">
+        {ShopNav}
+        <section className="shop-data-loading">
+          <SDLoader label="Preparing framed editions" />
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="shop">
       {ShopNav}
@@ -1558,11 +1663,20 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
         <div className="sh-copy">
           <p className="eyebrow">Sam Duckworth Photography</p>
           <h1>Framed<br />Editions</h1>
-          <p className="sh-lead">Fine-art aerial &amp; coastal prints, professionally framed. From the Northern Beaches to the Mediterranean.</p>
-          {/* Public visitors get the gallery CTA until the public shop opens;
-              authenticated admins get the real shop action for testing. */}
+          <p className="sh-lead">Fine-art aerial &amp; coastal prints, professionally framed. Photographed by Sam, printed and framed to order in Australia.</p>
+          {/* The gallery is the main discovery journey; the edited selection
+              below offers a quicker route for visitors ready to purchase. */}
           {shopLive ? (
-            <a className="solid-button" href="#shop-grid">Shop the collection</a>
+            <div className="shop-hero-actions">
+              <a
+                className="solid-button"
+                href="/galleries"
+                onClick={(event) => { event.preventDefault(); goGalleries(); }}
+              >
+                Explore the galleries
+              </a>
+              <a className="shop-hero-secondary" href="#shop-grid">View selected editions</a>
+            </div>
           ) : (
             <a
               className="solid-button"
@@ -1574,8 +1688,8 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
           )}
         </div>
         <div className="fh-stage">
-          {heroL ? <OakFrame className="fh-back" src={thumbUrl(heroL, 1000)} orientation="landscape" alt={heroL.title} /> : null}
-          {heroP ? <OakFrame className="fh-main" src={thumbUrl(heroP, 900)} orientation="portrait" alt={heroP.title} /> : null}
+          {heroL ? <OakFrame className="fh-back" src={thumbUrl(heroL, 1000)} orientation="landscape" alt={heroL.title} eager /> : null}
+          {heroP ? <OakFrame className="fh-main" src={thumbUrl(heroP, 900)} orientation="portrait" alt={heroP.title} eager /> : null}
         </div>
       </section>
       <div className="shop-strip">
@@ -1583,21 +1697,89 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
         <span><b>Ready</b> to hang</span><span><b>Ships</b> Australia-wide</span>
       </div>
 
+      <section className="shop-how" aria-labelledby="shop-how-title">
+        <details>
+          <summary id="shop-how-title">How it works</summary>
+          <ol>
+            <li><strong>Choose a photograph</strong><span>Explore the galleries and select “Order a print” on any available image.</span></li>
+            <li><strong>Preview your size and frame</strong><span>See the work on the wall, then choose the size, frame and mount that suit your space.</span></li>
+            <li><strong>Printed and delivered from Australia</strong><span>Each edition is made to order, carefully framed and delivered Australia-wide.</span></li>
+          </ol>
+        </details>
+      </section>
+
       {shopLive ? (
-        <section className="shop-section" id="shop-grid">
+        <>
+          {studioPhoto ? (
+            <section className="shop-studio-showcase" id="shop-studio" aria-labelledby="studio-showcase-title">
+              <div className="shop-studio-copy">
+                <p className="eyebrow">Preview the possibilities</p>
+                <h2 id="studio-showcase-title">See it in the studio</h2>
+                <p>An A1 vertical edition with a generous mat, shown at scale. Choose any available photograph in the galleries to create your own.</p>
+                <a
+                  href={`/shop/${studioPhoto.slug}`}
+                  onClick={(event) => {
+                    if (!configuratorOn) return;
+                    event.preventDefault();
+                    trackProductLinkClicked({ item_id: studioPhoto.id, item_name: studioPhoto.title, source: "shop_showcase" });
+                    window.history.pushState({}, "", `/shop/${studioPhoto.slug}`);
+                    onNavigate(`/shop/${studioPhoto.slug}`);
+                  }}
+                >
+                  Preview {studioPhoto.title}
+                </a>
+              </div>
+              <div className="shop-studio-wall" aria-live="off">
+                <OakFrame
+                  key={studioPhoto.id}
+                  className="shop-studio-frame"
+                  src={thumbUrl(studioPhoto, 1200)}
+                  orientation="portrait"
+                  alt={`${studioPhoto.title}, ${studioPhoto.location}, shown as an A1 framed print`}
+                />
+                <p><strong>{studioPhoto.title}</strong><span>{studioPhoto.location} · A1 vertical</span></p>
+                {studioPhotos.length > 1 ? (
+                  <div className="shop-studio-controls">
+                    <div aria-label="Choose a studio photograph">
+                      {studioPhotos.map((photo, index) => (
+                        <button
+                          key={photo.id}
+                          type="button"
+                          className={index === studioIndex ? "active" : ""}
+                          aria-label={`Show ${photo.title} in the studio`}
+                          aria-pressed={index === studioIndex}
+                          onClick={() => setStudioIndex(index)}
+                        />
+                      ))}
+                    </div>
+                    <button type="button" onClick={() => setStudioPaused((paused) => !paused)}>
+                      {studioPaused ? "Play showcase" : "Pause showcase"}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+          <section className="shop-section" id="shop-grid">
           <div className="shop-sec-head">
-            <div><p className="eyebrow">Every edition</p><h2>Shop all prints</h2></div>
+            <div>
+              <p className="eyebrow">Selected editions</p>
+              <h2>A considered collection</h2>
+              <p className="shop-selection-lead">A small edit of photographs that work beautifully in print. For the full archive, explore the galleries and choose “Order a print”.</p>
+            </div>
             {isAdmin ? (
               <button className="sec-edit" type="button" onClick={() => setCurating("shop")} aria-label="Choose the prints for sale" title="Choose the prints for sale">
                 <Pencil size={15} aria-hidden="true" />
               </button>
             ) : null}
           </div>
-          <div className="shop-filters">
-            {["All", "Europe", "Australia"].map((f) => (
-              <button key={f} className={`chip${filter === f ? " active" : ""}`} onClick={() => setFilter(f)} type="button">{f}</button>
-            ))}
-          </div>
+          {visibleFilters.length ? (
+            <div className="shop-filters">
+              {visibleFilters.map((f) => (
+                <button key={f} className={`chip${filter === f ? " active" : ""}`} onClick={() => setFilter(f)} type="button">{f}</button>
+              ))}
+            </div>
+          ) : null}
           {filtered.length ? (
             <div className="shop-grid">
               {filtered.map((p) => (
@@ -1612,10 +1794,21 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
             </div>
           ) : (
             <p className="shop-empty">
-              {isAdmin ? "No prints for sale yet — use the pencil above to choose which photos to sell." : "New editions coming soon."}
+              {isAdmin ? "No prints for sale yet — use the pencil above to choose which photos to sell." : "Explore the galleries to find photographs currently available as prints."}
             </p>
           )}
-        </section>
+          <div className="shop-gallery-cta">
+            <p>Looking for a particular place or photograph?</p>
+            <a
+              className="solid-button"
+              href="/galleries"
+              onClick={(event) => { event.preventDefault(); goGalleries(); }}
+            >
+              Browse the full galleries
+            </a>
+          </div>
+          </section>
+        </>
       ) : (
         <>
           <section className="shop-section" id="shop-wall">
@@ -1627,7 +1820,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
                 </button>
               ) : null}
             </div>
-            <p className="shop-wall-lead">A glimpse of the prints. The full shop opens soon.</p>
+            <p className="shop-wall-lead">A glimpse of the framed collection. Explore the galleries to discover the wider photographic archive.</p>
             <div className="shop-wall">
               {wall.map((p) => (
                 <div className={`sw-frame ${orientOf(p)}`} key={p.id}>
@@ -1638,18 +1831,25 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
           </section>
           <section className="shop-coming">
             <p className="eyebrow">Framed Editions</p>
-            <h2>Coming soon.</h2>
-            <p className="sh-lead">Prints, sizes and pricing are on the way.</p>
+            <h2>Explore the work.</h2>
+            <p className="sh-lead">Browse the galleries and discover photographs from Australia and Europe.</p>
+            <a
+              className="solid-button"
+              href="/galleries"
+              onClick={(event) => { event.preventDefault(); goGalleries(); }}
+            >
+              Browse the galleries
+            </a>
           </section>
         </>
       )}
 
-      <Footer />
+      <ShopLegalFooter />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onNavigate={onNavigate} />
       {curating === "shop" ? (
         <OrderedPhotoPicker
           title="Prints for sale"
-          hint="Pick the photos sold in the shop — they appear in this order. (Separate from the coming-soon glimpse.)"
+          hint="Pick the photos sold in the shop — they appear in this order. The first 15 form the curated shop landing-page selection."
           photos={publicPhotos}
           initialIds={shopPhotos.map((p) => p.id)}
           onClose={() => setCurating(null)}
@@ -1659,7 +1859,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
       {curating === "wall" ? (
         <OrderedPhotoPicker
           title="Collection glimpse"
-          hint="Pick up to 5 photos for the coming-soon wall — the mockup above shows exactly which frame each one lands in. Click again to remove; pick order = frame order."
+          hint="Pick up to 5 photos for the collection wall — the mockup above shows exactly which frame each one lands in. Click again to remove; pick order = frame order."
           max={5}
           photos={publicPhotos}
           initialIds={previewIds.filter((id) => publicPhotos.some((p) => p.id === id))}
@@ -1693,6 +1893,7 @@ function ShopProductRoute({ adminAccess = false, slug, onNavigate }: { adminAcce
     }
   }, [shouldRedirect, onNavigate]);
 
+  if (isLoading) return <main className="shop-feature-off"><SDLoader label="Preparing your print" /></main>;
   if (!photo || shouldRedirect) return null;
   return <PrintConfigurator photo={photo} otherShopPhotos={shopPhotos} onNavigate={onNavigate} />;
 }
@@ -1805,7 +2006,7 @@ function InstagramFeed({ posts }: { posts: InstagramPost[] }) {
 const TICKER_ITEMS = [
   "AERIAL & LANDSCAPE PHOTOGRAPHY",
   "NORTHERN BEACHES, SYDNEY",
-  "FRAMED EDITIONS — PRINTS COMING SOON",
+  "FRAMED EDITIONS — SHOP PRINTS",
   "SHOT ON LOCATION, WORLDWIDE",
 ];
 
@@ -2805,24 +3006,25 @@ const SKELETON_FLOW_RATIOS = ["3 / 4", "4 / 3", "1 / 1", "5 / 7", "4 / 5", "3 / 
 function GallerySkeleton({ view }: { view: GalleryView }) {
   const count = view === "box" ? 9 : SKELETON_FLOW_RATIOS.length;
   return (
-    <section
-      className={`gallery view-${view} is-skeleton`}
-      role="status"
-      aria-label="Loading gallery"
-    >
-      {Array.from({ length: count }, (_, index) => (
-        <div
-          className="skeleton-tile"
-          key={index}
-          aria-hidden="true"
-          style={
-            view === "flow"
-              ? ({ aspectRatio: SKELETON_FLOW_RATIOS[index] } as CSSProperties)
-              : undefined
-          }
-        />
-      ))}
-    </section>
+    <div className="gallery-loading-wrap">
+      <SDLoader label="Loading photographs" />
+      <section
+        className={`gallery view-${view} is-skeleton`}
+        aria-hidden="true"
+      >
+        {Array.from({ length: count }, (_, index) => (
+          <div
+            className="skeleton-tile"
+            key={index}
+            style={
+              view === "flow"
+                ? ({ aspectRatio: SKELETON_FLOW_RATIOS[index] } as CSSProperties)
+                : undefined
+            }
+          />
+        ))}
+      </section>
+    </div>
   );
 }
 
@@ -2832,6 +3034,7 @@ function RecentWorkSkeleton() {
   return (
     <section className="recent-work" aria-label="Loading recent work">
       <h2 className="recent-heading">Recent Work</h2>
+      <SDLoader label="Loading recent work" />
       <div className="recent-mosaic" aria-hidden="true">
         {Array.from({ length: 4 }, (_, index) => (
           <div className="recent-tile skeleton-tile" key={index} />
@@ -2913,6 +3116,7 @@ function Gallery({
             // never trickles in from the bottom.
             eager={index < EAGER_TILE_COUNT}
           />
+          {photo.inShop ? <span className="print-available-badge">Available as a print</span> : null}
           <div className="photo-meta">
             <span>
               <MapPin size={13} aria-hidden="true" />
@@ -5886,8 +6090,9 @@ function AboutOverlay({ onClose }: { onClose: () => void }) {
             Northern Beaches.
           </p>
           <p>
-            With ten years of experience, I have a passion for aerial and
-            landscape photography.
+            I have been taking photographs for more than ten years. I especially
+            enjoy aerial photography, whether I am creating work for prints,
+            helping commercial businesses, or shooting simply because I love it.
           </p>
         </div>
       </section>
@@ -5963,7 +6168,10 @@ function ContactOverlay({ onClose }: { onClose: () => void }) {
 
 // Shown for any unknown path (the router falls through to here).
 function NotFound({ onNavigate }: { onNavigate: (route: string) => void }) {
-  useSeo("Page not found — Sam Duckworth Photography", { path: "/404" });
+  useSeo("Page not found — Sam Duckworth Photography", {
+    path: window.location.pathname,
+    noindex: true,
+  });
   function goHome() { window.history.pushState({}, "", "/"); onNavigate("/"); }
   return (
     <main className="error-screen">
@@ -5985,7 +6193,7 @@ function Footer() {
       <a className="footer-ig" href="https://instagram.com/sam.duckworth" target="_blank" rel="noopener noreferrer" aria-label="Instagram: sam.duckworth">
         <Instagram size={15} aria-hidden="true" /> sam.duckworth
       </a>
-      <span>Photography by Sam Duckworth</span>
+      <a className="footer-admin" href="/admin" title="Site access">Photography by Sam Duckworth</a>
     </footer>
   );
 }

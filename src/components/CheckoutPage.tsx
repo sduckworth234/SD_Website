@@ -2,9 +2,11 @@ import { CheckoutElementsProvider, PaymentElement, ShippingAddressElement, useCh
 import { loadStripe } from "@stripe/stripe-js";
 import type { StripeCheckoutSession } from "@stripe/stripe-js";
 import { ArrowLeft, Check, LoaderCircle, Lock } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useCart } from "../lib/cart";
-import { colourById, money } from "../lib/printCatalogue";
+import { trackAddShippingInfo, trackPurchase } from "../lib/analytics";
+import { colourById, CONTACT_EMAIL, money } from "../lib/printCatalogue";
+import { useSeo } from "../lib/seo";
 import { supabase } from "../lib/supabase";
 
 const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
@@ -66,7 +68,22 @@ function go(path: string, onNavigate: (path: string) => void) {
   onNavigate(path);
 }
 
-function PaymentStep({ onBack }: { onBack: () => void }) {
+function PolicyLinks() {
+  return (
+    <nav className="co-policy-links" aria-label="Shop policies">
+      <a href="/shop/policies/shipping">Shipping</a>
+      <span aria-hidden="true"> · </span>
+      <a href="/shop/policies/returns">Returns</a>
+      <span aria-hidden="true"> · </span>
+      <a href="/shop/policies/privacy">Privacy</a>
+      <span aria-hidden="true"> · </span>
+      <a href="/shop/policies/terms">Terms</a>
+    </nav>
+  );
+}
+
+function PaymentStep({ onBack, onRetry }: { onBack: () => void; onRetry: () => void }) {
+  const cart = useCart();
   const checkoutState = useCheckoutElements();
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -85,11 +102,20 @@ function PaymentStep({ onBack }: { onBack: () => void }) {
 
   if (checkoutState.type === "loading") return loadTimedOut ? (
     <div className="co-payment-failed" role="alert">
-      <p>Secure payment couldn’t load.</p>
-      <span>Please retry. If it happens again, return to the shop and start checkout again.</span>
+      <p>Secure payment is taking longer than expected.</p>
+      <span>We can reconnect to the same secure checkout session. You won’t be charged and a new order won’t be created.</span>
+      <button type="button" onClick={onRetry}>Try loading again</button>
       <button type="button" onClick={onBack}>Return to contact details</button>
     </div>
-  ) : <div className="co-payment-loading"><LoaderCircle className="spin" /> Loading secure payment…</div>;
+  ) : (
+    <div className="co-payment-loading" aria-live="polite">
+      <LoaderCircle className="spin" aria-hidden="true" />
+      <div>
+        <b>Connecting securely to Stripe…</b>
+        <span>This can take a few seconds. Your order details are ready.</span>
+      </div>
+    </div>
+  );
   if (checkoutState.type === "error") return <p className="co-error">{checkoutState.error.message}</p>;
   const { checkout } = checkoutState;
 
@@ -108,6 +134,20 @@ function PaymentStep({ onBack }: { onBack: () => void }) {
     event.preventDefault();
     setSubmitting(true);
     setMessage("");
+    trackAddShippingInfo({
+      currency: "AUD",
+      value: cart.subtotal + cart.shipping,
+      shipping_tier: "Tracked Australia-wide delivery",
+      items: cart.items.map((item) => ({
+        item_id: item.photoId,
+        item_name: item.title,
+        item_brand: "Sam Duckworth Photography",
+        item_category: "Fine-art print",
+        item_variant: `${item.size} · ${colourById(item.colour).label} · ${item.mounted ? "Mounted" : "Unmounted"}`,
+        price: item.price,
+        quantity: 1,
+      })),
+    });
     const result = await checkout.confirm();
     if (result.type === "error") {
       setMessage(result.error.message || "Payment could not be completed.");
@@ -136,6 +176,7 @@ function PaymentStep({ onBack }: { onBack: () => void }) {
       </button>
       <button className="co-back-step" disabled={submitting} onClick={onBack} type="button">Edit delivery details</button>
       <p className="co-secure"><Lock size={12} /> Encrypted payment powered by Stripe</p>
+      <PolicyLinks />
     </form>
   );
 }
@@ -143,20 +184,33 @@ function PaymentStep({ onBack }: { onBack: () => void }) {
 type CartState = ReturnType<typeof useCart>;
 
 function OrderSummary({ cart, totals }: { cart: CartState; totals?: CheckoutTotals | null }) {
+  const [expanded, setExpanded] = useState(() => !window.matchMedia("(max-width: 800px)").matches);
   return (
     <aside className="co-summary">
-      <p className="co-summary-title">Your order <span>{cart.items.length}</span></p>
-      <div className="co-summary-items">
-        {cart.items.map((item, index) => <div className="co-summary-item" key={`${item.photoId}-${index}`}><img alt="" src={item.thumb} /><div><b>{item.title}</b><span>{item.size} · {colourById(item.colour).label} · {item.mounted ? "Mounted" : "Unmounted"}</span></div><strong>{money(item.price)}</strong></div>)}
+      <button
+        className="co-summary-title"
+        type="button"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((value) => !value)}
+      >
+        <span>Your order <em>{cart.items.length}</em></span>
+        <strong>{money(totals?.total ?? cart.subtotal + cart.shipping)}</strong>
+        <small>{expanded ? "Hide" : "Show"}</small>
+      </button>
+      <div className={`co-summary-content${expanded ? " is-open" : ""}`}>
+        <div className="co-summary-items">
+          {cart.items.map((item, index) => <div className="co-summary-item" key={`${item.photoId}-${index}`}><img alt="" src={item.thumb} /><div><b>{item.title}</b><span>{item.size} · {colourById(item.colour).label} · {item.mounted ? "Mounted" : "Unmounted"}</span></div><strong>{money(item.price)}</strong></div>)}
+        </div>
+        <div className="co-summary-lines">
+          <p><span>Subtotal</span><span>{money(totals?.subtotal ?? cart.subtotal)}</span></p>
+          {totals?.discount ? <p className="discount"><span>{totals.promotionCode ? `Promotion (${totals.promotionCode})` : "Promotion discount"}</span><span>−{money(totals.discount)}</span></p> : null}
+          <p><span>{totals ? "Delivery" : "Estimated delivery"}</span><span>{money(totals?.shipping ?? cart.shipping)}</span></p>
+          <p className="total"><span>{totals ? "Total" : "Estimated total"}</span><span>{money(totals?.total ?? cart.subtotal + cart.shipping)}</span></p>
+        </div>
+        <div className="co-hold"><Check size={15} /><p><b>45-minute change window</b><span>Need to change something? Contact us within 45 minutes of purchase and we’ll pause fulfilment.</span></p></div>
+        <p className="co-summary-note">The secure payment step confirms the live delivery price and any promotion code.</p>
+        <PolicyLinks />
       </div>
-      <div className="co-summary-lines">
-        <p><span>Subtotal</span><span>{money(totals?.subtotal ?? cart.subtotal)}</span></p>
-        {totals?.discount ? <p className="discount"><span>{totals.promotionCode ? `Promotion (${totals.promotionCode})` : "Promotion discount"}</span><span>−{money(totals.discount)}</span></p> : null}
-        <p><span>{totals ? "Delivery" : "Estimated delivery"}</span><span>{money(totals?.shipping ?? cart.shipping)}</span></p>
-        <p className="total"><span>{totals ? "Total" : "Estimated total"}</span><span>{money(totals?.total ?? cart.subtotal + cart.shipping)}</span></p>
-      </div>
-      <div className="co-hold"><Check size={15} /><p><b>45-minute change window</b><span>Paid orders pause before going to the print lab.</span></p></div>
-      <p className="co-summary-note">The secure payment step confirms the live delivery price and any promotion code.</p>
     </aside>
   );
 }
@@ -182,10 +236,16 @@ function CheckoutLayout({ children, summary }: { children: ReactNode; summary: R
 
 export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => void }) {
   const cart = useCart();
+  useSeo("Secure checkout — Sam Duckworth Photography", {
+    description: "Secure checkout for a Sam Duckworth Photography framed print.",
+    path: "/checkout",
+    noindex: true,
+  });
   const [customer, setCustomer] = useState<Customer>(EMPTY_CUSTOMER);
   const [clientSecret, setClientSecret] = useState("");
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
+  const [checkoutLoadAttempt, setCheckoutLoadAttempt] = useState(0);
 
   const options = useMemo(() => clientSecret ? {
     clientSecret,
@@ -218,6 +278,7 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
         console.error(`Stripe checkout mode mismatch: ${keyMode} publishable key with ${sessionMode} Checkout Session.`);
         throw new Error("Secure payment is temporarily unavailable because the Stripe client and server modes do not match.");
       }
+      setCheckoutLoadAttempt(0);
       setClientSecret(data.clientSecret);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Checkout could not be started.");
@@ -234,9 +295,9 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
         <span>Checkout</span>
       </header>
       {clientSecret && options ? (
-        <CheckoutElementsProvider options={options} stripe={stripePromise}>
+        <CheckoutElementsProvider key={checkoutLoadAttempt} options={options} stripe={stripePromise}>
           <CheckoutLayout summary={<StripeOrderSummary cart={cart} />}>
-            <PaymentStep onBack={() => setClientSecret("")} />
+            <PaymentStep onBack={() => setClientSecret("")} onRetry={() => setCheckoutLoadAttempt((attempt) => attempt + 1)} />
           </CheckoutLayout>
         </CheckoutElementsProvider>
       ) : (
@@ -272,8 +333,14 @@ type CheckoutStatus = {
 
 export function CheckoutSuccessPage({ onNavigate }: { onNavigate: (path: string) => void }) {
   const cart = useCart();
+  useSeo("Order confirmation — Sam Duckworth Photography", {
+    description: "Your Sam Duckworth Photography order confirmation.",
+    path: "/checkout/success",
+    noindex: true,
+  });
   const [status, setStatus] = useState<CheckoutStatus | null>(null);
   const [error, setError] = useState("");
+  const purchaseTracked = useRef(false);
   const sessionId = new URLSearchParams(window.location.search).get("session_id") ?? "";
 
   useEffect(() => {
@@ -298,5 +365,50 @@ export function CheckoutSuccessPage({ onNavigate }: { onNavigate: (path: string)
   }, [sessionId]);
 
   const paid = status && ["paid", "no_payment_required"].includes(status.paymentStatus);
-  return <main className="co-result"><div className={paid ? "co-result-icon paid" : "co-result-icon"}>{paid ? <Check /> : <LoaderCircle className="spin" />}</div><p className="co-kicker">Framed Editions</p><h1>{paid ? "Thank you. Your order is confirmed." : "Confirming your order…"}</h1>{error ? <p className="co-error">{error}</p> : null}{paid ? <><p>A receipt and order confirmation will be sent to <b>{status.customerEmail}</b>.</p>{status.order ? <p className="co-order-ref">Order {status.order.id.slice(0, 8).toUpperCase()} · {status.order.items.length} print{status.order.items.length === 1 ? "" : "s"}</p> : <p>Your payment is confirmed; the order record is still being finalised.</p>}<button onClick={() => go("/shop", onNavigate)} type="button">Return to Framed Editions</button></> : null}</main>;
+
+  useEffect(() => {
+    if (!paid || !status?.order || purchaseTracked.current) return;
+    purchaseTracked.current = true;
+    trackPurchase({
+      transaction_id: status.order.id,
+      currency: "AUD",
+      value: (status.amountTotal ?? 0) / 100,
+      items: status.order.items.map((item) => ({
+        item_id: `${status.order?.id}-${item.title}-${item.size}`,
+        item_name: item.title,
+        item_brand: "Sam Duckworth Photography",
+        item_category: "Fine-art print",
+        item_variant: item.size,
+        quantity: 1,
+      })),
+    });
+  }, [paid, status]);
+  return (
+    <main className="co-result">
+      <div className={paid ? "co-result-icon paid" : "co-result-icon"}>{paid ? <Check /> : <LoaderCircle className="spin" />}</div>
+      <p className="co-kicker">Framed Editions</p>
+      <h1>{paid ? "Thank you. Your order is confirmed." : "Confirming your order…"}</h1>
+      {error ? <p className="co-error">{error}</p> : null}
+      {paid ? (
+        <>
+          <p>Thank you for supporting my photography. A receipt and order confirmation will be sent to <b>{status.customerEmail}</b>.</p>
+          {status.order ? (
+            <p className="co-order-ref">Order {status.order.id.slice(0, 8).toUpperCase()} · {status.order.items.length} print{status.order.items.length === 1 ? "" : "s"}</p>
+          ) : (
+            <p>Your payment is confirmed; the order record is still being finalised.</p>
+          )}
+          <section className="co-result-next" aria-labelledby="co-result-next-title">
+            <h2 id="co-result-next-title">What happens next</h2>
+            <p>Your print will be prepared to order. We’ll email you again when it has been dispatched with tracking details.</p>
+            <p>Need help? Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or follow <a href="https://www.instagram.com/sam.duckworth/" target="_blank" rel="noreferrer">@sam.duckworth</a>.</p>
+          </section>
+          <div className="co-result-actions">
+            <button onClick={() => go("/shop", onNavigate)} type="button">Continue shopping</button>
+            <button onClick={() => go("/galleries", onNavigate)} type="button">Return to the gallery</button>
+          </div>
+          <PolicyLinks />
+        </>
+      ) : null}
+    </main>
+  );
 }

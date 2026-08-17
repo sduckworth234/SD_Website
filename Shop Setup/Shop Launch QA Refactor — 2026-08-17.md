@@ -1,0 +1,141 @@
+# Shop launch QA refactor — 17 August 2026
+
+This records the full public-site and commerce refactor completed before the
+manual-fulfilment shop launch. It is the durable companion to the account setup
+checklist in `Shop Checkout — Setup Handoff.md`.
+
+## Outcome
+
+- The shop now behaves as a curated exhibition rather than a complete catalogue.
+  Its public landing page shows the first 15 sale-enabled photographs in the exact
+  order chosen in Admin, while the full sale-enabled collection remains discoverable
+  through Galleries, direct product URLs and the sitemap.
+- The primary discovery journey is now **Galleries → Available as a print → product
+  studio → cart → checkout → confirmation**.
+- The shop remains Australia-only, manual fulfilment remains the safe launch mode,
+  and Prodigi can be enabled later without changing old orders.
+- Public wording contains no “coming soon” state. Admin access is available at
+  `/admin` and discreetly through the photography credit in the footer.
+
+## Experience changes
+
+### Home, navigation and loading
+
+- Removed all “coming soon” shop language and updated the framed-editions ticker.
+- Added concise, non-promotional About copy covering ten years of photography,
+  aerial print work, commercial projects and photography as a continuing hobby.
+- Removed the visible admin icon from the public header.
+- Added a responsive mobile navigation panel with 44-pixel minimum controls,
+  correct inert state, Escape behaviour and accessibility labels.
+- Added a reusable animated handwritten SD loading mark for route, shop and map
+  loading states.
+
+### Galleries
+
+- Added a discreet “Available as a print” badge to sale-enabled photographs.
+- Limited initial rendering to 24 photographs on mobile and 36 on desktop, followed
+  by a progressive **Show more** action. This reduces initial image and DOM work.
+- Reduced background image pre-warming to a small representative set.
+- Added measurement to print-product links from Galleries and Map.
+
+### Shop landing
+
+- Added a gallery-first hero, selected-editions secondary action and concise
+  Australia-wide delivery trust strip.
+- Added the three-step expandable explainer: choose a photograph, preview size and
+  frame, then have it printed and delivered from Australia.
+- Added a rotating portrait A1 mounted studio scene using only photographs that can
+  actually be ordered in that configuration. It supports manual selection, pause
+  and reduced-motion preferences.
+- Replaced the repetitive catalogue grid with an editorial 12-column selection and
+  strong return path to Galleries.
+
+### Product, cart and checkout
+
+- Product pages now explain tracked Australia-wide delivery, combined-print shipping
+  and the usual 2–3-business-day dispatch expectation. Customer-facing SKU and
+  paper-weight implementation detail were removed.
+- Similar images are relevance-ranked and capped at ten, with repeated shipping
+  arithmetic removed.
+- Product size persists when changing to another photograph where that size is valid.
+- Cart is a correctly labelled modal dialog with inert hidden state, Escape close,
+  focus entry/restoration and consistent close wording.
+- Checkout has a compact mobile order summary, stable Stripe loading/retry treatment,
+  policy links and neutral 45-minute stock/price reservation wording.
+- Confirmation explains next steps, supplies support and Instagram links, and offers
+  clear paths back to the shop and Galleries.
+
+## Policies and search presentation
+
+The following customer-facing routes are live and linked from the shop, product,
+cart and checkout surfaces:
+
+- `/shop/policies/shipping`
+- `/shop/policies/returns`
+- `/shop/policies/privacy`
+- `/shop/policies/terms`
+
+They document Australia-only delivery, made-to-order returns, damage handling,
+the 45-minute cancellation window, privacy/payment handling and Australian Consumer
+Law rights. They are operational copy, not a substitute for professional legal advice.
+
+Every product now has a unique canonical URL, product Open Graph type and JSON-LD
+Product/Offer data. Checkout, confirmation and not-found views are no-indexed. A
+server-generated `/sitemap.xml` includes core pages, policy pages, visible gallery
+locations and all currently sale-enabled product URLs; the static file remains a
+fallback.
+
+## GA4 measurement
+
+Automatic GA page views are disabled in the inline Google tag and replaced by SPA
+route-aware page views to prevent duplicate counts. Commerce remains independent of
+analytics: every helper safely does nothing if analytics is blocked or unavailable.
+
+Events implemented:
+
+| Journey point | GA4 event |
+| --- | --- |
+| SPA route changes | `page_view` |
+| Product opens | `view_item` |
+| Shop/similar/gallery product selection | `select_item`, `product_link_clicked` |
+| Added to cart | `add_to_cart` |
+| Cart opens | `view_cart` |
+| Checkout starts | `begin_checkout` |
+| Customer proceeds to payment | `add_shipping_info` |
+| Confirmed paid order | `purchase` |
+| Studio/detail tab changes | `product_view_changed` |
+| Size guidance opens | `size_guide_opened` |
+
+## Verification completed
+
+- Production TypeScript/Vite build: passed.
+- Dependency audit at high severity: zero vulnerabilities.
+- Diff whitespace validation: passed.
+- Desktop shop at 1440 pixels: curated 15-image layout, studio, explainer and no
+  horizontal overflow verified.
+- Mobile at 390 × 844: shop, menu, Galleries, product, policy and checkout layouts
+  verified; touch targets and collapsed order summary checked.
+- Galleries: 24 initial mobile tiles and progressive load control verified.
+- Product: unique canonical, Product Open Graph and Product JSON-LD verified.
+- Checkout: no payment submitted during this refactor; loading and pre-payment flow
+  only were exercised.
+- Browser console: no application errors. Local Stripe's expected non-HTTPS warning
+  and local-only Vercel analytics script absence are not production failures.
+- Local Lighthouse after the refactor: Shop performance 75 / accessibility 100 /
+  SEO 100; Product performance 74 / accessibility 100 / SEO 100. Remaining large
+  Map and admin-only HEIC chunks are
+  deferred and do not block the shop launch.
+
+## Final owner checks
+
+After the production deployment:
+
+1. Confirm GA4 Realtime receives a page view, product view, add-to-cart and checkout
+   start without duplicates.
+2. Place one deliberately low-value live order and verify Stripe payment, signed
+   webhook, Admin → Shop Orders, customer Resend email and owner Resend email.
+3. Test a decline and a 3DS challenge in Stripe test mode if they have not yet been
+   captured as evidence.
+4. Upload one JPEG master and complete the manual dispatch/tracking flow.
+5. Keep `SHOP_FULFILMENT_PROVIDER=manual` until the separate Prodigi sandbox,
+   callback and physical print proofs pass.

@@ -1,6 +1,9 @@
 import { X } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { useCart } from "../lib/cart";
+import { trackBeginCheckout, trackViewCart } from "../lib/analytics";
 import { colourById, money } from "../lib/printCatalogue";
+import { LegalNav } from "./LegalPages";
 
 export function CartDrawer({
   open,
@@ -12,9 +15,55 @@ export function CartDrawer({
   onNavigate: (route: string) => void;
 }) {
   const cart = useCart();
+  const drawerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    if (cart.items.length) {
+      trackViewCart({
+        currency: "AUD",
+        value: cart.subtotal + cart.shipping,
+        items: cart.items.map((item) => ({
+          item_id: item.photoId,
+          item_name: item.title,
+          item_brand: "Sam Duckworth Photography",
+          item_category: "Fine-art print",
+          item_variant: `${item.size} · ${colourById(item.colour).label} · ${item.mounted ? "Mounted" : "Unmounted"}`,
+          price: item.price,
+          quantity: 1,
+        })),
+      });
+    }
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const closeButton = drawerRef.current?.querySelector<HTMLButtonElement>('[aria-label="Close cart"]');
+    closeButton?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      onClose();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      previouslyFocused?.focus();
+    };
+  }, [cart.items, cart.shipping, cart.subtotal, onClose, open]);
 
   function checkout() {
     if (!cart.items.length) return;
+    trackBeginCheckout({
+      currency: "AUD",
+      value: cart.subtotal + cart.shipping,
+      items: cart.items.map((item) => ({
+        item_id: item.photoId,
+        item_name: item.title,
+        item_brand: "Sam Duckworth Photography",
+        item_category: "Fine-art print",
+        item_variant: `${item.size} · ${colourById(item.colour).label} · ${item.mounted ? "Mounted" : "Unmounted"}`,
+        price: item.price,
+        quantity: 1,
+      })),
+    });
     onClose();
     window.history.pushState({}, "", "/checkout");
     onNavigate("/checkout");
@@ -22,11 +71,19 @@ export function CartDrawer({
 
   return (
     <>
-      <div className={`pc-scrim${open ? " open" : ""}`} onClick={onClose} />
-      <aside className={`pc-cart-drawer${open ? " open" : ""}`} aria-label="Cart" aria-hidden={!open}>
+      <div className={`pc-scrim${open ? " open" : ""}`} onClick={onClose} aria-hidden="true" />
+      <aside
+        ref={drawerRef}
+        className={`pc-cart-drawer${open ? " open" : ""}`}
+        aria-label="Cart"
+        aria-hidden={!open}
+        aria-modal={open ? "true" : undefined}
+        inert={!open}
+        role="dialog"
+      >
         <div className="pc-cart-head">
           <h3>Your cart</h3>
-          <button type="button" onClick={onClose} aria-label="Close cart"><X size={18} /></button>
+          <button type="button" onClick={onClose} aria-label="Close cart"><X size={18} aria-hidden="true" /></button>
         </div>
         <div className="pc-cart-items">
           {cart.items.length === 0 ? (
@@ -56,6 +113,7 @@ export function CartDrawer({
           <p className="pc-au-note">Shipping within Australia only. Exact cost is confirmed at checkout.</p>
           <button className="pc-checkout-btn" disabled={!cart.items.length} type="button" onClick={checkout}>Secure checkout</button>
           <p className="pc-checkout-note">Promotion codes are applied securely at checkout.</p>
+          <LegalNav className="pc-cart-policies" />
         </div>
       </aside>
     </>
