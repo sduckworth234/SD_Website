@@ -56,7 +56,7 @@ export type ShopAnalyticsEvents = {
   product_view_changed: {
     item_id: string;
     item_name: string;
-    view: "studio" | "detail";
+    view: "studio" | "detail" | "other_finishes";
   };
   size_guide_opened: {
     item_id?: string;

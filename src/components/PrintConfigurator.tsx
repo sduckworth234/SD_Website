@@ -62,8 +62,10 @@ export function PrintConfigurator({
   const [addError, setAddError] = useState<string | null>(null);
   const [pulseCart, setPulseCart] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("studio");
-  const [questionOpen, setQuestionOpen] = useState(false);
+  const [finishesOpen, setFinishesOpen] = useState(false);
+  const [questionKind, setQuestionKind] = useState<"print" | "finishes" | null>(null);
   const pairTrackRef = useRef<HTMLDivElement | null>(null);
+  const finishCloseRef = useRef<HTMLButtonElement | null>(null);
 
   const roomWrapRef = useRef<HTMLDivElement | null>(null);
   const [frameStyle, setFrameStyle] = useState<{
@@ -87,6 +89,16 @@ export function PrintConfigurator({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [navOpen]);
+
+  useEffect(() => {
+    if (!finishesOpen) return undefined;
+    finishCloseRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFinishesOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [finishesOpen]);
 
   // Snap to the largest available size whenever the photo or mount option
   // changes and the currently-selected size is no longer offered for it —
@@ -500,6 +512,23 @@ export function PrintConfigurator({
             </p>
           </div>
 
+          <aside className="pc-alt-finishes" aria-label="Canvas and glass finishes">
+            <div>
+              <span>Available by request</span>
+              <b>Canvas &amp; glass</b>
+              <p>Both finishes are available now by contacting Sam, and are coming to the online print store soon.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setFinishesOpen(true);
+                trackProductViewChanged({ item_id: photo.id, item_name: photo.title, view: "other_finishes" });
+              }}
+            >
+              See finishes
+            </button>
+          </aside>
+
           <div className="pc-price-row"><span className="pc-price">{money(price)}</span></div>
           <button className="pc-add-cart" type="button" onClick={addToCart}>{justAdded ? "Added ✓" : "Add to cart"}</button>
           {addError ? <p className="pc-add-error" role="alert">{addError}</p> : null}
@@ -549,7 +578,7 @@ export function PrintConfigurator({
           <b>Not sure which size is right, or have a question about this print?</b>
           <span>Sam answers these personally — sizing, framing, shipping, anything about {photo.title}.</span>
         </div>
-        <button className="pc-help-btn" type="button" onClick={() => setQuestionOpen(true)}>
+        <button className="pc-help-btn" type="button" onClick={() => setQuestionKind("print")}>
           Email a question
         </button>
       </section>
@@ -557,11 +586,49 @@ export function PrintConfigurator({
       <ShopLegalFooter className="pc-legal-footer" />
 
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onNavigate={onNavigate} />
-      {questionOpen ? (
+      {finishesOpen ? (
+        <div className="pc-finishes-overlay" role="dialog" aria-modal="true" aria-labelledby="pc-finishes-title">
+          <button className="lightbox-backdrop" type="button" onClick={() => setFinishesOpen(false)} aria-label="Close finish previews" />
+          <section className="pc-finishes-panel">
+            <button ref={finishCloseRef} className="icon-button close-button" type="button" onClick={() => setFinishesOpen(false)} aria-label="Close finish previews">
+              <X size={18} aria-hidden="true" />
+            </button>
+            <header>
+              <p className="eyebrow">Alternative finishes</p>
+              <h2 id="pc-finishes-title">Canvas or glass, made to order.</h2>
+              <p>Available now by enquiry while online ordering is being prepared. Sam will confirm the right dimensions, finish and quote for your chosen photograph.</p>
+            </header>
+            <div className="pc-finish-grid">
+              <article>
+                <img src="/shop/manly-canvas-portrait.webp" alt="The Manly aerial photograph on a portrait gallery-wrapped canvas leaning against a wall" />
+                <div><b>Canvas</b><span>Tactile gallery-wrapped canvas with visible woven texture and clean wrapped edges.</span></div>
+              </article>
+              <article>
+                <img src="/shop/manly-glass.webp" alt="The Manly aerial photograph presented as a frameless glass wall print" />
+                <div><b>Glass</b><span>A crisp, glossy frameless finish with polished edges and subtle depth from the wall.</span></div>
+              </article>
+            </div>
+            <p className="pc-finish-caption">Finish previews show <em>Manly, 2023</em> for material reference. Availability and suitable dimensions vary by photograph.</p>
+            <button
+              className="solid-button pc-finish-enquire"
+              type="button"
+              onClick={() => {
+                setFinishesOpen(false);
+                setQuestionKind("finishes");
+              }}
+            >
+              Ask about canvas or glass
+            </button>
+          </section>
+        </div>
+      ) : null}
+      {questionKind ? (
         <ContactOverlay
-          context={`Print question: ${photo.title}`}
-          intro={`Ask about sizing, framing, shipping or anything else related to “${photo.title}”.`}
-          onClose={() => setQuestionOpen(false)}
+          context={questionKind === "finishes" ? `Canvas or glass enquiry: ${photo.title}` : `Print question: ${photo.title}`}
+          intro={questionKind === "finishes"
+            ? `Ask Sam about canvas or glass for “${photo.title}”. Include the size or wall space you have in mind if you know it.`
+            : `Ask about sizing, framing, shipping or anything else related to “${photo.title}”.`}
+          onClose={() => setQuestionKind(null)}
         />
       ) : null}
     </main>

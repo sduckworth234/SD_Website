@@ -94,6 +94,16 @@ checklist in `Shop Checkout — Setup Handoff.md`.
   thumbnails and a compact ordered selection queue with move/remove controls.
 - Matched the visible vertical height of landscape and portrait oak frames in the
   Considered Collection on desktop and mobile without page-level overflow.
+- Added a prominent but secondary **Canvas & glass** notice to every product
+  configurator. Both finishes are described as available now by direct enquiry and
+  coming to online ordering soon, without implying that the current cart can price
+  or fulfil them.
+- Added an accessible **See finishes** dialog with material mockups using the exact
+  Manly 2023 aerial (83.1 m; −33.797, 151.290), clear material-reference wording,
+  per-photograph size caveats and a direct Resend-backed enquiry path. The canvas
+  preview uses the photograph rotated 90° anticlockwise on a modest portrait
+  A3–A2-scale gallery wrap leaning against a wall; the glass preview demonstrates a
+  restrained frameless wall finish.
 - Automatic storefront mode now draws a fresh balanced portrait/landscape sample on
   each visit, allowing the full sellable archive to cycle over time. Any explicitly
   curated Studio or Considered selection remains fixed until an admin changes it.
