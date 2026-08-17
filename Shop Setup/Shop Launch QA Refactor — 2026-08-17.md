@@ -226,3 +226,10 @@ After the production deployment:
 - The cart uses the same icon, outlined chip and count badge as the per-print
   Studio editor; on small screens it remains visible beside the theme and menu
   controls.
+
+## Recent Work print eligibility
+
+- The dedicated Recent Work query includes the same public sale and sizing
+  fields as the gallery query. A photograph opened from the homepage therefore
+  retains its `in_shop` state and shows the same “Order a print” action as when
+  it is opened from Galleries or Map.
