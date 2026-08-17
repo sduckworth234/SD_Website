@@ -63,7 +63,7 @@ export function ContactOverlay({
             <Check size={24} aria-hidden="true" />
             <p className="eyebrow">Message sent</p>
             <h2 id="contact-title">Thanks, {name}.</h2>
-            <p className="contact-lead">Your enquiry is in Sam’s inbox. He’ll reply to {email}.</p>
+            <p className="contact-lead">Your enquiry is in my inbox. I’ll reply to {email}.</p>
             <button className="solid-button" type="button" onClick={onClose}>Done</button>
           </div>
         ) : (

@@ -516,7 +516,7 @@ export function PrintConfigurator({
             <div>
               <span>Available by request</span>
               <b>Canvas &amp; glass</b>
-              <p>Both finishes are available now by contacting Sam, and are coming to the online print store soon.</p>
+              <p>Both finishes are available now by direct enquiry, and are coming to the online print store soon.</p>
             </div>
             <button
               type="button"
@@ -576,7 +576,7 @@ export function PrintConfigurator({
       <section className="pc-help">
         <div>
           <b>Not sure which size is right, or have a question about this print?</b>
-          <span>Sam answers these personally — sizing, framing, shipping, anything about {photo.title}.</span>
+          <span>Contact me directly about sizing, framing, shipping or anything else related to {photo.title}.</span>
         </div>
         <button className="pc-help-btn" type="button" onClick={() => setQuestionKind("print")}>
           Email a question
@@ -596,7 +596,7 @@ export function PrintConfigurator({
             <header>
               <p className="eyebrow">Alternative finishes</p>
               <h2 id="pc-finishes-title">Canvas or glass, made to order.</h2>
-              <p>Available now by enquiry while online ordering is being prepared. Sam will confirm the right dimensions, finish and quote for your chosen photograph.</p>
+              <p>Enquire now while online ordering is being finalised. Tell me the photograph, dimensions and finish you have in mind, and I’ll be in touch with availability and a quote.</p>
             </header>
             <div className="pc-finish-grid">
               <article>
@@ -626,7 +626,7 @@ export function PrintConfigurator({
         <ContactOverlay
           context={questionKind === "finishes" ? `Canvas or glass enquiry: ${photo.title}` : `Print question: ${photo.title}`}
           intro={questionKind === "finishes"
-            ? `Ask Sam about canvas or glass for “${photo.title}”. Include the size or wall space you have in mind if you know it.`
+            ? `Tell me the size, finish or wall space you have in mind for “${photo.title}”, and I’ll be in touch.`
             : `Ask about sizing, framing, shipping or anything else related to “${photo.title}”.`}
           onClose={() => setQuestionKind(null)}
         />

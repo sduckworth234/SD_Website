@@ -191,3 +191,13 @@ After the production deployment:
 4. Upload one JPEG master and complete the manual dispatch/tracking flow.
 5. Keep `SHOP_FULFILMENT_PROVIDER=manual` until the separate Prodigi sandbox,
    callback and physical print proofs pass.
+
+## Customer-facing voice
+
+- Direct enquiries, help text and contact confirmations use first person (`me` /
+  `I`) so the customer is clearly speaking with the photographer.
+- Third person remains only where it serves a professional purpose: the Sam
+  Duckworth Photography brand, photography credits, SEO attribution, copyright,
+  legal policies and transactional email identity.
+- The Admin-managed live contact heading and introduction were updated alongside
+  the source defaults so production does not retain the superseded copy.

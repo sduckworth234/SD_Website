@@ -33,8 +33,8 @@ export const DEFAULT_PUBLIC_CONTENT: PublicContent = {
   aboutBody: "I have been taking photographs for more than ten years. I especially enjoy aerial photography, whether I am creating work for prints, helping commercial businesses, or shooting simply because I love it.",
   aboutPortraitPath: "/about-sam.webp",
   contactEyebrow: "Get in touch",
-  contactHeading: "Ask Sam directly.",
-  contactIntro: "Commissions, prints and licensing — drop a note and Sam will get back to you.",
+  contactHeading: "Contact me directly.",
+  contactIntro: "Commissions, prints and licensing — drop me a note and I’ll get back to you.",
   contactPromptHeading: "Let's work together.",
   contactPromptBody: "Commissions, prints & licensing enquiries — say hello.",
 };
