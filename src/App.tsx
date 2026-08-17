@@ -1760,12 +1760,6 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   const studioPhoto = studioPhotos[studioIndex % Math.max(studioPhotos.length, 1)];
   const studioOrientation = studioPhoto ? orientOf(studioPhoto) : "portrait";
 
-  function moveStudio(direction: 1 | -1) {
-    if (studioPhotos.length < 2) return;
-    setStudioDirection(direction > 0 ? "next" : "prev");
-    setStudioIndex((current) => (current + direction + studioPhotos.length) % studioPhotos.length);
-  }
-
   function scrollEditions(direction: 1 | -1) {
     const track = editionsTrackRef.current;
     if (!track) return;
@@ -1990,28 +1984,12 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
                 </details>
                 {studioPhotos.length > 1 ? (
                   <div className="shop-studio-controls">
-                    <button type="button" onClick={() => moveStudio(-1)} aria-label="Previous studio photograph">
-                      <ChevronLeft size={17} aria-hidden="true" />
-                    </button>
-                    <div className="shop-studio-dots" aria-label="Choose a studio photograph">
-                      {studioPhotos.map((photo, index) => (
-                        <button
-                          key={photo.id}
-                          type="button"
-                          className={index === studioIndex ? "active" : ""}
-                          aria-label={`Show ${photo.title} in the studio`}
-                          aria-pressed={index === studioIndex}
-                          onClick={() => {
-                            setStudioDirection(index < studioIndex ? "prev" : "next");
-                            setStudioIndex(index);
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <button type="button" onClick={() => moveStudio(1)} aria-label="Next studio photograph">
-                      <ChevronRight size={17} aria-hidden="true" />
-                    </button>
-                    <button className="shop-studio-pause" type="button" onClick={() => setStudioPaused((paused) => !paused)}>
+                    <button
+                      className="shop-studio-pause"
+                      type="button"
+                      aria-pressed={studioPaused}
+                      onClick={() => setStudioPaused((paused) => !paused)}
+                    >
                       {studioPaused ? "Play" : "Pause"}
                     </button>
                   </div>
@@ -2027,10 +2005,6 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
               <p className="shop-selection-lead">A small edit of photographs that work beautifully in print. For the full archive, explore the galleries and choose “Order a print”.</p>
             </div>
             <div className="shop-sec-actions">
-              <div className="shop-edition-nav" aria-label="Browse selected editions">
-                <button type="button" onClick={() => scrollEditions(-1)} aria-label="Previous selected editions"><ChevronLeft size={17} aria-hidden="true" /></button>
-                <button type="button" onClick={() => scrollEditions(1)} aria-label="Next selected editions"><ChevronRight size={17} aria-hidden="true" /></button>
-              </div>
               {isAdmin ? (
                 <button className="sec-edit" type="button" onClick={() => setCurating("considered")} aria-label="Edit the considered collection" title="Edit the considered collection">
                   <Pencil size={15} aria-hidden="true" />
@@ -2062,6 +2036,12 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
               {isAdmin ? "No prints for sale yet — use the pencil above to choose which photos to sell." : "Explore the galleries to find photographs currently available as prints."}
             </p>
           )}
+          {filtered.length > 1 ? (
+            <div className="shop-edition-nav shop-edition-nav-bottom" aria-label="Browse selected editions">
+              <button type="button" onClick={() => scrollEditions(-1)} aria-label="Previous selected editions"><ChevronLeft size={17} aria-hidden="true" /></button>
+              <button type="button" onClick={() => scrollEditions(1)} aria-label="Next selected editions"><ChevronRight size={17} aria-hidden="true" /></button>
+            </div>
+          ) : null}
           <div className="shop-gallery-cta">
             <p>Looking for a particular place or photograph?</p>
             <a

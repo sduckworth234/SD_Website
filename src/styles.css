@@ -5611,13 +5611,8 @@ body:has(.contact-overlay) {
 .shop-studio-wall > p { position: absolute; z-index: 2; left: 26px; bottom: 24px; display: grid; gap: 3px; margin: 0; }
 .shop-studio-wall > p strong { color: #292622; font: 600 13px/1.2 var(--font-sans); }
 .shop-studio-wall > p span { color: #777067; font: 500 9px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
-.shop-studio-controls { position: absolute; z-index: 3; right: 18px; bottom: 14px; display: flex; align-items: center; gap: 4px; padding: 2px 6px; border: 1px solid rgba(41,38,34,.16); border-radius: 999px; background: rgba(245,242,236,.78); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
-.shop-studio-controls > button { display: grid; min-width: 44px; min-height: 44px; padding: 0 8px; place-items: center; border: 0; background: none; color: #565048; cursor: pointer; }
-.shop-studio-dots { display: flex; gap: 1px; }
-.shop-studio-dots button { position: relative; width: 24px; height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer; }
-.shop-studio-dots button::after { content: ""; position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; border: 1px solid #292622; border-radius: 50%; transform: translate(-50%,-50%); }
-.shop-studio-dots button.active::after { background: #292622; }
-.shop-studio-controls .shop-studio-pause { min-width: 52px; font: 600 8px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.shop-studio-controls { position: absolute; z-index: 3; right: 18px; bottom: 14px; }
+.shop-studio-controls .shop-studio-pause { min-width: 64px; min-height: 38px; padding: 0 14px; border: 1px solid rgba(41,38,34,.16); border-radius: 999px; background: rgba(245,242,236,.82); color: #565048; font: 600 8px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 .shop-studio-disclaimer { position: absolute; right: 20px; bottom: 69px; z-index: 4; }
 .shop-studio-disclaimer summary { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid rgba(41,38,34,.2); border-radius: 50%; background: rgba(245,242,236,.82); color: #565048; cursor: pointer; list-style: none; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 .shop-studio-disclaimer summary::-webkit-details-marker { display: none; }
@@ -5647,6 +5642,7 @@ body:has(.contact-overlay) {
 .shop-sec-actions { display: flex; align-items: center; gap: 10px; }
 .shop-edition-nav { display: flex; gap: 6px; }
 .shop-edition-nav button { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer; }
+.shop-edition-nav-bottom { justify-content: center; margin: 4px 0 30px; }
 .shop .shop-grid { display: flex; gap: clamp(22px, 3vw, 42px); margin-inline: calc(clamp(18px, 4vw, 56px) * -1); padding: 8px clamp(18px, 4vw, 56px) 24px; overflow-x: auto; overscroll-behavior-inline: contain; scroll-snap-type: x mandatory; scrollbar-width: thin; scrollbar-color: var(--line) transparent; columns: auto; }
 .shop .shop-card { flex: 0 0 auto; width: clamp(300px, 35vw, 430px); margin: 0; scroll-snap-align: start; }
 .shop .shop-card.landscape { width: clamp(455px, 57.9vw, 703px); }
@@ -5782,7 +5778,8 @@ body:has(.contact-overlay) {
   .shop .shop-card.landscape { width: 468px; }
   .shop .shop-card-frame { height: 340px; }
   .shop-sec-head { align-items: flex-start; }
-  .shop-sec-actions { flex-direction: column-reverse; align-items: flex-end; }
+  .shop-sec-actions { align-items: flex-end; }
+  .shop-edition-nav-bottom { margin: 2px 0 28px; }
   .shop-filters { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
   .shop-filters::-webkit-scrollbar { display: none; }
   .gallery-page .collection-rail, .gallery-page .location-rail { overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: none; }
