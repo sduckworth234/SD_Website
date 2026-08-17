@@ -6,6 +6,7 @@ import {
   Check,
   Copy,
   Crosshair,
+  DollarSign,
   Eye,
   EyeOff,
   Frame,
@@ -19,6 +20,7 @@ import {
   Heart,
   MapPin,
   MessageCircle,
+  PackageCheck,
   ChevronLeft,
   ChevronRight,
   LoaderCircle,
@@ -33,7 +35,7 @@ import {
   X,
 } from "lucide-react";
 import type { CSSProperties, DependencyList, ReactNode } from "react";
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   assignRecentSlot,
   bulkEditPhotos,
@@ -61,6 +63,7 @@ import {
   setLocationFeedOrder,
   setMapFeature,
   setPhotoShop,
+  setPhotoSizeOverride,
   removeUploadedAsset,
   setSiteFlag,
   setSiteSetting,
@@ -89,8 +92,10 @@ import { Header } from "./components/Header";
 import { OakFrame } from "./components/OakFrame";
 import { SmartImage } from "./components/SmartImage";
 import { PrintConfigurator } from "./components/PrintConfigurator";
+import { CartDrawer } from "./components/CartDrawer";
 import { useCart } from "./lib/cart";
-import { money, priceFor } from "./lib/printCatalogue";
+import { CONTACT_EMAIL, SIZES, money, priceFor } from "./lib/printCatalogue";
+import type { SizeId } from "./lib/printCatalogue";
 import { SHOP_FEATURE_ENABLED } from "./lib/features";
 
 // Lazy-loaded so MapLibre + the basemap stay out of the main gallery bundle.
@@ -721,6 +726,9 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
               />
             </AdminHideable>
           ) : null}
+          <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "ticker_banner")} label="Scrolling banner">
+            <TickerBanner items={TICKER_ITEMS} />
+          </AdminHideable>
           {recentPhotos.length >= 5 ? (
             <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "recent_work")} label="Recent Work">
               <RecentWork
@@ -1157,42 +1165,9 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   );
 }
 
-// One location tile that slowly cross-fades through a handful of its photos.
-// `featured` tiles are the big editorial-mosaic heroes. Admins get a pencil to
-// choose which photos cycle. Bigger tiles pull a higher-res image variant.
-function CollectionCard({ name, photos, onOpen, delay, onEdit, featured = false }: { name: string; photos: Photo[]; onOpen: (name: string) => void; delay: number; onEdit?: () => void; featured?: boolean }) {
-  const [i, setI] = useState(0);
-  useEffect(() => {
-    if (photos.length <= 1) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const timer: { id?: number } = {};
-    const start = window.setTimeout(() => {
-      setI((v) => (v + 1) % photos.length);
-      timer.id = window.setInterval(() => setI((v) => (v + 1) % photos.length), 4600);
-    }, delay);
-    return () => { window.clearTimeout(start); if (timer.id) window.clearInterval(timer.id); };
-  }, [photos.length, delay]);
-
-  return (
-    <div className={`cc-wrap${featured ? " cc-feat" : ""}`}>
-      <button className="collection-card" type="button" onClick={() => onOpen(name)} aria-label={`View the ${name} gallery`}>
-        {photos.map((p, idx) => (
-          <img key={p.id} className={`cc-img${idx === i ? " is-on" : ""}`} src={thumbUrl(p, featured ? 1100 : 700)} alt="" loading="lazy" decoding="async" />
-        ))}
-        <span className="cc-label">{name}</span>
-      </button>
-      {onEdit ? (
-        <button className="cc-edit" type="button" onClick={onEdit} aria-label={`Choose featured photos for ${name}`} title="Choose featured photos">
-          <Pencil size={14} aria-hidden="true" />
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
-// The home page's location collections — one cross-fading card per location.
-// Each card cycles its admin-pinned photos (collectionOrder), else the first
-// few in gallery order.
+// The home page's location collections, as a scroll-highlighted row list (see
+// CollectionCurtain). Each row's peek photo prefers admin-pinned photos
+// (collectionOrder), else the first in gallery order.
 const CURTAIN_LIMIT = 10;
 
 function CollectionCards({ photos, locations, onOpen, onOpenAll, isAdmin = false, onEdit }: { photos: Photo[]; locations: GalleryLocation[]; onOpen: (name: string) => void; onOpenAll?: () => void; isAdmin?: boolean; onEdit?: (location: GalleryLocation) => void }) {
@@ -1224,7 +1199,7 @@ function CollectionCards({ photos, locations, onOpen, onOpenAll, isAdmin = false
       .sort((a, b) => (order.get(a.name) ?? 999) - (order.get(b.name) ?? 999) || a.name.localeCompare(b.name));
   }, [photos, locations]);
 
-  // The phone list is capped at the ten most recent places — all 26 is a long
+  // The list is capped at the ten most recent places — all 26 is a long
   // scroll past a lot of thin galleries. Newest first, photo count breaking
   // ties within a year; places with no year at all sort last.
   //
@@ -1241,58 +1216,19 @@ function CollectionCards({ photos, locations, onOpen, onOpenAll, isAdmin = false
     [cards],
   );
 
-  // Phones get the curtain instead of the tile grid — see CollectionCurtain.
-  // Chosen in JS rather than CSS so only one of the two sets of images is ever
-  // requested; a display:none grid would still download every tile.
-  const narrow = useIsNarrow();
-
   if (!cards.length) return null;
 
-  if (narrow) {
-    return (
-      <CollectionCurtain
-        rows={recent}
-        // Capping the list orphans the remaining places on mobile, so the list
-        // ends with a way through to all of them.
-        remaining={cards.length - recent.length}
-        onOpen={onOpen}
-        onOpenAll={onOpenAll}
-        onEdit={isAdmin && onEdit ? onEdit : undefined}
-      />
-    );
-  }
-
   return (
-    <section className="collection-cards scroll-reveal" aria-label="Browse by location">
-      {cards.map((c, i) => (
-        <CollectionCard
-          key={c.name}
-          name={c.name}
-          photos={c.photos}
-          onOpen={onOpen}
-          delay={i * 650}
-          featured={i % 6 === 0}
-          onEdit={isAdmin && c.loc && onEdit ? () => onEdit(c.loc as GalleryLocation) : undefined}
-        />
-      ))}
-    </section>
+    <CollectionCurtain
+      rows={recent}
+      // Capping the list orphans the remaining places, so the list ends with
+      // a way through to all of them.
+      remaining={cards.length - recent.length}
+      onOpen={onOpen}
+      onOpenAll={onOpenAll}
+      onEdit={isAdmin && onEdit ? onEdit : undefined}
+    />
   );
-}
-
-// True on phones. Kept as a hook so the collections block can pick a layout in
-// JS instead of rendering both and hiding one.
-function useIsNarrow(query = "(max-width: 760px)") {
-  const [narrow, setNarrow] = useState(
-    () => typeof window !== "undefined" && window.matchMedia(query).matches,
-  );
-  useEffect(() => {
-    const mq = window.matchMedia(query);
-    const onChange = () => setNarrow(mq.matches);
-    mq.addEventListener("change", onChange);
-    onChange();
-    return () => mq.removeEventListener("change", onChange);
-  }, [query]);
-  return narrow;
 }
 
 type CurtainRow = {
@@ -1303,11 +1239,11 @@ type CurtainRow = {
   years: readonly [number, number] | null;
 };
 
-// The mobile index of places. On a phone the tile grid becomes a tall wall of
-// near-identical thumbnails you scroll past; this reads as a contents page, and
-// the "live" row — expanded, in colour — follows SCROLL POSITION rather than
-// hover, because hover doesn't exist on touch and the list would otherwise sit
-// grey forever.
+// The index of places, as a stack of rows rather than a thumbnail grid — reads
+// as a contents page. The "live" row — expanded, in colour — follows SCROLL
+// POSITION rather than hover, because hover doesn't exist on touch and the
+// list would otherwise sit grey forever there; desktop keeps hover as well so
+// a mouse still feels direct.
 function CollectionCurtain({
   rows,
   remaining = 0,
@@ -1391,8 +1327,8 @@ function CollectionCurtain({
         <div className="curtain-row curtain-all">
           <button className="curtain-hit" type="button" onClick={onOpenAll}>
             <span className="curtain-txt">
-              <span className="curtain-nm">All places</span>
-              <span className="curtain-meta">{remaining} more · view the full archive</span>
+              <span className="curtain-nm">See the full collection</span>
+              <span className="curtain-meta">{remaining} more places · view the full archive</span>
             </span>
             <span className="curtain-arrow" aria-hidden="true">
               <ChevronRight size={20} />
@@ -1406,10 +1342,16 @@ function CollectionCurtain({
 
 function CollectionsSkeleton() {
   return (
-    <section className="collection-cards" aria-hidden="true">
-      {Array.from({ length: 7 }, (_, i) => (
-        <div className={`cc-wrap${i % 6 === 0 ? " cc-feat" : ""}`} key={i}>
-          <div className="skeleton-tile cc-skel" />
+    <section className="collection-curtain" aria-hidden="true">
+      {Array.from({ length: 10 }, (_, i) => (
+        <div className="curtain-row" key={i}>
+          <div className="curtain-hit">
+            <span className="curtain-txt">
+              <span className="skeleton-tile curtain-skel-nm" />
+              <span className="skeleton-tile curtain-skel-meta" />
+            </span>
+            <span className="curtain-peek skeleton-tile" />
+          </div>
         </div>
       ))}
     </section>
@@ -1517,6 +1459,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   const isAdmin = adminAccess || detectedAdmin;
   const [cart, setCart] = useState(0);
   const realCart = useCart();
+  const [cartOpen, setCartOpen] = useState(false);
   const [filter, setFilter] = useState("All");
   // Two independent curations: "shop" = the products for sale (in_shop), "wall" =
   // the coming-soon collection glimpse (its own ordered list in shop_preview).
@@ -1601,7 +1544,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
       <button className="shop-logo" onClick={goHome} type="button">FRAMED EDITIONS</button>
       <div className="shop-nav-links">
         <a href="/" onClick={(e) => { e.preventDefault(); goHome(); }}>← samduckworth.com</a>
-        {shopLive ? <span className="shop-cart">Cart · {cartCount}</span> : null}
+        {shopLive ? <button className="shop-cart" type="button" onClick={() => setCartOpen(true)}>Cart · {cartCount}</button> : null}
       </div>
     </div>
   );
@@ -1703,6 +1646,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
       )}
 
       <Footer />
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onNavigate={onNavigate} />
       {curating === "shop" ? (
         <OrderedPhotoPicker
           title="Prints for sale"
@@ -1735,7 +1679,10 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
 // grid and checkout API, so disabling a photo removes direct/bookmarked access.
 function ShopProductRoute({ adminAccess = false, slug, onNavigate }: { adminAccess?: boolean; slug: string; onNavigate: (route: string) => void }) {
   const { publicPhotos, flags, isLoading } = useSiteData();
-  const configuratorOn = adminAccess || (SHOP_FEATURE_ENABLED && flags.print_configurator === true);
+  // Local development can render the configurator without changing the shared
+  // Supabase visibility flag. `import.meta.env.DEV` is compiled to false in the
+  // production build, where admin/public access remains authoritative.
+  const configuratorOn = import.meta.env.DEV || adminAccess || (SHOP_FEATURE_ENABLED && flags.print_configurator === true);
   const shopPhotos = useMemo(() => publicPhotos.filter((p) => p.inShop), [publicPhotos]);
   const photo = shopPhotos.find((p) => p.slug === slug);
   const shouldRedirect = !isLoading && (!configuratorOn || !photo);
@@ -1852,6 +1799,34 @@ function InstagramFeed({ posts }: { posts: InstagramPost[] }) {
   );
 }
 
+// A continuously scrolling promo strip between the Europe hero and Recent
+// Work. Purely decorative marketing copy — aria-hidden, since the doubled
+// track would otherwise read twice to a screen reader and everything it says
+// is already stated plainly elsewhere on the page (hero subtitle, Framed
+// Editions banner).
+const TICKER_ITEMS = [
+  "AERIAL & LANDSCAPE PHOTOGRAPHY",
+  "NORTHERN BEACHES, SYDNEY",
+  "FRAMED EDITIONS — PRINTS COMING SOON",
+  "SHOT ON LOCATION, WORLDWIDE",
+];
+
+function TickerBanner({ items }: { items: string[] }) {
+  if (!items.length) return null;
+  // Doubled so a translateX(-50%) loop is seamless — the second copy picks up
+  // exactly where the first ends.
+  const track = [...items, ...items];
+  return (
+    <section className="ticker-banner" aria-hidden="true">
+      <div className="ticker-track">
+        {track.map((text, i) => (
+          <span className="ticker-item" key={i}>{text}</span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function RecentWork({
   isAdmin,
   onChangePhoto,
@@ -1867,15 +1842,20 @@ function RecentWork({
   onWarm?: (photo: Photo) => void;
   photos: Photo[];
 }) {
-  const tiles = photos.slice(0, 9);
+  // Always exactly two rows — the column count grows with however many recent
+  // photos there are (row-major fill: row 1 first, then row 2), rather than a
+  // fixed 2×2. Phones cap lower so tiles stay legible.
+  const isPhone = useMediaQuery("(max-width: 560px)");
+  const tiles = photos.slice(0, isPhone ? 4 : 8);
+  const cols = Math.max(1, Math.ceil(tiles.length / 2));
 
   return (
     <section className="recent-work scroll-reveal" aria-label="Recent work">
       <h2 className="recent-heading">Recent Work</h2>
-      <div className="recent-mosaic">
+      <div className="recent-mosaic" style={{ "--recent-cols": cols } as CSSProperties}>
         {tiles.map((photo, index) => (
           <div
-            className={`recent-tile recent-tile-${index + 1} scroll-reveal${isAdmin ? " is-admin" : ""}`}
+            className={`recent-tile scroll-reveal${isAdmin ? " is-admin" : ""}`}
             key={photo.id}
             onClick={(event) => onSelect(photo, event.currentTarget)}
             onPointerDown={() => onWarm?.(photo)}
@@ -2339,16 +2319,10 @@ function CollectionRail({
 }) {
   return (
     // Reuses .location-rail for the scrolling flex row, then overrides it to sit
-    // static (only the places rail sticks) with taller two-line tabs.
+    // static (only the places rail sticks) with taller two-line tabs. The "view
+    // everything" tab sits LAST, not first — same destination-at-the-end
+    // pattern as the home page's location rows (see CollectionCurtain).
     <section className="location-rail collection-rail" aria-label="Filter gallery by collection">
-      <button
-        className={activeId === ALL_COLLECTIONS ? "active" : ""}
-        onClick={() => onChange(ALL_COLLECTIONS)}
-        type="button"
-      >
-        <span className="rail-period">All</span>
-        <span className="rail-name">All work</span>
-      </button>
       {collections.map((collection) => {
         const count = counts.get(collection.id) ?? 0;
         return (
@@ -2367,6 +2341,14 @@ function CollectionRail({
           </button>
         );
       })}
+      <button
+        className={activeId === ALL_COLLECTIONS ? "active" : ""}
+        onClick={() => onChange(ALL_COLLECTIONS)}
+        type="button"
+      >
+        <span className="rail-period">All</span>
+        <span className="rail-name">View the whole gallery</span>
+      </button>
     </section>
   );
 }
@@ -2853,8 +2835,8 @@ function RecentWorkSkeleton() {
     <section className="recent-work" aria-label="Loading recent work">
       <h2 className="recent-heading">Recent Work</h2>
       <div className="recent-mosaic" aria-hidden="true">
-        {Array.from({ length: 9 }, (_, index) => (
-          <div className={`recent-tile recent-tile-${index + 1} skeleton-tile`} key={index} />
+        {Array.from({ length: 4 }, (_, index) => (
+          <div className="recent-tile skeleton-tile" key={index} />
         ))}
       </div>
     </section>
@@ -3689,14 +3671,13 @@ function CollectionsAdmin({ photos }: { photos: Photo[] }) {
 // the DB) so the panel reads well even if a seed row is missing.
 const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
   { key: "hero_2026", label: "Home — 2026 Europe hero", hint: "The crossfading trip banner near the top of the home page." },
+  { key: "ticker_banner", label: "Home — Scrolling banner", hint: "The horizontal scrolling promo strip between the Europe hero and Recent Work." },
   { key: "recent_work", label: "Home — Recent Work mosaic", hint: "The editorial photo mosaic near the top of the home page." },
   { key: "map_promo", label: "Home — Map promo", hint: "The interactive-map teaser on the home page." },
-  { key: "collection_cards", label: "Home — Collection cards", hint: "The cycling location tiles on the home page." },
+  { key: "collection_cards", label: "Home — Collection cards", hint: "The scroll-highlighted list of places on the home page." },
   { key: "framed_banner", label: "Home — Framed Editions banner", hint: "The print-shop banner near the bottom of the home page." },
   { key: "contact_prompt", label: "Home — Contact / Work with me", hint: "The “Let’s work together” prompt + contact popup." },
   { key: "instagram_feed", label: "Home — Instagram feed", hint: "The live strip of your latest Instagram posts, above the footer." },
-  { key: "shop_public", label: "Shop page — public", hint: "Open /shop to the public (otherwise it shows “Opening soon”)." },
-  { key: "print_configurator", label: "Shop — Print configurator", hint: "The true-to-size room preview + size/frame/mount picker + cart on each print's own page (/shop/<slug>). Off = the old inline size picker stays on the shop grid." },
 ];
 
 // Flags that default OFF with no site_settings row (vs. every other flag,
@@ -4071,38 +4052,196 @@ function NotAdmin({ email }: { email: string }) {
   );
 }
 
-type AdminTab = "photos" | "collections" | "homepage" | "locations" | "shop" | "settings";
+type AdminTab = "photos" | "collections" | "homepage" | "locations" | "shop" | "pricing" | "orders" | "settings";
 
 const ADMIN_TABS: { id: AdminTab; label: string; description: string; icon: ReactNode }[] = [
   { id: "photos", label: "Photos", description: "Upload, publish and edit the archive", icon: <Images size={16} /> },
   { id: "collections", label: "Collections", description: "Build and order gallery collections", icon: <LayoutGrid size={16} /> },
   { id: "homepage", label: "Homepage", description: "Curate the homepage photo feed", icon: <LayoutDashboard size={16} /> },
   { id: "locations", label: "Locations", description: "Arrange places and gallery order", icon: <MapPin size={16} /> },
-  { id: "shop", label: "Shop", description: "Choose sale images and manage orders", icon: <Frame size={16} /> },
+  { id: "shop", label: "Shop", description: "Choose which photographs are for sale", icon: <Frame size={16} /> },
+  { id: "pricing", label: "Pricing", description: "Sell prices, live Prodigi cost and margin", icon: <DollarSign size={16} /> },
+  { id: "orders", label: "Shop Orders", description: "Payments, fulfilment, tracking and refunds", icon: <PackageCheck size={16} /> },
   { id: "settings", label: "Site settings", description: "Visibility, banners and feature switches", icon: <Eye size={16} /> },
 ];
+
+// Print-quality readiness, shown wherever admin decides what to sell or edits
+// a photo's details. Prefers the raw master's dimensions, falls back to the
+// export's — see server/shop/printSizing.mjs / src/lib/printCatalogue.ts for
+// the same math, and supabase/migrations/20260816010000_photo_raw_source.sql
+// + 20260816020000_photo_source_dims.sql for where these columns come from.
+function PrintReadinessBadge({ photo }: { photo: Photo }) {
+  const width = photo.rawWidth || photo.sourceWidth;
+  const height = photo.rawHeight || photo.sourceHeight;
+  const isRaw = Boolean(photo.rawWidth);
+
+  if (!width || !height) {
+    return <em className="print-readiness unknown">No resolution data yet</em>;
+  }
+  if (!photo.maxSellableMounted) {
+    return <em className="print-readiness too-small">Too small to print sell · {width}×{height}{isRaw ? " raw" : ""}</em>;
+  }
+  return (
+    <em className="print-readiness ok">
+      Sellable to <b>{photo.maxSellableMounted}</b> mounted · {width}×{height}{isRaw ? " raw" : " export only"}
+    </em>
+  );
+}
+
+// Per-photo manual size gating — 5 sizes x mounted/unmounted, each a 3-state
+// cycle (auto -> on -> off -> auto). Writes size_overrides + the recomputed
+// sellable_sizes/max_sellable_* in one call via setPhotoSizeOverride. See
+// supabase/migrations/20260816130000_photo_size_overrides.sql.
+function SizeOverridePanel({ photo, onSaved, setMessage }: { photo: Photo; onSaved: (patch: Partial<Photo>) => void; setMessage: (message: string) => void }) {
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const hasDims = Boolean((photo.rawWidth || photo.sourceWidth) && (photo.rawHeight || photo.sourceHeight));
+
+  async function cycle(size: SizeId, mounted: boolean) {
+    const key = `${size}-${mounted ? "m" : "u"}`;
+    const current = photo.sizeOverrides?.[size]?.[mounted ? "mounted" : "unmounted"];
+    // true -> false -> null(auto) -> true
+    const next = current === true ? false : current === false ? null : true;
+    setBusyKey(key);
+    try {
+      const result = await setPhotoSizeOverride(photo, size, mounted, next);
+      onSaved(result);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The size override could not be saved.");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  return (
+    <div className="size-override-panel">
+      {!hasDims ? <p className="size-override-warn">No resolution data yet — overrides will apply once raw/export dimensions are known.</p> : null}
+      <div className="size-override-grid">
+        <span />
+        <b>Unmounted</b>
+        <b>Mounted</b>
+        {SIZES.map((s) => (
+          <Fragment key={s.id}>
+            <span>{s.id}</span>
+            {[false, true].map((mounted) => {
+              const key = `${s.id}-${mounted ? "m" : "u"}`;
+              const override = photo.sizeOverrides?.[s.id]?.[mounted ? "mounted" : "unmounted"];
+              const computed = photo.sellableSizes?.[s.id]?.[mounted ? "mounted" : "unmounted"];
+              const state = override === true ? "on" : override === false ? "off" : "auto";
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  className={`size-override-cell ${state}${computed ? " is-computed-ok" : ""}`}
+                  disabled={busyKey !== null}
+                  onClick={() => cycle(s.id, mounted)}
+                  title={state === "auto" ? `Auto (currently ${computed ? "sellable" : "not sellable"} from resolution) — click to force on` : state === "on" ? "Forced on — click to force off" : "Forced off — click to reset to auto"}
+                >
+                  {busyKey === key ? "…" : state === "auto" ? (computed ? "Auto · on" : "Auto · off") : state === "on" ? "Forced on" : "Forced off"}
+                </button>
+              );
+            })}
+          </Fragment>
+        ))}
+      </div>
+      <p className="size-override-hint">Click a cell to cycle: auto → forced on → forced off → auto. Auto follows the photo's actual resolution.</p>
+    </div>
+  );
+}
 
 function ShopCatalogueAdmin({
   photos,
   onChanged,
+  session,
   setMessage,
 }: {
   photos: Photo[];
   onChanged: () => Promise<void>;
+  session: Session;
   setMessage: (message: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "sale" | "not_sale">("all");
+  const [locationFilter, setLocationFilter] = useState("all");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  // Local optimistic patches for size-override saves, keyed by photo id, so
+  // the panel reflects a save immediately without waiting on the parent's
+  // next full refresh (setPhotoSizeOverride already persisted it).
+  const [localPatches, setLocalPatches] = useState<Record<string, Partial<Photo>>>({});
   const saleCount = photos.filter((photo) => photo.inShop).length;
+
+  type ShopRuntimeState = {
+    shopEnabled: boolean;
+    fulfilmentProvider: "manual" | "prodigi";
+    publicCapabilityEnabled: boolean;
+    prodigiConfigured: boolean;
+  };
+  const [runtime, setRuntime] = useState<ShopRuntimeState | null>(null);
+  const [runtimeBusy, setRuntimeBusy] = useState(false);
+
+  const shopSettingsRequest = useCallback(async (body?: Record<string, unknown>) => {
+    const response = await fetch("/api/admin-shop-settings", {
+      method: body ? "POST" : "GET",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(data?.error || "Shop settings could not be updated.");
+    return data as ShopRuntimeState;
+  }, [session.access_token]);
+
+  useEffect(() => {
+    shopSettingsRequest()
+      .then(setRuntime)
+      .catch((error) => setMessage(error instanceof Error ? error.message : "Shop settings could not be loaded."));
+  }, [setMessage, shopSettingsRequest]);
+
+  async function setPublicShop(enabled: boolean) {
+    if (enabled && !window.confirm("Open the shop and checkout to the public now?")) return;
+    setRuntimeBusy(true);
+    try {
+      setRuntime(await shopSettingsRequest({ action: "set_shop_enabled", enabled }));
+      setMessage(enabled ? "The shop and checkout are now open to the public." : "The public shop and checkout are disabled. Admin access remains available.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The public shop setting could not be saved.");
+    } finally {
+      setRuntimeBusy(false);
+    }
+  }
+
+  async function setProvider(provider: "manual" | "prodigi") {
+    if (provider === runtime?.fulfilmentProvider) return;
+    if (provider === "prodigi" && !window.confirm("Use Prodigi for NEW orders? Existing manual orders will remain manual.")) return;
+    setRuntimeBusy(true);
+    try {
+      setRuntime(await shopSettingsRequest({ action: "set_fulfilment_provider", provider }));
+      setMessage(provider === "manual" ? "New orders will use manual fulfilment." : "New orders will be locked to Prodigi fulfilment.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The fulfilment provider could not be saved.");
+    } finally {
+      setRuntimeBusy(false);
+    }
+  }
+
+  const locationOptions = useMemo(
+    () => [...new Set(photos.map((p) => p.location).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [photos],
+  );
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return [...photos]
+      .map((photo) => (localPatches[photo.id] ? { ...photo, ...localPatches[photo.id] } : photo))
       .filter((photo) => filter === "all" || (filter === "sale" ? photo.inShop : !photo.inShop))
+      .filter((photo) => locationFilter === "all" || photo.location === locationFilter)
       .filter((photo) => !q || photo.title.toLowerCase().includes(q) || photo.location.toLowerCase().includes(q))
       .sort((a, b) => Number(b.inShop) - Number(a.inShop) || (a.shopOrder ?? 1e9) - (b.shopOrder ?? 1e9) || a.title.localeCompare(b.title));
-  }, [filter, photos, query]);
+  }, [filter, locationFilter, localPatches, photos, query]);
 
   async function toggle(photo: Photo) {
     const next = !photo.inShop;
@@ -4121,18 +4260,81 @@ function ShopCatalogueAdmin({
     }
   }
 
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectAllVisible() {
+    setSelectedIds(new Set(visible.map((p) => p.id)));
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  async function bulkSetSale(next: boolean) {
+    if (!selectedIds.size) return;
+    setBulkBusy(true);
+    let nextOrder = Math.max(0, ...photos.map((p) => p.shopOrder ?? 0)) + 1;
+    try {
+      const targets = photos.filter((p) => selectedIds.has(p.id));
+      for (const photo of targets) {
+        await setPhotoShop(photo.id, { inShop: next, shopOrder: next ? nextOrder++ : null });
+      }
+      setMessage(`${targets.length} photo${targets.length === 1 ? "" : "s"} ${next ? "selected for sale" : "removed from sale"}.`);
+      clearSelection();
+      await onChanged();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The bulk sale update could not be completed.");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   return (
     <section className="shop-catalogue-admin" aria-label="Shop catalogue">
+      <div className="shop-runtime-controls" aria-label="Shop controls">
+        <div className="shop-runtime-heading">
+          <div><p className="eyebrow">Live controls</p><h2>Shop availability and fulfilment</h2></div>
+          <a href="/shop">Open admin shop →</a>
+        </div>
+        {!runtime ? <p className="loading-note"><LoaderCircle className="spin" size={15} /> Loading shop controls…</p> : (
+          <div className="shop-runtime-grid">
+            <div className="shop-runtime-control">
+              <span className="shop-runtime-icon"><Globe size={17} /></span>
+              <span className="vis-flag-text"><b>Public shop and checkout</b><span>{runtime.shopEnabled ? "Customers can browse, configure and pay." : "Closed to the public; signed-in admins retain full access."}</span></span>
+              <button
+                aria-label={`${runtime.shopEnabled ? "Disable" : "Enable"} public shop and checkout`}
+                aria-pressed={runtime.shopEnabled}
+                className={`vis-toggle${runtime.shopEnabled ? " on" : ""}`}
+                disabled={runtimeBusy || (!runtime.publicCapabilityEnabled && !runtime.shopEnabled)}
+                onClick={() => setPublicShop(!runtime.shopEnabled)}
+                type="button"
+              ><span className="vis-knob" /></button>
+            </div>
+            {!runtime.publicCapabilityEnabled ? <p className="shop-runtime-warning"><TriangleAlert size={14} /> Deployment capability is off. Enable the two Vercel shop gates and redeploy once before this switch can open the shop.</p> : null}
+            <div className="shop-runtime-control provider">
+              <span className="shop-runtime-icon"><PackageCheck size={17} /></span>
+              <span className="vis-flag-text"><b>New-order fulfilment</b><span>Only orders purchased after a change use the newly selected provider.</span></span>
+              <div className="provider-switch" role="group" aria-label="New-order fulfilment provider">
+                <button className={runtime.fulfilmentProvider === "manual" ? "on" : ""} disabled={runtimeBusy} onClick={() => setProvider("manual")} type="button">Manual</button>
+                <button className={runtime.fulfilmentProvider === "prodigi" ? "on" : ""} disabled={runtimeBusy || !runtime.prodigiConfigured} onClick={() => setProvider("prodigi")} title={runtime.prodigiConfigured ? "Use Prodigi for new orders" : "Add the Production Prodigi API key first"} type="button">Prodigi</button>
+              </div>
+            </div>
+            {!runtime.prodigiConfigured ? <p className="shop-runtime-note">Prodigi is locked until its Production API key is configured. Manual fulfilment remains the safe default.</p> : null}
+          </div>
+        )}
+      </div>
       <div className="admin-section-intro">
         <div>
           <p className="eyebrow">Shop catalogue</p>
           <h2>Choose what customers can buy.</h2>
           <p>“For sale” controls the shop grid, direct product links and server-side checkout validation. A photo must also be published.</p>
-        </div>
-        <div className={`admin-feature-state${SHOP_FEATURE_ENABLED ? " is-on" : ""}`}>
-          <b>{SHOP_FEATURE_ENABLED ? "Public shop enabled" : "Public shop disabled"}</b>
-          <span>{SHOP_FEATURE_ENABLED ? "This build can show public shop pages." : "Public routes and links are off; authenticated admins retain access."}</span>
-          <a href="/shop">Open admin shop →</a>
         </div>
       </div>
       <div className="shop-catalogue-summary">
@@ -4148,12 +4350,37 @@ function ShopCatalogueAdmin({
           <option value="sale">For sale</option>
           <option value="not_sale">Not for sale</option>
         </select>
+        <select aria-label="Filter by location" onChange={(event) => setLocationFilter(event.target.value)} value={locationFilter}>
+          <option value="all">All locations</option>
+          {locationOptions.map((loc) => (
+            <option key={loc} value={loc}>{loc}</option>
+          ))}
+        </select>
+      </div>
+      <div className="shop-bulk-bar">
+        <div className="shop-bulk-select">
+          <button className="text-button" type="button" onClick={selectAllVisible}>Select all ({visible.length})</button>
+          <button className="text-button" type="button" onClick={clearSelection} disabled={!selectedIds.size}>Clear</button>
+          <span>{selectedIds.size} selected</span>
+        </div>
+        <div className="shop-bulk-actions">
+          <button className="text-button" type="button" disabled={!selectedIds.size || bulkBusy} onClick={() => bulkSetSale(true)}>
+            {bulkBusy ? "Saving…" : "Enable sale"}
+          </button>
+          <button className="text-button danger" type="button" disabled={!selectedIds.size || bulkBusy} onClick={() => bulkSetSale(false)}>
+            {bulkBusy ? "Saving…" : "Remove from sale"}
+          </button>
+        </div>
       </div>
       <div className="shop-catalogue-grid">
         {visible.map((photo) => {
           const eligible = photo.inShop && photo.published;
+          const expanded = expandedId === photo.id;
           return (
-            <article className={`shop-catalogue-card${photo.inShop ? " is-sale" : ""}`} key={photo.id}>
+            <article className={`shop-catalogue-card${photo.inShop ? " is-sale" : ""}${selectedIds.has(photo.id) ? " is-selected" : ""}`} key={photo.id}>
+              <label className="shop-catalogue-select" title="Select for bulk actions">
+                <input type="checkbox" checked={selectedIds.has(photo.id)} onChange={() => toggleSelect(photo.id)} aria-label={`Select ${photo.title}`} />
+              </label>
               <img alt="" src={thumbUrl(photo, 420)} />
               <div>
                 <span>{photo.location}{photo.year ? ` · ${photo.year}` : ""}</span>
@@ -4161,23 +4388,225 @@ function ShopCatalogueAdmin({
                 <small className={eligible ? "is-eligible" : ""}>
                   {eligible ? "Available when the shop gates are on" : photo.inShop ? "Selected for sale · still a draft" : "Not for sale"}
                 </small>
+                <PrintReadinessBadge photo={photo} />
               </div>
-              <button
-                aria-label={`${photo.inShop ? "Remove" : "Enable"} ${photo.title} ${photo.inShop ? "from" : "for"} sale`}
-                aria-pressed={photo.inShop}
-                className={`sale-toggle${photo.inShop ? " on" : ""}`}
-                disabled={busyId !== null}
-                onClick={() => toggle(photo)}
-                type="button"
-              >
-                <span className="vis-knob" />
-                {busyId === photo.id ? "Saving…" : photo.inShop ? "For sale" : "Not for sale"}
-              </button>
+              <div className="shop-catalogue-card-actions">
+                <button
+                  aria-label={`${photo.inShop ? "Remove" : "Enable"} ${photo.title} ${photo.inShop ? "from" : "for"} sale`}
+                  aria-pressed={photo.inShop}
+                  className={`sale-toggle${photo.inShop ? " on" : ""}`}
+                  disabled={busyId !== null}
+                  onClick={() => toggle(photo)}
+                  type="button"
+                >
+                  <span className="vis-knob" />
+                  {busyId === photo.id ? "Saving…" : photo.inShop ? "For sale" : "Not for sale"}
+                </button>
+                <button
+                  className="text-button size-override-toggle"
+                  type="button"
+                  aria-expanded={expanded}
+                  onClick={() => setExpandedId(expanded ? null : photo.id)}
+                >
+                  Sizes {expanded ? "▲" : "▼"}
+                </button>
+              </div>
+              {expanded ? (
+                <SizeOverridePanel
+                  photo={photo}
+                  setMessage={setMessage}
+                  onSaved={(patch) => setLocalPatches((prev) => ({ ...prev, [photo.id]: { ...prev[photo.id], ...patch } }))}
+                />
+              ) : null}
             </article>
           );
         })}
       </div>
       {!visible.length ? <p className="admin-card">No photos match this filter.</p> : null}
+    </section>
+  );
+}
+
+// print_pricing row shape as returned by GET /api/admin-pricing (full admin
+// view — includes cost/shipping, which anon/authenticated never see via the
+// direct table grant; this endpoint reads with the service-role key).
+type PricingRow = {
+  size: SizeId;
+  mounted: boolean;
+  sell_cents: number;
+  cost_cents: number | null;
+  shipping_cents: number | null;
+  cost_source: string | null;
+  cost_checked_at: string | null;
+};
+
+const centsToDollarsStr = (cents: number) => (cents / 100).toFixed(2);
+const dollarsStrToCents = (value: string) => Math.round(Number.parseFloat(value || "0") * 100);
+
+// Live Prodigi cost + admin-editable sell prices, one flat price per
+// size/mount combo for every photo (Sam's instruction, 2026-08-17). Backed
+// by public.print_pricing (supabase/migrations/20260817010000_print_pricing.sql)
+// via api/admin-pricing.mjs — the same table server/shop/catalogue.mjs reads
+// for the amount actually charged at checkout, so a save here takes effect
+// on the very next order, no redeploy.
+function PricingAdmin({ session, setMessage }: { session: Session; setMessage: (message: string) => void }) {
+  const [rows, setRows] = useState<PricingRow[]>([]);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [prodigiConfigured, setProdigiConfigured] = useState(true);
+
+  const request = useCallback(async (init?: RequestInit) => {
+    const response = await fetch("/api/admin-pricing", {
+      ...init,
+      headers: { authorization: `Bearer ${session.access_token}`, "content-type": "application/json", ...(init?.headers ?? {}) },
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Pricing request failed.");
+    return data;
+  }, [session.access_token]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await request();
+      setRows(data.rows ?? []);
+      setProdigiConfigured(Boolean(data.prodigiConfigured));
+      const nextDrafts: Record<string, string> = {};
+      for (const row of data.rows ?? []) nextDrafts[`${row.size}-${row.mounted}`] = centsToDollarsStr(row.sell_cents);
+      setDrafts(nextDrafts);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Pricing could not be loaded.");
+    } finally {
+      setLoading(false);
+    }
+  }, [request, setMessage]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const dirty = useMemo(
+    () => rows.some((row) => drafts[`${row.size}-${row.mounted}`] !== centsToDollarsStr(row.sell_cents)),
+    [rows, drafts],
+  );
+
+  async function savePrices() {
+    setSaving(true);
+    try {
+      const prices = rows
+        .map((row) => ({ size: row.size, mounted: row.mounted, sellCents: dollarsStrToCents(drafts[`${row.size}-${row.mounted}`] ?? "") }))
+        .filter((p) => Number.isFinite(p.sellCents) && p.sellCents >= 0);
+      const data = await request({ method: "POST", body: JSON.stringify({ action: "save_prices", prices }) });
+      setRows(data.rows ?? []);
+      setMessage("Prices saved — live on the shop now.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Prices could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function refreshCosts() {
+    setRefreshing(true);
+    try {
+      const data = await request({ method: "POST", body: JSON.stringify({ action: "refresh_costs" }) });
+      setRows(data.rows ?? []);
+      if (data.errors?.length) setMessage(`Refreshed with ${data.errors.length} error(s): ${data.errors[0]}`);
+      else setMessage("Live Prodigi costs refreshed.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Live costs could not be refreshed.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  const bySize = useMemo(() => {
+    const map = new Map<SizeId, { unmounted?: PricingRow; mounted?: PricingRow }>();
+    for (const row of rows) {
+      const entry = map.get(row.size) ?? {};
+      if (row.mounted) entry.mounted = row; else entry.unmounted = row;
+      map.set(row.size, entry);
+    }
+    return map;
+  }, [rows]);
+
+  const checkedDates = rows.map((r) => r.cost_checked_at).filter(Boolean).sort();
+  const lastChecked = checkedDates[checkedDates.length - 1];
+
+  function priceCell(row: PricingRow | undefined) {
+    if (!row) return null;
+    const key = `${row.size}-${row.mounted}`;
+    const cost = row.cost_cents != null ? row.cost_cents : null;
+    const shipping = row.shipping_cents != null ? row.shipping_cents : null;
+    const sellCents = dollarsStrToCents(drafts[key] ?? "");
+    const margin = cost != null && shipping != null && Number.isFinite(sellCents) ? sellCents - cost - shipping : null;
+    return (
+      <div className="pricing-cell">
+        <label>
+          <span>$</span>
+          <input
+            inputMode="decimal"
+            type="text"
+            value={drafts[key] ?? ""}
+            onChange={(event) => setDrafts((prev) => ({ ...prev, [key]: event.target.value }))}
+          />
+        </label>
+        <small>
+          {cost != null ? `Cost $${centsToDollarsStr(cost)}` : "Cost —"}
+          {shipping != null ? ` · Ship $${centsToDollarsStr(shipping)}` : ""}
+        </small>
+        {margin != null ? (
+          <small className={margin < 0 ? "pricing-margin-bad" : "pricing-margin-ok"}>
+            Margin {margin < 0 ? "-" : ""}${centsToDollarsStr(Math.abs(margin))}
+          </small>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <section className="pricing-admin" aria-label="Print pricing">
+      <div className="admin-section-intro">
+        <div>
+          <p className="eyebrow">Pricing</p>
+          <h2>Set what customers pay.</h2>
+          <p>One flat price per size, mounted or unmounted — every photo costs the same for now. Live Prodigi cost and shipping shown alongside for margin, refreshed on demand (never automatically).</p>
+        </div>
+        <div className={`admin-feature-state${prodigiConfigured ? " is-on" : ""}`}>
+          <b>{prodigiConfigured ? "Prodigi API connected" : "Prodigi API not configured"}</b>
+          <span>{prodigiConfigured ? "Live cost refresh is available." : "Set PRODIGI_API_KEY to pull live costs."}</span>
+        </div>
+      </div>
+      <div className="pricing-toolbar">
+        <button className="text-button" type="button" onClick={refreshCosts} disabled={refreshing || !prodigiConfigured}>
+          <RotateCw size={13} aria-hidden="true" /> {refreshing ? "Refreshing…" : "Refresh live Prodigi prices"}
+        </button>
+        {lastChecked ? <span className="pricing-checked-at">Costs as of {new Date(lastChecked).toLocaleString("en-AU")}</span> : <span className="pricing-checked-at">Costs never checked yet</span>}
+        <button className="solid-button" type="button" onClick={savePrices} disabled={saving || !dirty}>
+          {saving ? "Saving…" : "Save prices"}
+        </button>
+      </div>
+      {loading ? (
+        <p className="loading-note"><LoaderCircle className="spin" /> Loading pricing…</p>
+      ) : (
+        <div className="pricing-table">
+          <div className="pricing-row pricing-head">
+            <span>Size</span>
+            <span>Unmounted</span>
+            <span>Mounted</span>
+          </div>
+          {SIZES.map((s) => {
+            const entry = bySize.get(s.id);
+            return (
+              <div className="pricing-row" key={s.id}>
+                <span className="pricing-size">{s.id}<small>{s.outer[0].toFixed(0)}×{s.outer[1].toFixed(0)}cm</small></span>
+                {priceCell(entry?.unmounted)}
+                {priceCell(entry?.mounted)}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
@@ -4408,12 +4837,13 @@ function AdminDashboard({ session }: { session: Session }) {
       {activeTab === "locations" ? <PlacesOrderAdmin locations={locations} photos={adminPhotos} onChanged={refresh} /> : null}
       {activeTab === "settings" ? <VisibilityAdmin photos={adminPhotos} locations={locations} /> : null}
       {activeTab === "shop" ? (
-        <div className="admin-tab-stack">
-          <ShopCatalogueAdmin photos={adminPhotos} onChanged={refresh} setMessage={setMessage} />
-          <Suspense fallback={<p className="loading-note">Loading shop orders…</p>}>
-            <AdminOrders session={session} />
-          </Suspense>
-        </div>
+        <ShopCatalogueAdmin photos={adminPhotos} onChanged={refresh} session={session} setMessage={setMessage} />
+      ) : null}
+      {activeTab === "pricing" ? <PricingAdmin session={session} setMessage={setMessage} /> : null}
+      {activeTab === "orders" ? (
+        <Suspense fallback={<p className="loading-note">Loading shop orders…</p>}>
+          <AdminOrders session={session} />
+        </Suspense>
       ) : null}
       {activeTab === "photos" ? (
         <>
@@ -4537,6 +4967,7 @@ function AdminDashboard({ session }: { session: Session }) {
                 ) : (
                   <small className="admin-source-missing">No source file linked</small>
                 )}
+                <PrintReadinessBadge photo={photo} />
                 <div className="card-actions">
                   <button className="text-button edit-button" onClick={() => setEditingPhotoId(photo.id)} type="button">
                     <Pencil size={13} aria-hidden="true" /> Edit details
@@ -4777,6 +5208,14 @@ function PhotoEditForm({
               type="text"
             />
           </label>
+          <div className="edit-print-readiness">
+            <span>Print readiness</span>
+            <PrintReadinessBadge photo={photo} />
+            {photo.rawSourcePath ? (
+              <small className="edit-raw-path" title={photo.rawSourcePath}>Raw: {photo.rawSourcePath}</small>
+            ) : null}
+            {photo.rawMatchNotes ? <small className="edit-raw-notes">{photo.rawMatchNotes}</small> : null}
+          </div>
           <div className="check-row edit-flags">
             <label>
               <input defaultChecked={Boolean(photo.published)} name="isPublished" type="checkbox" /> Published
@@ -5457,9 +5896,6 @@ function AboutOverlay({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
-
-// Where enquiry emails go (the contact popup composes a message to this inbox).
-const CONTACT_EMAIL = "samduckworthphoto@gmail.com";
 
 // Small "let's work together" prompt beneath the home print-shop banner.
 function ContactPrompt({ onOpen }: { onOpen: () => void }) {
