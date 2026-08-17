@@ -1665,8 +1665,11 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
     window.history.pushState({}, "", route);
     onNavigate(route);
   }
-  function goHome() { goTo("/"); }
   function goGalleries() { goTo("/galleries"); }
+  function goShopTop() {
+    setShopMenuOpen(false);
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+  }
   // Classify by the location's DB region (no hardcoded place list — a newly
   // created Australian location should never file under Europe).
   const regionByLocation = useMemo(() => new Map(locations.map((l) => [l.name, l.region])), [locations]);
@@ -1786,10 +1789,10 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   }
 
   const ShopNav = (
-    <div className={`shop-nav${shopMenuOpen ? " menu-open" : ""}`}>
-      <button className="shop-logo" onClick={goHome} type="button">FRAMED EDITIONS</button>
+    <header className={`shop-nav${shopMenuOpen ? " menu-open" : ""}`}>
+      <button className="shop-logo" onClick={goShopTop} type="button" aria-label="Framed Editions shop home">FRAMED EDITIONS</button>
       <div className="shop-nav-links">
-        <a className="shop-back-link" href="/" onClick={(e) => { e.preventDefault(); goHome(); }}>← samduckworth.com</a>
+        <a className="shop-back-link" href="/galleries" onClick={(event) => { event.preventDefault(); goGalleries(); }}>← Photography galleries</a>
         {shopLive ? <button className="shop-cart" type="button" onClick={() => setCartOpen(true)}>Cart · {cartCount}</button> : null}
         <button
           className="shop-menu-toggle"
@@ -1804,15 +1807,17 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
       </div>
       {shopMenuOpen ? <button className="shop-nav-dismiss" onClick={() => setShopMenuOpen(false)} type="button" aria-label="Close shop navigation" /> : null}
       <nav id="shop-mobile-navigation" className={`shop-mobile-nav${shopMenuOpen ? " is-open" : ""}`} aria-label="Shop mobile navigation" aria-hidden={!shopMenuOpen} inert={!shopMenuOpen}>
-        <a href="/" onClick={(event) => { event.preventDefault(); goTo("/"); }}>Home</a>
+        <span className="shop-mobile-nav-label">Photography</span>
+        <a href="/" onClick={(event) => { event.preventDefault(); goTo("/"); }}>Photography home</a>
         <a href="/galleries" onClick={(event) => { event.preventDefault(); goTo("/galleries"); }}>Gallery</a>
         <a href="/map" onClick={(event) => { event.preventDefault(); goTo("/map"); }}>Map</a>
         <a href="/?panel=about" onClick={(event) => { event.preventDefault(); goTo("/?panel=about"); }}>About Me</a>
-        <a href="/shop" aria-current="page" onClick={(event) => { event.preventDefault(); setShopMenuOpen(false); }}>Shop</a>
         <a href="/?panel=contact" onClick={(event) => { event.preventDefault(); goTo("/?panel=contact"); }}>Contact</a>
+        <span className="shop-mobile-nav-label">Print shop</span>
+        <a href="/shop" aria-current="page" onClick={(event) => { event.preventDefault(); setShopMenuOpen(false); }}>Framed Editions</a>
         {shopLive ? <button type="button" onClick={() => { setShopMenuOpen(false); setCartOpen(true); }}>Cart <span>{cartCount}</span></button> : null}
       </nav>
-    </div>
+    </header>
   );
 
   if (isLoading) {
@@ -2664,7 +2669,7 @@ function HeroPicker({
 
 // Cinematic landing: a full-bleed hero photo (admin-chosen, else auto) revealed
 // by the existing fade-from-black, with the wordmark over it and the photo's
-// place · title set small in the bottom-left corner. On mobile the photo fills
+// place set small in the bottom-left corner. On mobile the photo fills
 // the screen (portrait) when flagged portrait-worthy, else letterboxes.
 function Hero({ photo, locations, isAdmin, rotate, onPickHero }: { photo?: Photo; locations: string[]; isAdmin: boolean; rotate: string; onPickHero: () => void }) {
   const content = usePublicContent();
@@ -2684,7 +2689,6 @@ function Hero({ photo, locations, isAdmin, rotate, onPickHero }: { photo?: Photo
       {photo ? (
         <figcaption className="hero-caption">
           <span className="loc">{photo.location}</span>
-          <span className="ttl">{photo.title}</span>
         </figcaption>
       ) : null}
       {isAdmin ? (

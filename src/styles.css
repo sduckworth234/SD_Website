@@ -463,7 +463,7 @@ nav a:hover,
   color: var(--on-photo);
 }
 
-/* The hero photo's place · title, small and minimal, bottom-left. */
+/* The hero photo's place, small and minimal, bottom-left. */
 .hero-caption {
   position: absolute;
   left: max(clamp(18px, 4vw, 56px), env(safe-area-inset-left));
@@ -484,14 +484,6 @@ nav a:hover,
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: rgba(var(--on-photo-rgb), 0.82);
-}
-
-.hero-caption .ttl {
-  font-family: var(--font-sans);
-  font-weight: 500;
-  letter-spacing: -0.015em;
-  font-size: clamp(1.05rem, 1.5vw, 1.5rem);
-  line-height: 1;
 }
 
 /* Admin-only: a small pencil to choose the landing hero, bottom-right. */
@@ -5587,12 +5579,14 @@ body:has(.contact-overlay) {
 /* Shop policies and discreet admin access */
 .shop-legal-footer { display: grid; justify-items: center; gap: 12px; padding: 28px clamp(18px,4vw,56px); border-top: 1px solid var(--line); background: var(--paper-deep); color: var(--muted); text-align: center; }
 .shop-legal-footer p { margin: 0; font-size: 10px; }
+.shop-photography-link { color: var(--ink) !important; text-decoration: none !important; }
 .legal-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; }
 .legal-nav a, .shop-legal-footer a { color: inherit; font: 600 9px/1.3 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; text-decoration: underline; text-underline-offset: 3px; }
 .legal-nav a, .shop-legal-footer p a { display: inline-flex; align-items: center; min-height: 28px; padding-block: 2px; }
 .footer-admin { color: inherit; text-decoration: none; }
 .legal-page { min-height: 100dvh; background: var(--paper); color: var(--ink); }
-.legal-page__back { position: sticky; top: 0; z-index: 2; display: block; padding: 20px clamp(18px,4vw,56px); border-bottom: 1px solid var(--line); background: rgba(var(--paper-rgb),.9); color: var(--muted); font: 600 9px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.legal-page__top { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px clamp(18px,4vw,56px); border-bottom: 1px solid var(--line); background: rgba(var(--paper-rgb),.9); color: var(--muted); font: 600 9px/1.35 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.legal-page__top a:last-child { color: var(--sea); text-align: right; }
 .legal-page__article { width: min(760px, calc(100% - 36px)); margin: 0 auto; padding: clamp(55px,8vw,110px) 0; }
 .legal-page__eyebrow, .legal-page__updated { color: var(--muted); font: 600 9px/1.4 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
 .legal-page__article h1 { max-width: 11ch; margin: 10px 0 12px; font: 600 clamp(3rem,7vw,6rem)/.92 var(--font-sans); letter-spacing: -.055em; }
@@ -5670,6 +5664,7 @@ body:has(.contact-overlay) {
   .shop-mobile-nav { position: absolute; top: 100%; right: 0; left: 0; z-index: 2; display: grid; max-height: 0; overflow: hidden; overscroll-behavior: contain; background: rgba(var(--paper-rgb),.985); opacity: 0; pointer-events: none; transform: translateY(-8px); transition: max-height 240ms ease, opacity 180ms ease, transform 240ms ease; -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px); }
   .shop-mobile-nav.is-open { max-height: calc(100dvh - 67px); overflow-y: auto; padding-bottom: env(safe-area-inset-bottom); border-bottom: 1px solid var(--line); opacity: 1; pointer-events: auto; transform: none; }
   .shop-mobile-nav a, .shop-mobile-nav button { position: relative; display: flex; align-items: center; justify-content: space-between; min-height: 54px; padding: 0 20px; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--ink); font: 600 11px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; text-align: left; cursor: pointer; }
+  .shop-mobile-nav-label { display: flex; align-items: center; min-height: 30px; padding: 0 20px; border-top: 1px solid var(--line); background: var(--paper-deep); color: var(--muted); font: 600 8px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; }
   .shop-mobile-nav a::after { content: "→"; color: var(--muted); font-size: 12px; }
   .shop-mobile-nav button span { display: grid; min-width: 24px; height: 24px; place-items: center; border-radius: 50%; background: var(--ink); color: var(--paper); font-size: 9px; }
   .shop-mobile-nav [aria-current="page"] { color: var(--sea); }

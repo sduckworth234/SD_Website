@@ -24,6 +24,7 @@ export function ShopLegalFooter({ className = "" }: { className?: string }) {
   const content = usePublicContent();
   return (
     <footer className={`shop-legal-footer ${className}`.trim()}>
+      <a className="shop-photography-link" href="/galleries">Explore the photography galleries →</a>
       <LegalNav />
       <p>
         Questions? Email <a href={`mailto:${content.publicEmail}`}>{content.publicEmail}</a>.
@@ -52,7 +53,10 @@ function PolicyShell({
 
   return (
     <main className="legal-page">
-      <a className="legal-page__back" href="/shop">← Back to the shop</a>
+      <nav className="legal-page__top" aria-label="Policy navigation">
+        <a href="/shop">← Back to Framed Editions</a>
+        <a href="/galleries">Photography galleries →</a>
+      </nav>
       <article className="legal-page__article">
         <p className="legal-page__eyebrow">{content.siteName}</p>
         <h1>{title}</h1>

@@ -304,12 +304,14 @@ export function PrintConfigurator({
         </div>
         {navOpen ? <button className="pc-nav-dismiss" onClick={() => setNavOpen(false)} type="button" aria-label="Close shop navigation" /> : null}
         <nav id="pc-mobile-navigation" className={`pc-mobile-nav${navOpen ? " is-open" : ""}`} aria-label="Product mobile navigation" aria-hidden={!navOpen} inert={!navOpen}>
-          <a href="/" onClick={(event) => { event.preventDefault(); navigate("/"); }}>Home</a>
+          <span className="shop-mobile-nav-label">Photography</span>
+          <a href="/" onClick={(event) => { event.preventDefault(); navigate("/"); }}>Photography home</a>
           <a href="/galleries" onClick={(event) => { event.preventDefault(); navigate("/galleries"); }}>Gallery</a>
           <a href="/map" onClick={(event) => { event.preventDefault(); navigate("/map"); }}>Map</a>
           <a href="/?panel=about" onClick={(event) => { event.preventDefault(); navigate("/?panel=about"); }}>About Me</a>
-          <a href="/shop" aria-current="page" onClick={(event) => { event.preventDefault(); navigate("/shop"); }}>Shop</a>
           <a href="/?panel=contact" onClick={(event) => { event.preventDefault(); navigate("/?panel=contact"); }}>Contact</a>
+          <span className="shop-mobile-nav-label">Print shop</span>
+          <a href="/shop" aria-current="page" onClick={(event) => { event.preventDefault(); navigate("/shop"); }}>Framed Editions</a>
           <button type="button" onClick={() => { setNavOpen(false); setCartOpen(true); }}>Cart <span>{cart.items.length}</span></button>
         </nav>
       </header>

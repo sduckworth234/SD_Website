@@ -53,6 +53,13 @@ data is stored there.
   and print configurator: Home, Gallery, Map, About, Shop, Contact and Cart remain
   reachable, with viewport-safe scrolling, active-page state, Escape/backdrop close,
   body-scroll locking and direct About/Contact panel links.
+- The mobile journey now distinguishes the two spaces explicitly: shop menus group
+  Photography and Print shop destinations, Framed Editions always means the shop,
+  and gallery/policy/footer links provide a clear route back to the photography site.
+  Checkout remains intentionally focused, while confirmation and error states offer
+  both Framed Editions and Photography Gallery recovery actions.
+- The opening homepage hero caption shows location only; the photograph title is
+  reserved for galleries and lightboxes where it has clearer context.
 - About & Contact edits typed business identity, public email/Instagram, homepage
   hero eyebrow, About portrait/copy, contact copy and footer label. The same record
   is used by the public footer, Instagram links, contact form, shop policy footer and

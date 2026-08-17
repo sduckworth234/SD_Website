@@ -410,6 +410,11 @@ export function CheckoutSuccessPage({ onNavigate }: { onNavigate: (path: string)
           </div>
           <PolicyLinks />
         </>
+      ) : error ? (
+        <div className="co-result-actions">
+          <button onClick={() => go("/shop", onNavigate)} type="button">Return to Framed Editions</button>
+          <button onClick={() => go("/galleries", onNavigate)} type="button">Photography galleries</button>
+        </div>
       ) : null}
     </main>
   );
