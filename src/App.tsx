@@ -727,7 +727,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
             </AdminHideable>
           ) : null}
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "ticker_banner")} label="Scrolling banner">
-            <TickerBanner items={TICKER_ITEMS} />
+            <TickerBanner items={TICKER_ITEMS} onOpen={goToShop} />
           </AdminHideable>
           {recentPhotos.length >= 5 ? (
             <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "recent_work")} label="Recent Work">
@@ -1799,10 +1799,9 @@ function InstagramFeed({ posts }: { posts: InstagramPost[] }) {
 }
 
 // A continuously scrolling promo strip between the Europe hero and Recent
-// Work. Purely decorative marketing copy — aria-hidden, since the doubled
-// track would otherwise read twice to a screen reader and everything it says
-// is already stated plainly elsewhere on the page (hero subtitle, Framed
-// Editions banner).
+// Work, linking through to the shop. The marquee text itself is decorative
+// marketing copy (doubled for the loop, so it would read twice to a screen
+// reader) — the surrounding button carries the one real accessible name.
 const TICKER_ITEMS = [
   "AERIAL & LANDSCAPE PHOTOGRAPHY",
   "NORTHERN BEACHES, SYDNEY",
@@ -1810,19 +1809,19 @@ const TICKER_ITEMS = [
   "SHOT ON LOCATION, WORLDWIDE",
 ];
 
-function TickerBanner({ items }: { items: string[] }) {
+function TickerBanner({ items, onOpen }: { items: string[]; onOpen: () => void }) {
   if (!items.length) return null;
   // Doubled so a translateX(-50%) loop is seamless — the second copy picks up
   // exactly where the first ends.
   const track = [...items, ...items];
   return (
-    <section className="ticker-banner" aria-hidden="true">
-      <div className="ticker-track">
+    <button className="ticker-banner" type="button" onClick={onOpen} aria-label="Shop the framed print collection">
+      <span className="ticker-track" aria-hidden="true">
         {track.map((text, i) => (
           <span className="ticker-item" key={i}>{text}</span>
         ))}
-      </div>
-    </section>
+      </span>
+    </button>
   );
 }
 
