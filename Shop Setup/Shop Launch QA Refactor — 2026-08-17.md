@@ -233,3 +233,13 @@ After the production deployment:
   fields as the gallery query. A photograph opened from the homepage therefore
   retains its `in_shop` state and shows the same “Order a print” action as when
   it is opened from Galleries or Map.
+
+## Restricted end-to-end checkout promotions
+
+- Stripe remains authoritative for percentage discounts and promotion-code
+  redemption limits.
+- A promotion carrying trusted Stripe metadata `free_shipping=true` also sets
+  the generated Checkout Session shipping rate to $0. Customer input cannot set
+  this flag; untagged promotions continue to discount merchandise only.
+- End-to-end test codes should be unguessable, limited to one redemption and
+  given a short expiry. Disable or archive them immediately after verification.

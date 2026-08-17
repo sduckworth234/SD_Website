@@ -76,6 +76,12 @@ export default async function handler(req, res) {
       promotion = result.data[0] ?? null;
       if (!promotion) throw new Error("That promotion code is not valid.");
     }
+    // Stripe coupons discount line-item subtotal, not Checkout's shipping
+    // option. A deliberately tagged promotion can additionally waive delivery;
+    // ordinary customer promotions remain subtotal-only. The flag lives on the
+    // Stripe promotion object, so a customer cannot inject it in the request.
+    const freeShippingPromotion = promotion?.metadata?.free_shipping === "true";
+    const chargedShippingCents = freeShippingPromotion ? 0 : shipping.cents;
 
     const lineItems = cart.map((item) => {
       const photo = photos.get(item.photoId);
@@ -95,7 +101,7 @@ export default async function handler(req, res) {
 
     const metadata = {
       cart_count: String(cart.length),
-      quote_source: shipping.source,
+      quote_source: freeShippingPromotion ? `${shipping.source}+promotion-free-shipping` : shipping.source,
       promotion_code: promoText,
       fulfilment_provider: provider,
       customer_name: customer.name,
@@ -120,7 +126,7 @@ export default async function handler(req, res) {
       shipping_options: [{
         shipping_rate_data: {
           type: "fixed_amount",
-          fixed_amount: { amount: shipping.cents, currency: "aud" },
+          fixed_amount: { amount: chargedShippingCents, currency: "aud" },
           display_name: "Tracked delivery within Australia",
           delivery_estimate: {
             minimum: { unit: "business_day", value: 3 },
@@ -151,8 +157,8 @@ export default async function handler(req, res) {
     json(res, 200, {
       clientSecret: session.client_secret,
       sessionId: session.id,
-      shippingCents: shipping.cents,
-      quoteSource: shipping.source,
+      shippingCents: chargedShippingCents,
+      quoteSource: freeShippingPromotion ? `${shipping.source}+promotion-free-shipping` : shipping.source,
     });
   } catch (error) {
     const message = safeError(error);
