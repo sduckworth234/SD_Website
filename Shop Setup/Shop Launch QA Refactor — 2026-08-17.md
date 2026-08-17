@@ -88,6 +88,11 @@ checklist in `Shop Checkout — Setup Handoff.md`.
   thumbnails and a compact ordered selection queue with move/remove controls.
 - Matched the visible vertical height of landscape and portrait oak frames in the
   Considered Collection on desktop and mobile without page-level overflow.
+- Automatic storefront mode now draws a fresh balanced portrait/landscape sample on
+  each visit, allowing the full sellable archive to cycle over time. Any explicitly
+  curated Studio or Considered selection remains fixed until an admin changes it.
+- Simplified the active gallery scope from “Showing …” to the collection/place path
+  and made the minimal **Clear selection ×** action visually unambiguous.
 - Added an expandable manual-workflow guide inside Admin → Shop Orders describing
   Start fulfilment, Mark shipped, Refund and Receipt at the point of use.
 

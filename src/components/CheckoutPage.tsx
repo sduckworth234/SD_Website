@@ -5,7 +5,8 @@ import { ArrowLeft, Check, LoaderCircle, Lock } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useCart } from "../lib/cart";
 import { trackAddShippingInfo, trackPurchase } from "../lib/analytics";
-import { colourById, CONTACT_EMAIL, money } from "../lib/printCatalogue";
+import { colourById, money } from "../lib/printCatalogue";
+import { usePublicContent } from "../lib/publicContent";
 import { useSeo } from "../lib/seo";
 import { supabase } from "../lib/supabase";
 
@@ -333,8 +334,9 @@ type CheckoutStatus = {
 
 export function CheckoutSuccessPage({ onNavigate }: { onNavigate: (path: string) => void }) {
   const cart = useCart();
-  useSeo("Order confirmation — Sam Duckworth Photography", {
-    description: "Your Sam Duckworth Photography order confirmation.",
+  const content = usePublicContent();
+  useSeo(`Order confirmation — ${content.siteName}`, {
+    description: `Your ${content.siteName} order confirmation.`,
     path: "/checkout/success",
     noindex: true,
   });
@@ -400,7 +402,7 @@ export function CheckoutSuccessPage({ onNavigate }: { onNavigate: (path: string)
           <section className="co-result-next" aria-labelledby="co-result-next-title">
             <h2 id="co-result-next-title">What happens next</h2>
             <p>Your print will be prepared to order. We’ll email you again when it has been dispatched with tracking details.</p>
-            <p>Need help? Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> or follow <a href="https://www.instagram.com/sam.duckworth/" target="_blank" rel="noreferrer">@sam.duckworth</a>.</p>
+            <p>Need help? Email <a href={`mailto:${content.publicEmail}`}>{content.publicEmail}</a> or follow <a href={content.instagramUrl} target="_blank" rel="noreferrer">@{content.instagramHandle}</a>.</p>
           </section>
           <div className="co-result-actions">
             <button onClick={() => go("/shop", onNavigate)} type="button">Continue shopping</button>

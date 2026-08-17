@@ -69,6 +69,7 @@ import {
   setSiteSetting,
   supabase,
   updateCollection,
+  updateLocationDetails,
   updatePhotoDetails,
   updatePhotoCuration,
   updatePhotoVisibility,
@@ -101,6 +102,7 @@ import { trackPageView, trackProductLinkClicked, trackSelectItem } from "./lib/a
 import { SIZES, money, priceFor } from "./lib/printCatalogue";
 import type { SizeId } from "./lib/printCatalogue";
 import { SHOP_FEATURE_ENABLED } from "./lib/features";
+import { savePublicContent, usePublicContent, type PublicContent } from "./lib/publicContent";
 
 // Lazy-loaded so MapLibre + the basemap stay out of the main gallery bundle.
 const MapPage = lazy(() => import("./MapPage"));
@@ -1521,6 +1523,15 @@ function balanceShopOrientations(photos: Photo[]) {
   return balanced;
 }
 
+function randomBalancedShopSelection(photos: Photo[], maximum: number) {
+  const shuffled = [...photos];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swap]] = [shuffled[swap], shuffled[index]];
+  }
+  return balanceShopOrientations(shuffled).slice(0, maximum);
+}
+
 function parseOrderedSetting(value?: string | null) {
   try {
     const parsed = value ? JSON.parse(value) : [];
@@ -1597,7 +1608,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   const curatedShopPhotos = useMemo(() => {
     const byId = new Map(shopPhotos.map((photo) => [photo.id, photo]));
     const selected = consideredIds.map((id) => byId.get(id)).filter((photo): photo is Photo => Boolean(photo));
-    return selected.length ? selected.slice(0, 15) : balanceShopOrientations(shopPhotos.slice(0, 15));
+    return selected.length ? selected.slice(0, 15) : randomBalancedShopSelection(shopPhotos, 15);
   }, [consideredIds, shopPhotos]);
   const filtered = filter === "All" ? curatedShopPhotos : curatedShopPhotos.filter((p) => region(p) === filter);
   const representedRegions = ["Europe", "Australia"].filter((candidate) => curatedShopPhotos.some((p) => region(p) === candidate));
@@ -1614,7 +1625,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
     const eligible = shopPhotos.filter((photo) => photo.aspect !== "square");
     const byId = new Map(eligible.map((photo) => [photo.id, photo]));
     const selected = studioIds.map((id) => byId.get(id)).filter((photo): photo is Photo => Boolean(photo));
-    return selected.length ? selected.slice(0, 6) : balanceShopOrientations(eligible).slice(0, 6);
+    return selected.length ? selected.slice(0, 6) : randomBalancedShopSelection(eligible, 6);
   }, [shopPhotos, studioIds]);
   const studioPhoto = studioPhotos[studioIndex % Math.max(studioPhotos.length, 1)];
   const studioOrientation = studioPhoto ? orientOf(studioPhoto) : "portrait";
@@ -1964,16 +1975,17 @@ function ShopProductRoute({ adminAccess = false, slug, onNavigate }: { adminAcce
 }
 
 function InstagramRail() {
+  const content = usePublicContent();
   return (
     <a
       className="ig-rail"
-      href="https://instagram.com/sam.duckworth"
+      href={content.instagramUrl}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Instagram: sam.duckworth"
+      aria-label={`Instagram: ${content.instagramHandle}`}
     >
       <Instagram size={16} aria-hidden="true" />
-      <span>sam.duckworth</span>
+      <span>{content.instagramHandle}</span>
     </a>
   );
 }
@@ -1985,6 +1997,7 @@ function InstagramRail() {
 // Light to match the rest of the page, with the caption always readable under
 // each post rather than on hover — so it behaves identically on a phone.
 function InstagramFeed({ posts }: { posts: InstagramPost[] }) {
+  const content = usePublicContent();
   const isPhone = useMediaQuery("(max-width: 760px)");
   const trackRef = useRef<HTMLDivElement | null>(null);
 
@@ -2001,7 +2014,7 @@ function InstagramFeed({ posts }: { posts: InstagramPost[] }) {
       <div className="ig-feed-head">
         <div className="ig-feed-id">
           <span className="ig-feed-handle">
-            <Instagram size={14} aria-hidden="true" /> @sam.duckworth
+            <Instagram size={14} aria-hidden="true" /> @{content.instagramHandle}
           </span>
           <h2 className="ig-feed-title">Latest on Instagram</h2>
         </div>
@@ -2018,7 +2031,7 @@ function InstagramFeed({ posts }: { posts: InstagramPost[] }) {
           ) : null}
           <a
             className="ig-feed-follow"
-            href="https://instagram.com/sam.duckworth"
+            href={content.instagramUrl}
             rel="noopener noreferrer"
             target="_blank"
           >
@@ -2495,6 +2508,7 @@ function HeroPicker({
 // place · title set small in the bottom-left corner. On mobile the photo fills
 // the screen (portrait) when flagged portrait-worthy, else letterboxes.
 function Hero({ photo, locations, isAdmin, rotate, onPickHero }: { photo?: Photo; locations: string[]; isAdmin: boolean; rotate: string; onPickHero: () => void }) {
+  const content = usePublicContent();
   const rotClass = rotate === "90" ? " rotate-90" : rotate === "270" ? " rotate-270" : "";
   return (
     <section className={`hero landing-stage cinematic${rotClass}`} id="top" aria-label="Sam Duckworth Photography">
@@ -2504,7 +2518,7 @@ function Hero({ photo, locations, isAdmin, rotate, onPickHero }: { photo?: Photo
         </div>
       ) : null}
       <div className="landing-copy scroll-reveal is-visible">
-        <p className="eyebrow">Aerial &amp; Landscape · Northern Beaches</p>
+        <p className="eyebrow">{content.heroEyebrow}</p>
         <h1>Sam Duckworth</h1>
         <RotatingLocations locations={locations} />
       </div>
@@ -2709,7 +2723,7 @@ function CollectionScope({
   return (
     <div className="collection-scope">
       <span className="scope-text">
-        Showing <b>{collectionTitle(collection)}</b>
+        <b>{collectionTitle(collection)}</b>
         {place ? (
           <>
             <span className="scope-sep" aria-hidden="true">›</span>
@@ -2718,7 +2732,7 @@ function CollectionScope({
         ) : null}
       </span>
       <span className="scope-count">{count === 1 ? "1 photo" : `${count} photos`}</span>
-      <button className="scope-clear" onClick={onClear} type="button">Clear</button>
+      <button className="scope-clear" onClick={onClear} type="button">Clear selection <span aria-hidden="true">×</span></button>
     </div>
   );
 }
@@ -3671,6 +3685,10 @@ function PlacesOrderAdmin({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
+  const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
+  const [locationDraft, setLocationDraft] = useState({ name: "", region: "", description: "" });
+  const [curatingLocation, setCuratingLocation] = useState<GalleryLocation | null>(null);
+  const [newPlace, setNewPlace] = useState({ name: "", region: "Northern Beaches" });
 
   // Adopt the server's order whenever it genuinely changes. A reload elsewhere
   // in the dashboard will discard unsaved moves — the server is the truth, and
@@ -3720,6 +3738,46 @@ function PlacesOrderAdmin({
     }
   }
 
+  function editLocation(location: GalleryLocation) {
+    setEditingLocationId(location.id);
+    setLocationDraft({ name: location.name, region: location.region, description: location.description ?? "" });
+  }
+
+  async function saveLocationDetails() {
+    if (!editingLocationId) return;
+    setBusy(true);
+    setError("");
+    try {
+      await updateLocationDetails(editingLocationId, locationDraft);
+      setOrder((current) => current.map((location) => location.id === editingLocationId
+        ? { ...location, name: locationDraft.name.trim(), region: locationDraft.region.trim(), description: locationDraft.description.trim() || null }
+        : location));
+      await onChanged();
+      setEditingLocationId(null);
+      setSaved(true);
+    } catch (editError) {
+      setError(editError instanceof Error ? editError.message : "Could not update the location.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addPlace() {
+    if (!newPlace.name.trim() || !newPlace.region.trim()) return;
+    setBusy(true);
+    setError("");
+    try {
+      await createLocation(newPlace.name, newPlace.region);
+      setNewPlace({ name: "", region: newPlace.region });
+      await onChanged();
+      setSaved(true);
+    } catch (addError) {
+      setError(addError instanceof Error ? addError.message : "Could not add the location.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <section className="admin-visibility" aria-label="Place order">
       <div className="admin-sec-head"><ArrowUpDown size={16} aria-hidden="true" /><h2>Place order</h2></div>
@@ -3728,12 +3786,18 @@ function PlacesOrderAdmin({
         gallery. Places with no published photos are listed here but never appear publicly.
         The phone list on the home page ignores this — it always shows the ten most recent places.
       </p>
+      <div className="place-new">
+        <label>New location<input placeholder="Location name" value={newPlace.name} onChange={(event) => setNewPlace((current) => ({ ...current, name: event.target.value }))} /></label>
+        <label>Region<input placeholder="Region" value={newPlace.region} onChange={(event) => setNewPlace((current) => ({ ...current, region: event.target.value }))} /></label>
+        <button className="solid-button" disabled={busy || !newPlace.name.trim() || !newPlace.region.trim()} onClick={addPlace} type="button"><Plus size={13} aria-hidden="true" /> Add location</button>
+      </div>
 
       <div className="place-order">
         {order.map((location, index) => {
           const count = counts.get(location.name) ?? 0;
           return (
-            <div className={`place-row${count ? "" : " is-empty"}`} key={location.id}>
+            <Fragment key={location.id}>
+            <div className={`place-row${count ? "" : " is-empty"}`}>
               <span className="place-pos">{index + 1}</span>
               <span className="place-id">
                 <b>{location.name}</b>
@@ -3743,6 +3807,8 @@ function PlacesOrderAdmin({
                 </span>
               </span>
               <span className="place-actions">
+                <button className="text-button" disabled={busy || !count} onClick={() => setCuratingLocation(location)} type="button">Card photos</button>
+                <button className="text-button" disabled={busy} onClick={() => editLocation(location)} type="button">Edit</button>
                 <button
                   aria-label={`Move ${location.name} up`}
                   className="icon-button"
@@ -3765,6 +3831,16 @@ function PlacesOrderAdmin({
                 </button>
               </span>
             </div>
+            {editingLocationId === location.id ? (
+              <div className="place-edit-panel">
+                <label>Name<input value={locationDraft.name} onChange={(event) => setLocationDraft((current) => ({ ...current, name: event.target.value }))} /></label>
+                <label>Region<input value={locationDraft.region} onChange={(event) => setLocationDraft((current) => ({ ...current, region: event.target.value }))} /></label>
+                <label className="place-edit-description">Public description<textarea rows={3} value={locationDraft.description} onChange={(event) => setLocationDraft((current) => ({ ...current, description: event.target.value }))} /></label>
+                <p>The existing URL slug stays unchanged when the display name changes, protecting shared links.</p>
+                <div><button className="solid-button" disabled={busy || !locationDraft.name.trim() || !locationDraft.region.trim()} onClick={saveLocationDetails} type="button">Save location</button><button className="text-button" disabled={busy} onClick={() => setEditingLocationId(null)} type="button">Cancel</button></div>
+              </div>
+            ) : null}
+            </Fragment>
           );
         })}
       </div>
@@ -3785,6 +3861,112 @@ function PlacesOrderAdmin({
         {saved && !dirty ? <span className="place-order-note is-ok">Order saved</span> : null}
         {error ? <span className="place-order-note is-bad">{error}</span> : null}
       </div>
+      {curatingLocation ? (
+        <OrderedPhotoPicker
+          title={`${curatingLocation.name} · homepage card`}
+          hint="Choose up to 5 published photographs to cycle in this location card. Leave the selection empty to use the latest work automatically."
+          max={5}
+          photos={photos.filter((photo) => photo.published && photo.location === curatingLocation.name)}
+          initialIds={photos
+            .filter((photo) => photo.location === curatingLocation.name && photo.collectionOrder != null)
+            .sort((a, b) => (a.collectionOrder ?? 0) - (b.collectionOrder ?? 0))
+            .map((photo) => photo.id)}
+          onClose={() => setCuratingLocation(null)}
+          onSave={async (ids) => {
+            await setCollectionPicks(curatingLocation.name, ids);
+            await onChanged();
+            setCuratingLocation(null);
+          }}
+        />
+      ) : null}
+    </section>
+  );
+}
+
+function HomepageDisplayAdmin({ photos, onChanged }: { photos: Photo[]; onChanged: () => Promise<void> }) {
+  const published = useMemo(() => photos.filter((photo) => photo.published), [photos]);
+  const [settings, setSettings] = useState<SiteSetting[]>([]);
+  const [recent, setRecent] = useState<Photo[]>([]);
+  const [picker, setPicker] = useState<"hero" | number | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const [nextSettings, nextRecent] = await Promise.all([getSiteSettings(), getRecentPhotos(8)]);
+    setSettings(nextSettings);
+    setRecent(nextRecent.slice(0, 8));
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const values = useMemo(() => Object.fromEntries(settings.map((setting) => [setting.key, setting.value])), [settings]);
+  const hero = published.find((photo) => photo.id === values.hero_photo)
+    ?? published.find((photo) => photo.featured && (photo.aspect === "landscape" || photo.aspect === "wide"))
+    ?? published[0];
+  const heroRotate = values.hero_mobile_rotate ?? "0";
+
+  async function saveHero(ids: string[]) {
+    if (!ids[0]) return;
+    setBusy(true);
+    try {
+      await setSiteSetting("hero_photo", ids[0]);
+      await load();
+      await onChanged();
+      setPicker(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveHeroRotation(rotate: string) {
+    setBusy(true);
+    try {
+      await setSiteSetting("hero_mobile_rotate", rotate === "0" ? null : rotate);
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveRecent(slot: number, ids: string[]) {
+    if (!ids[0]) return;
+    setBusy(true);
+    try {
+      await assignRecentSlot(slot, ids[0]);
+      await load();
+      await onChanged();
+      setPicker(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="homepage-display-admin" aria-label="Homepage displayed photographs">
+      <div className="admin-sec-head"><Images size={16} aria-hidden="true" /><h2>Opening hero & Recent Work</h2></div>
+      <p className="admin-sec-hint">The first photographs visitors meet. Each picker searches and filters the published archive in batches, so it stays manageable as the library grows.</p>
+      <div className="homepage-hero-admin">
+        <div className="homepage-hero-preview">{hero ? <SmartImage src={thumbUrl(hero, 1000)} alt={hero.title} /> : null}<span>Opening hero</span></div>
+        <div>
+          <b>{hero?.title ?? "No published hero"}</b>
+          <small>{hero ? `${hero.location} · ${hero.aspect}` : "Publish a photograph first"}</small>
+          <button className="solid-button" disabled={busy || !published.length} onClick={() => setPicker("hero")} type="button">Choose hero</button>
+          <label>Phone orientation<select value={heroRotate} disabled={busy} onChange={(event) => saveHeroRotation(event.target.value)}><option value="0">Natural crop</option><option value="90">Rotate 90°</option><option value="270">Rotate 270°</option></select></label>
+        </div>
+      </div>
+      <div className="homepage-recent-head"><div><b>Recent Work</b><span>Eight public mosaic positions</span></div><a href="/#galleries" target="_blank" rel="noreferrer">Preview section →</a></div>
+      <div className="homepage-recent-grid">
+        {Array.from({ length: 8 }, (_, index) => {
+          const photo = recent[index];
+          return (
+            <button key={index} className="homepage-recent-slot" disabled={busy || !published.length} onClick={() => setPicker(index + 1)} type="button">
+              {photo ? <SmartImage src={thumbUrl(photo, 360)} alt="" /> : <span>No photograph</span>}
+              <strong>{index + 1}</strong>
+              <small>{photo?.title ?? "Choose"}</small>
+            </button>
+          );
+        })}
+      </div>
+      {picker === "hero" ? <OrderedPhotoPicker title="Opening hero" hint="Choose the main homepage photograph. Use the phone-orientation control after saving if an aerial landscape should rotate vertically on mobile." max={1} photos={published} initialIds={hero ? [hero.id] : []} onClose={() => setPicker(null)} onSave={saveHero} /> : null}
+      {typeof picker === "number" ? <OrderedPhotoPicker title={`Recent Work · position ${picker}`} hint="Choose one published photograph for this exact homepage mosaic position." max={1} photos={published} initialIds={recent[picker - 1] ? [recent[picker - 1].id] : []} onClose={() => setPicker(null)} onSave={(ids) => saveRecent(picker, ids)} /> : null}
     </section>
   );
 }
@@ -4394,17 +4576,18 @@ function NotAdmin({ email }: { email: string }) {
   );
 }
 
-type AdminTab = "photos" | "collections" | "homepage" | "locations" | "shop" | "pricing" | "orders" | "settings";
+type AdminTab = "overview" | "homepage" | "collections" | "locations" | "shop" | "pricing" | "orders" | "content" | "photos";
 
 const ADMIN_TABS: { id: AdminTab; label: string; description: string; icon: ReactNode }[] = [
-  { id: "photos", label: "Photos", description: "Upload, publish and edit the archive", icon: <Images size={16} /> },
-  { id: "collections", label: "Collections", description: "Build and order gallery collections", icon: <LayoutGrid size={16} /> },
-  { id: "homepage", label: "Homepage", description: "Curate the homepage photo feed", icon: <LayoutDashboard size={16} /> },
-  { id: "locations", label: "Locations", description: "Arrange places and gallery order", icon: <MapPin size={16} /> },
-  { id: "shop", label: "Shop", description: "Choose which photographs are for sale", icon: <Frame size={16} /> },
-  { id: "pricing", label: "Pricing", description: "Sell prices, live Prodigi cost and margin", icon: <DollarSign size={16} /> },
-  { id: "orders", label: "Shop Orders", description: "Payments, fulfilment, tracking and refunds", icon: <PackageCheck size={16} /> },
-  { id: "settings", label: "Site settings", description: "Visibility, banners and feature switches", icon: <Eye size={16} /> },
+  { id: "overview", label: "Overview", description: "Website status and quick actions", icon: <LayoutDashboard size={16} /> },
+  { id: "homepage", label: "Homepage", description: "Sections, hero images and displayed work", icon: <Eye size={16} /> },
+  { id: "collections", label: "Galleries & collections", description: "Build and order visitor galleries", icon: <LayoutGrid size={16} /> },
+  { id: "locations", label: "Map & locations", description: "Places, ordering and map presentation", icon: <MapPin size={16} /> },
+  { id: "shop", label: "Shop presentation", description: "Storefront images, catalogue and fulfilment", icon: <Frame size={16} /> },
+  { id: "pricing", label: "Products & pricing", description: "Sell prices, Prodigi cost and margins", icon: <DollarSign size={16} /> },
+  { id: "orders", label: "Orders", description: "Payments, fulfilment, tracking and refunds", icon: <PackageCheck size={16} /> },
+  { id: "content", label: "About & contact", description: "Identity, biography, contact and footer", icon: <Globe size={16} /> },
+  { id: "photos", label: "Media archive", description: "Upload, publish and edit all photographs", icon: <Images size={16} /> },
 ];
 
 // Print-quality readiness, shown wherever admin decides what to sell or edits
@@ -4598,6 +4781,10 @@ function ShopCatalogueAdmin({
     [photos],
   );
   const studioCandidates = useMemo(() => sellablePhotos.filter((photo) => photo.aspect !== "square"), [sellablePhotos]);
+  const automaticStorefront = useMemo(() => ({
+    considered: randomBalancedShopSelection(sellablePhotos, 15),
+    studio: randomBalancedShopSelection(studioCandidates, 6),
+  }), [sellablePhotos, studioCandidates]);
 
   async function saveStorefrontSelection(kind: "considered" | "studio", ids: string[]) {
     const candidates = kind === "studio" ? studioCandidates : sellablePhotos;
@@ -4733,9 +4920,8 @@ function ShopCatalogueAdmin({
           <div className="shop-curation-grid">
             {(["studio", "considered"] as const).map((kind) => {
               const candidates = kind === "studio" ? studioCandidates : sellablePhotos;
-              const maximum = kind === "studio" ? 6 : 15;
               const saved = storefrontSettings[kind];
-              const selected = (saved.length ? saved.map((id) => candidates.find((photo) => photo.id === id)).filter(Boolean) : candidates.slice(0, maximum)) as Photo[];
+              const selected = (saved.length ? saved.map((id) => candidates.find((photo) => photo.id === id)).filter(Boolean) : automaticStorefront[kind]) as Photo[];
               const portraits = selected.filter((photo) => photo.aspect === "portrait").length;
               const landscapes = selected.filter((photo) => photo.aspect === "landscape" || photo.aspect === "wide").length;
               return (
@@ -4755,7 +4941,7 @@ function ShopCatalogueAdmin({
                     {!selected.length ? <p>No eligible photographs yet.</p> : null}
                   </div>
                   <div className="shop-curation-meta">
-                    <span>{saved.length ? `${selected.length} selected` : `Automatic mix · first ${Math.min(candidates.length, maximum)}`}</span>
+                    <span>{saved.length ? `${selected.length} selected` : `Automatic mix · balanced shuffle each visit`}</span>
                     <span>{portraits} portrait · {landscapes} landscape</span>
                   </div>
                   <div className="shop-curation-actions">
@@ -4869,9 +5055,7 @@ function ShopCatalogueAdmin({
           photos={storefrontPicker === "studio" ? studioCandidates : sellablePhotos}
           initialIds={storefrontSettings[storefrontPicker].length
             ? storefrontSettings[storefrontPicker]
-            : (storefrontPicker === "studio" ? studioCandidates : sellablePhotos)
-              .slice(0, storefrontPicker === "studio" ? 6 : 15)
-              .map((photo) => photo.id)}
+            : automaticStorefront[storefrontPicker].map((photo) => photo.id)}
           onClose={() => setStorefrontPicker(null)}
           onSave={(ids) => saveStorefrontSelection(storefrontPicker, ids)}
         />
@@ -5064,8 +5248,99 @@ function PricingAdmin({ session, setMessage }: { session: Session; setMessage: (
   );
 }
 
+function SiteContentAdmin({ setMessage }: { setMessage: (message: string) => void }) {
+  const liveContent = usePublicContent();
+  const [draft, setDraft] = useState<PublicContent>(liveContent);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => setDraft(liveContent), [liveContent]);
+
+  function field<K extends keyof PublicContent>(key: K, value: PublicContent[K]) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  async function save(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const saved = await savePublicContent(draft);
+      setDraft(saved);
+      setMessage("Public identity, About, contact and footer content updated.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Site content could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form className="content-admin" onSubmit={save}>
+      <div className="admin-section-intro">
+        <div>
+          <p className="eyebrow">Public content</p>
+          <h2>Identity, About and contact.</h2>
+          <p>Structured fields update the visitor site immediately. Operational recipients and API credentials remain safely server-side.</p>
+        </div>
+        <a className="text-button" href="/" target="_blank" rel="noreferrer">Preview website →</a>
+      </div>
+
+      <div className="content-admin-grid">
+        <fieldset className="content-admin-card">
+          <legend>Identity & social</legend>
+          <label>Business name<input required maxLength={100} value={draft.siteName} onChange={(event) => field("siteName", event.target.value)} /></label>
+          <label>Public email<input required type="email" maxLength={254} value={draft.publicEmail} onChange={(event) => field("publicEmail", event.target.value)} /></label>
+          <label>Instagram handle<input required maxLength={80} value={draft.instagramHandle} onChange={(event) => field("instagramHandle", event.target.value)} /></label>
+          <label>Instagram URL<input required type="url" maxLength={500} value={draft.instagramUrl} onChange={(event) => field("instagramUrl", event.target.value)} /></label>
+          <label>Footer label<input required maxLength={100} value={draft.footerLabel} onChange={(event) => field("footerLabel", event.target.value)} /></label>
+        </fieldset>
+
+        <fieldset className="content-admin-card">
+          <legend>Homepage opening</legend>
+          <label>Hero eyebrow<input required maxLength={160} value={draft.heroEyebrow} onChange={(event) => field("heroEyebrow", event.target.value)} /></label>
+          <div className="content-live-preview">
+            <span>{draft.heroEyebrow}</span>
+            <strong>Sam Duckworth</strong>
+            <small>Live typography preview</small>
+          </div>
+          <p>Hero, campaign, Recent Work, map, location-card and shop-banner photographs are curated in the Homepage tab.</p>
+        </fieldset>
+
+        <fieldset className="content-admin-card content-admin-wide">
+          <legend>About</legend>
+          <div className="content-about-layout">
+            <div className="content-portrait-preview"><img src={draft.aboutPortraitPath} alt="Current About portrait" /></div>
+            <div>
+              <label>Eyebrow<input required maxLength={80} value={draft.aboutEyebrow} onChange={(event) => field("aboutEyebrow", event.target.value)} /></label>
+              <label>Heading<input required maxLength={100} value={draft.aboutHeading} onChange={(event) => field("aboutHeading", event.target.value)} /></label>
+              <label>Portrait path<input required maxLength={500} value={draft.aboutPortraitPath} onChange={(event) => field("aboutPortraitPath", event.target.value)} /><small>Use a public path such as /about-sam.webp. Managed portrait uploads are the next media-library step.</small></label>
+            </div>
+          </div>
+          <label>Introduction<textarea required maxLength={500} rows={3} value={draft.aboutIntro} onChange={(event) => field("aboutIntro", event.target.value)} /></label>
+          <label>Biography<textarea required maxLength={2000} rows={6} value={draft.aboutBody} onChange={(event) => field("aboutBody", event.target.value)} /></label>
+        </fieldset>
+
+        <fieldset className="content-admin-card content-admin-wide">
+          <legend>Contact</legend>
+          <div className="content-fields-two">
+            <label>Eyebrow<input required maxLength={80} value={draft.contactEyebrow} onChange={(event) => field("contactEyebrow", event.target.value)} /></label>
+            <label>Form heading<input required maxLength={140} value={draft.contactHeading} onChange={(event) => field("contactHeading", event.target.value)} /></label>
+            <label>Form introduction<textarea required maxLength={600} rows={3} value={draft.contactIntro} onChange={(event) => field("contactIntro", event.target.value)} /></label>
+            <label>Homepage prompt heading<input required maxLength={140} value={draft.contactPromptHeading} onChange={(event) => field("contactPromptHeading", event.target.value)} /></label>
+            <label>Homepage prompt body<textarea required maxLength={400} rows={3} value={draft.contactPromptBody} onChange={(event) => field("contactPromptBody", event.target.value)} /></label>
+          </div>
+        </fieldset>
+      </div>
+
+      <div className="content-admin-save">
+        <span>Changes appear publicly as soon as they are saved.</span>
+        <button className="solid-button" type="submit" disabled={saving}>{saving ? "Saving…" : "Save public content"}</button>
+      </div>
+    </form>
+  );
+}
+
 function AdminDashboard({ session }: { session: Session }) {
-  const [activeTab, setActiveTab] = useState<AdminTab>("photos");
+  const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [locations, setLocations] = useState<GalleryLocation[]>([]);
   const [adminPhotos, setAdminPhotos] = useState<Photo[]>([]);
   const [activeLocation, setActiveLocation] =
@@ -5261,7 +5536,7 @@ function AdminDashboard({ session }: { session: Session }) {
       <div className="admin-title">
         <div>
           <p className="eyebrow">Admin</p>
-          <h1>Manage the photo archive.</h1>
+          <h1>Manage the website.</h1>
           <p>{session.user.email}</p>
         </div>
         <button className="text-button" onClick={signOut} type="button">
@@ -5285,10 +5560,40 @@ function AdminDashboard({ session }: { session: Session }) {
       {message ? (
         <div className="admin-toast" role="status" onClick={() => setMessage("")}>{message}</div>
       ) : null}
+      {activeTab === "overview" ? (
+        <section className="admin-overview" aria-label="Website management overview">
+          <div className="admin-section-intro">
+            <div><p className="eyebrow">Website overview</p><h2>Edit by visitor page.</h2><p>Start with what a visitor sees, then move to the underlying archive or commerce tools only when you need them.</p></div>
+            <a className="text-button" href="/" target="_blank" rel="noreferrer">View public website →</a>
+          </div>
+          <div className="admin-overview-stats">
+            <span><b>{adminPhotos.filter((photo) => photo.published).length}</b> published photographs</span>
+            <span><b>{adminPhotos.filter((photo) => photo.inShop && photo.published).length}</b> available as prints</span>
+            <span><b>{locations.length}</b> public locations</span>
+          </div>
+          <div className="admin-overview-grid">
+            {ADMIN_TABS.filter((tab) => tab.id !== "overview").map((tab) => (
+              <button type="button" key={tab.id} onClick={() => setActiveTab(tab.id)}>
+                <span>{tab.icon}</span><b>{tab.label}</b><small>{tab.description}</small><em>Open →</em>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
       {activeTab === "collections" ? <CollectionsAdmin photos={adminPhotos} /> : null}
-      {activeTab === "homepage" ? <MapFeedAdmin photos={adminPhotos} locations={locations} onChanged={refresh} /> : null}
+      {activeTab === "homepage" ? (
+        <div className="admin-page-stack">
+          <div className="admin-page-guide">
+            <div><p className="eyebrow">Homepage</p><h2>Work from top to bottom.</h2><p>Visibility and displayed-image controls follow the visitor journey: opening campaign, Recent Work, map, place cards, framed editions, contact and Instagram.</p></div>
+            <a href="/" target="_blank" rel="noreferrer">Preview homepage →</a>
+          </div>
+          <HomepageDisplayAdmin photos={adminPhotos} onChanged={refresh} />
+          <VisibilityAdmin photos={adminPhotos} locations={locations} />
+          <MapFeedAdmin photos={adminPhotos} locations={locations} onChanged={refresh} />
+        </div>
+      ) : null}
       {activeTab === "locations" ? <PlacesOrderAdmin locations={locations} photos={adminPhotos} onChanged={refresh} /> : null}
-      {activeTab === "settings" ? <VisibilityAdmin photos={adminPhotos} locations={locations} /> : null}
+      {activeTab === "content" ? <SiteContentAdmin setMessage={setMessage} /> : null}
       {activeTab === "shop" ? (
         <ShopCatalogueAdmin photos={adminPhotos} onChanged={refresh} session={session} setMessage={setMessage} />
       ) : null}
@@ -6315,6 +6620,7 @@ function BatchRow({
 }
 
 function AboutOverlay({ onClose }: { onClose: () => void }) {
+  const content = usePublicContent();
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -6331,20 +6637,13 @@ function AboutOverlay({ onClose }: { onClose: () => void }) {
           <X size={18} aria-hidden="true" />
         </button>
         <div className="about-portrait">
-          <img src="/about-sam.webp" alt="Sam Duckworth" loading="lazy" decoding="async" />
+          <img src={content.aboutPortraitPath} alt={content.aboutHeading} loading="lazy" decoding="async" />
         </div>
         <div className="about-copy">
-          <p className="eyebrow">About Me</p>
-          <h2>Sam Duckworth</h2>
-          <p>
-            Photographer and videographer, born in Manly and based on Sydney's
-            Northern Beaches.
-          </p>
-          <p>
-            I have been taking photographs for more than ten years. I especially
-            enjoy aerial photography, whether I am creating work for prints,
-            helping commercial businesses, or shooting simply because I love it.
-          </p>
+          <p className="eyebrow">{content.aboutEyebrow}</p>
+          <h2>{content.aboutHeading}</h2>
+          <p>{content.aboutIntro}</p>
+          <p>{content.aboutBody}</p>
         </div>
       </section>
     </div>
@@ -6353,11 +6652,12 @@ function AboutOverlay({ onClose }: { onClose: () => void }) {
 
 // Small "let's work together" prompt beneath the home print-shop banner.
 function ContactPrompt({ onOpen }: { onOpen: () => void }) {
+  const content = usePublicContent();
   return (
     <section className="contact-prompt scroll-reveal" aria-label="Contact">
-      <p className="eyebrow">Get in touch</p>
-      <h2>Let&rsquo;s work together.</h2>
-      <p className="contact-lead">Commissions, prints &amp; licensing enquiries — say hello.</p>
+      <p className="eyebrow">{content.contactEyebrow}</p>
+      <h2>{content.contactPromptHeading}</h2>
+      <p className="contact-lead">{content.contactPromptBody}</p>
       <button className="solid-button" type="button" onClick={onOpen}>Contact me</button>
     </section>
   );
@@ -6384,11 +6684,12 @@ function NotFound({ onNavigate }: { onNavigate: (route: string) => void }) {
 }
 
 function Footer() {
+  const content = usePublicContent();
   return (
     <footer className="site-footer">
-      <span>SD Gallery</span>
-      <a className="footer-ig" href="https://instagram.com/sam.duckworth" target="_blank" rel="noopener noreferrer" aria-label="Instagram: sam.duckworth">
-        <Instagram size={15} aria-hidden="true" /> sam.duckworth
+      <span>{content.footerLabel}</span>
+      <a className="footer-ig" href={content.instagramUrl} target="_blank" rel="noopener noreferrer" aria-label={`Instagram: ${content.instagramHandle}`}>
+        <Instagram size={15} aria-hidden="true" /> {content.instagramHandle}
       </a>
       <a className="footer-admin" href="/admin" title="Site access">Photography by Sam Duckworth</a>
     </footer>

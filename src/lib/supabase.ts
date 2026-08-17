@@ -655,6 +655,27 @@ export async function createLocation(name: string, region = "Northern Beaches") 
   if (error) throw error;
 }
 
+export async function updateLocationDetails(
+  locationId: string,
+  input: { name: string; region: string; description?: string | null },
+) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const name = input.name.trim();
+  const region = input.region.trim();
+  if (!name) throw new Error("A location needs a name.");
+  if (!region) throw new Error("A location needs a region.");
+
+  // The slug intentionally stays unchanged when a display name is edited so
+  // existing gallery URLs and external links do not break unexpectedly.
+  const { data, error } = await supabase
+    .from("locations")
+    .update({ name, region, description: input.description?.trim() || null })
+    .eq("id", locationId)
+    .select("id");
+  if (error) throw error;
+  if (!data?.length) throw new Error("The location was not updated.");
+}
+
 // Find a location by name (case-insensitive), creating it if absent, and return
 // its id. Used by the batch uploader to resolve a reverse-geocoded or manually
 // typed location name into a real row in one call. Mirrors ensureLocation in

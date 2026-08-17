@@ -1,8 +1,8 @@
 import { useSeo } from "../lib/seo";
+import { usePublicContent } from "../lib/publicContent";
 
 export type LegalPageId = "privacy" | "terms" | "shipping" | "returns";
 
-const CONTACT_EMAIL = "samduckworthphoto@gmail.com";
 const LEGAL_LINKS: ReadonlyArray<{ id: LegalPageId; label: string }> = [
   { id: "shipping", label: "Shipping" },
   { id: "returns", label: "Returns & damaged orders" },
@@ -21,13 +21,14 @@ export function LegalNav({ className = "" }: { className?: string }) {
 }
 
 export function ShopLegalFooter({ className = "" }: { className?: string }) {
+  const content = usePublicContent();
   return (
     <footer className={`shop-legal-footer ${className}`.trim()}>
       <LegalNav />
       <p>
-        Questions? Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+        Questions? Email <a href={`mailto:${content.publicEmail}`}>{content.publicEmail}</a>.
       </p>
-      <p>© {new Date().getFullYear()} Sam Duckworth Photography</p>
+      <p>© {new Date().getFullYear()} {content.siteName}</p>
     </footer>
   );
 }
@@ -43,8 +44,9 @@ function PolicyShell({
   intro: string;
   children: React.ReactNode;
 }) {
-  useSeo(`${title} — Sam Duckworth Photography`, {
-    description: `${intro} Shop policies for made-to-order photography prints from Sam Duckworth Photography.`,
+  const content = usePublicContent();
+  useSeo(`${title} — ${content.siteName}`, {
+    description: `${intro} Shop policies for made-to-order photography prints from ${content.siteName}.`,
     path: `/shop/policies/${id}`,
   });
 
@@ -52,7 +54,7 @@ function PolicyShell({
     <main className="legal-page">
       <a className="legal-page__back" href="/shop">← Back to the shop</a>
       <article className="legal-page__article">
-        <p className="legal-page__eyebrow">Sam Duckworth Photography</p>
+        <p className="legal-page__eyebrow">{content.siteName}</p>
         <h1>{title}</h1>
         <p className="legal-page__updated">Last updated 17 August 2026</p>
         <p className="legal-page__intro">{intro}</p>
@@ -60,7 +62,7 @@ function PolicyShell({
         <section>
           <h2>Contact</h2>
           <p>
-            Email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> with your order
+            Email <a href={`mailto:${content.publicEmail}`}>{content.publicEmail}</a> with your order
             number and we’ll help.
           </p>
         </section>

@@ -1,17 +1,18 @@
 import { Check, LoaderCircle, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { trackContactFormOpened, trackContactFormSubmitted } from "../lib/analytics";
-import { CONTACT_EMAIL } from "../lib/printCatalogue";
+import { usePublicContent } from "../lib/publicContent";
 
 export function ContactOverlay({
   context = "Website enquiry",
-  intro = "Commissions, prints and licensing — drop a note and Sam will get back to you.",
+  intro,
   onClose,
 }: {
   context?: string;
   intro?: string;
   onClose: () => void;
 }) {
+  const content = usePublicContent();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
@@ -67,9 +68,9 @@ export function ContactOverlay({
           </div>
         ) : (
           <>
-            <p className="eyebrow">Get in touch</p>
-            <h2 id="contact-title">Ask Sam directly.</h2>
-            <p className="contact-lead">{intro}</p>
+            <p className="eyebrow">{content.contactEyebrow}</p>
+            <h2 id="contact-title">{content.contactHeading}</h2>
+            <p className="contact-lead">{intro ?? content.contactIntro}</p>
             <form className="contact-form" onSubmit={submit}>
               <label>Name
                 <input ref={nameRef} value={name} onChange={(event) => setName(event.target.value)} type="text" autoComplete="name" placeholder="Your name" required minLength={2} />
@@ -86,7 +87,7 @@ export function ContactOverlay({
                 {status === "sending" ? <><LoaderCircle className="spin" size={15} aria-hidden="true" /> Sending…</> : "Send message"}
               </button>
             </form>
-            <p className="contact-alt">Prefer your own email app? <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></p>
+            <p className="contact-alt">Prefer your own email app? <a href={`mailto:${content.publicEmail}`}>{content.publicEmail}</a></p>
           </>
         )}
       </section>

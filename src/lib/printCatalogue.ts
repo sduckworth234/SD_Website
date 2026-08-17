@@ -7,7 +7,6 @@
 
 // Where enquiry emails go — the contact popup (App.tsx) and the shop product
 // page's "need help?" card both compose to this inbox.
-export const CONTACT_EMAIL = "samduckworthphoto@gmail.com";
 
 export type SizeId = "A5" | "A4" | "A3" | "A2" | "A1";
 
