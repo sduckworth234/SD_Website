@@ -1,5 +1,6 @@
 import { CheckoutElementsProvider, PaymentElement, ShippingAddressElement, useCheckoutElements } from "@stripe/react-stripe-js/checkout";
 import { loadStripe } from "@stripe/stripe-js";
+import type { StripeCheckoutSession } from "@stripe/stripe-js";
 import { ArrowLeft, Check, LoaderCircle, Lock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useCart } from "../lib/cart";
@@ -40,12 +41,32 @@ const EMPTY_CUSTOMER: Customer = {
   phone: "",
 };
 
+type CheckoutTotals = {
+  subtotal: number;
+  shipping: number;
+  discount: number;
+  total: number;
+  promotionCode: string | null;
+};
+
+function totalsFromStripe(session: StripeCheckoutSession): CheckoutTotals {
+  const divisor = session.minorUnitsAmountDivisor || 100;
+  const promotion = session.discountAmounts?.find((discount) => discount.promotionCode);
+  return {
+    subtotal: session.total.subtotal.minorUnitsAmount / divisor,
+    shipping: session.total.shippingRate.minorUnitsAmount / divisor,
+    discount: session.total.discount.minorUnitsAmount / divisor,
+    total: session.total.total.minorUnitsAmount / divisor,
+    promotionCode: promotion?.promotionCode ?? null,
+  };
+}
+
 function go(path: string, onNavigate: (path: string) => void) {
   window.history.pushState({}, "", path);
   onNavigate(path);
 }
 
-function PaymentStep({ onBack }: { onBack: () => void }) {
+function PaymentStep({ onBack, onTotalsChange }: { onBack: () => void; onTotalsChange: (totals: CheckoutTotals) => void }) {
   const checkoutState = useCheckoutElements();
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -61,6 +82,20 @@ function PaymentStep({ onBack }: { onBack: () => void }) {
     const timer = window.setTimeout(() => setLoadTimedOut(true), 12_000);
     return () => window.clearTimeout(timer);
   }, [checkoutState.type]);
+
+  const stripeSession = checkoutState.type === "success" ? checkoutState.checkout : null;
+  const subtotalMinor = stripeSession?.total.subtotal.minorUnitsAmount;
+  const shippingMinor = stripeSession?.total.shippingRate.minorUnitsAmount;
+  const discountMinor = stripeSession?.total.discount.minorUnitsAmount;
+  const totalMinor = stripeSession?.total.total.minorUnitsAmount;
+  const promotionCode = stripeSession?.discountAmounts?.find((discount) => discount.promotionCode)?.promotionCode ?? null;
+
+  useEffect(() => {
+    if (stripeSession) onTotalsChange(totalsFromStripe(stripeSession));
+    // Stripe emits a new session whenever its totals change. Depending only on
+    // the monetary values avoids feeding parent renders back into this effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subtotalMinor, shippingMinor, discountMinor, totalMinor, promotionCode, onTotalsChange]);
 
   if (checkoutState.type === "loading") return loadTimedOut ? (
     <div className="co-payment-failed" role="alert">
@@ -79,7 +114,10 @@ function PaymentStep({ onBack }: { onBack: () => void }) {
     setMessage("");
     const result = await checkout.applyPromotionCode(code);
     if (result.type === "error") setMessage(result.error.message || "That promotion code is not valid.");
-    else setMessage(`${code.toUpperCase()} applied.`);
+    else {
+      onTotalsChange(totalsFromStripe(result.session));
+      setMessage(`${code.toUpperCase()} applied.`);
+    }
     setPromoWorking(false);
   }
 
@@ -125,6 +163,7 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
   const [clientSecret, setClientSecret] = useState("");
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
+  const [stripeTotals, setStripeTotals] = useState<CheckoutTotals | null>(null);
 
   const options = useMemo(() => clientSecret ? {
     clientSecret,
@@ -135,6 +174,7 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
     event.preventDefault();
     setStarting(true);
     setError("");
+    setStripeTotals(null);
     try {
       const accessToken = supabase ? (await supabase.auth.getSession()).data.session?.access_token : null;
       const response = await fetch("/api/create-checkout-session", {
@@ -181,7 +221,7 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
             <div className="co-empty"><p>Your cart is empty.</p><button onClick={() => go("/shop", onNavigate)} type="button">Return to the shop</button></div>
           ) : clientSecret && options ? (
             <CheckoutElementsProvider options={options} stripe={stripePromise}>
-              <PaymentStep onBack={() => setClientSecret("")} />
+              <PaymentStep onBack={() => { setClientSecret(""); setStripeTotals(null); }} onTotalsChange={setStripeTotals} />
             </CheckoutElementsProvider>
           ) : (
             <form className="co-details" onSubmit={continueToPayment}>
@@ -201,7 +241,12 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
           <div className="co-summary-items">
             {cart.items.map((item, index) => <div className="co-summary-item" key={`${item.photoId}-${index}`}><img alt="" src={item.thumb} /><div><b>{item.title}</b><span>{item.size} · {colourById(item.colour).label} · {item.mounted ? "Mounted" : "Unmounted"}</span></div><strong>{money(item.price)}</strong></div>)}
           </div>
-          <div className="co-summary-lines"><p><span>Subtotal</span><span>{money(cart.subtotal)}</span></p><p><span>Estimated delivery</span><span>{money(cart.shipping)}</span></p><p className="total"><span>Estimated total</span><span>{money(cart.subtotal + cart.shipping)}</span></p></div>
+          <div className="co-summary-lines">
+            <p><span>Subtotal</span><span>{money(stripeTotals?.subtotal ?? cart.subtotal)}</span></p>
+            {stripeTotals?.discount ? <p className="discount"><span>{stripeTotals.promotionCode ? `Promotion (${stripeTotals.promotionCode})` : "Promotion discount"}</span><span>−{money(stripeTotals.discount)}</span></p> : null}
+            <p><span>{stripeTotals ? "Delivery" : "Estimated delivery"}</span><span>{money(stripeTotals?.shipping ?? cart.shipping)}</span></p>
+            <p className="total"><span>{stripeTotals ? "Total" : "Estimated total"}</span><span>{money(stripeTotals?.total ?? cart.subtotal + cart.shipping)}</span></p>
+          </div>
           <div className="co-hold"><Check size={15} /><p><b>45-minute change window</b><span>Paid orders pause before going to the print lab.</span></p></div>
           <p className="co-summary-note">The secure payment step confirms the live delivery price and any promotion code.</p>
         </aside>
