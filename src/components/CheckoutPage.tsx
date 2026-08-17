@@ -2,7 +2,7 @@ import { CheckoutElementsProvider, PaymentElement, ShippingAddressElement, useCh
 import { loadStripe } from "@stripe/stripe-js";
 import type { StripeCheckoutSession } from "@stripe/stripe-js";
 import { ArrowLeft, Check, LoaderCircle, Lock } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useCart } from "../lib/cart";
 import { colourById, money } from "../lib/printCatalogue";
 import { supabase } from "../lib/supabase";
@@ -66,7 +66,7 @@ function go(path: string, onNavigate: (path: string) => void) {
   onNavigate(path);
 }
 
-function PaymentStep({ onBack, onTotalsChange }: { onBack: () => void; onTotalsChange: (totals: CheckoutTotals) => void }) {
+function PaymentStep({ onBack }: { onBack: () => void }) {
   const checkoutState = useCheckoutElements();
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
@@ -82,20 +82,6 @@ function PaymentStep({ onBack, onTotalsChange }: { onBack: () => void; onTotalsC
     const timer = window.setTimeout(() => setLoadTimedOut(true), 12_000);
     return () => window.clearTimeout(timer);
   }, [checkoutState.type]);
-
-  const stripeSession = checkoutState.type === "success" ? checkoutState.checkout : null;
-  const subtotalMinor = stripeSession?.total.subtotal.minorUnitsAmount;
-  const shippingMinor = stripeSession?.total.shippingRate.minorUnitsAmount;
-  const discountMinor = stripeSession?.total.discount.minorUnitsAmount;
-  const totalMinor = stripeSession?.total.total.minorUnitsAmount;
-  const promotionCode = stripeSession?.discountAmounts?.find((discount) => discount.promotionCode)?.promotionCode ?? null;
-
-  useEffect(() => {
-    if (stripeSession) onTotalsChange(totalsFromStripe(stripeSession));
-    // Stripe emits a new session whenever its totals change. Depending only on
-    // the monetary values avoids feeding parent renders back into this effect.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subtotalMinor, shippingMinor, discountMinor, totalMinor, promotionCode, onTotalsChange]);
 
   if (checkoutState.type === "loading") return loadTimedOut ? (
     <div className="co-payment-failed" role="alert">
@@ -114,10 +100,7 @@ function PaymentStep({ onBack, onTotalsChange }: { onBack: () => void; onTotalsC
     setMessage("");
     const result = await checkout.applyPromotionCode(code);
     if (result.type === "error") setMessage(result.error.message || "That promotion code is not valid.");
-    else {
-      onTotalsChange(totalsFromStripe(result.session));
-      setMessage(`${code.toUpperCase()} applied.`);
-    }
+    else setMessage(`${code.toUpperCase()} applied.`);
     setPromoWorking(false);
   }
 
@@ -157,13 +140,52 @@ function PaymentStep({ onBack, onTotalsChange }: { onBack: () => void; onTotalsC
   );
 }
 
+type CartState = ReturnType<typeof useCart>;
+
+function OrderSummary({ cart, totals }: { cart: CartState; totals?: CheckoutTotals | null }) {
+  return (
+    <aside className="co-summary">
+      <p className="co-summary-title">Your order <span>{cart.items.length}</span></p>
+      <div className="co-summary-items">
+        {cart.items.map((item, index) => <div className="co-summary-item" key={`${item.photoId}-${index}`}><img alt="" src={item.thumb} /><div><b>{item.title}</b><span>{item.size} · {colourById(item.colour).label} · {item.mounted ? "Mounted" : "Unmounted"}</span></div><strong>{money(item.price)}</strong></div>)}
+      </div>
+      <div className="co-summary-lines">
+        <p><span>Subtotal</span><span>{money(totals?.subtotal ?? cart.subtotal)}</span></p>
+        {totals?.discount ? <p className="discount"><span>{totals.promotionCode ? `Promotion (${totals.promotionCode})` : "Promotion discount"}</span><span>−{money(totals.discount)}</span></p> : null}
+        <p><span>{totals ? "Delivery" : "Estimated delivery"}</span><span>{money(totals?.shipping ?? cart.shipping)}</span></p>
+        <p className="total"><span>{totals ? "Total" : "Estimated total"}</span><span>{money(totals?.total ?? cart.subtotal + cart.shipping)}</span></p>
+      </div>
+      <div className="co-hold"><Check size={15} /><p><b>45-minute change window</b><span>Paid orders pause before going to the print lab.</span></p></div>
+      <p className="co-summary-note">The secure payment step confirms the live delivery price and any promotion code.</p>
+    </aside>
+  );
+}
+
+function StripeOrderSummary({ cart }: { cart: CartState }) {
+  const checkoutState = useCheckoutElements();
+  const totals = checkoutState.type === "success" ? totalsFromStripe(checkoutState.checkout) : null;
+  return <OrderSummary cart={cart} totals={totals} />;
+}
+
+function CheckoutLayout({ children, summary }: { children: ReactNode; summary: ReactNode }) {
+  return (
+    <div className="co-layout">
+      <section className="co-main">
+        <p className="co-kicker">Sam Duckworth Photography</p>
+        <h1>Complete your order.</h1>
+        {children}
+      </section>
+      {summary}
+    </div>
+  );
+}
+
 export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => void }) {
   const cart = useCart();
   const [customer, setCustomer] = useState<Customer>(EMPTY_CUSTOMER);
   const [clientSecret, setClientSecret] = useState("");
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
-  const [stripeTotals, setStripeTotals] = useState<CheckoutTotals | null>(null);
 
   const options = useMemo(() => clientSecret ? {
     clientSecret,
@@ -174,7 +196,6 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
     event.preventDefault();
     setStarting(true);
     setError("");
-    setStripeTotals(null);
     try {
       const accessToken = supabase ? (await supabase.auth.getSession()).data.session?.access_token : null;
       const response = await fetch("/api/create-checkout-session", {
@@ -212,17 +233,17 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
         <div className="co-brand">SD</div>
         <span>Checkout</span>
       </header>
-      <div className="co-layout">
-        <section className="co-main">
-          <p className="co-kicker">Sam Duckworth Photography</p>
-          <h1>Complete your order.</h1>
+      {clientSecret && options ? (
+        <CheckoutElementsProvider options={options} stripe={stripePromise}>
+          <CheckoutLayout summary={<StripeOrderSummary cart={cart} />}>
+            <PaymentStep onBack={() => setClientSecret("")} />
+          </CheckoutLayout>
+        </CheckoutElementsProvider>
+      ) : (
+        <CheckoutLayout summary={<OrderSummary cart={cart} />}>
           {!publishableKey ? <p className="co-error">Stripe is ready in code; add VITE_STRIPE_PUBLISHABLE_KEY to this environment to enable payment.</p> : null}
           {!cart.items.length ? (
             <div className="co-empty"><p>Your cart is empty.</p><button onClick={() => go("/shop", onNavigate)} type="button">Return to the shop</button></div>
-          ) : clientSecret && options ? (
-            <CheckoutElementsProvider options={options} stripe={stripePromise}>
-              <PaymentStep onBack={() => { setClientSecret(""); setStripeTotals(null); }} onTotalsChange={setStripeTotals} />
-            </CheckoutElementsProvider>
           ) : (
             <form className="co-details" onSubmit={continueToPayment}>
               <div className="co-section-head"><span>01</span><div><p>Contact details</p><small>Your Australian delivery address is matched in the secure next step.</small></div></div>
@@ -235,22 +256,8 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
               <button className="co-continue" disabled={starting || !publishableKey} type="submit">{starting ? <><LoaderCircle className="spin" size={16} /> Preparing payment…</> : "Continue to delivery & payment"}</button>
             </form>
           )}
-        </section>
-        <aside className="co-summary">
-          <p className="co-summary-title">Your order <span>{cart.items.length}</span></p>
-          <div className="co-summary-items">
-            {cart.items.map((item, index) => <div className="co-summary-item" key={`${item.photoId}-${index}`}><img alt="" src={item.thumb} /><div><b>{item.title}</b><span>{item.size} · {colourById(item.colour).label} · {item.mounted ? "Mounted" : "Unmounted"}</span></div><strong>{money(item.price)}</strong></div>)}
-          </div>
-          <div className="co-summary-lines">
-            <p><span>Subtotal</span><span>{money(stripeTotals?.subtotal ?? cart.subtotal)}</span></p>
-            {stripeTotals?.discount ? <p className="discount"><span>{stripeTotals.promotionCode ? `Promotion (${stripeTotals.promotionCode})` : "Promotion discount"}</span><span>−{money(stripeTotals.discount)}</span></p> : null}
-            <p><span>{stripeTotals ? "Delivery" : "Estimated delivery"}</span><span>{money(stripeTotals?.shipping ?? cart.shipping)}</span></p>
-            <p className="total"><span>{stripeTotals ? "Total" : "Estimated total"}</span><span>{money(stripeTotals?.total ?? cart.subtotal + cart.shipping)}</span></p>
-          </div>
-          <div className="co-hold"><Check size={15} /><p><b>45-minute change window</b><span>Paid orders pause before going to the print lab.</span></p></div>
-          <p className="co-summary-note">The secure payment step confirms the live delivery price and any promotion code.</p>
-        </aside>
-      </div>
+        </CheckoutLayout>
+      )}
     </main>
   );
 }
