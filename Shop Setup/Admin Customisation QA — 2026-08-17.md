@@ -10,7 +10,15 @@ page builder.
 
 ## Shop presentation controls delivered
 
-- **Available for sale** remains the full catalogue control.
+- All 610 currently published photographs are enabled for sale. Public gallery tiles
+  no longer repeat an availability badge; print discovery happens through the
+  lightbox's **Order a print** action.
+- **Available for sale** remains the full catalogue safety control, allowing a work
+  to be withdrawn later without deleting it from the photography archive.
+- Availability never bypasses production limits: each photograph's source resolution
+  still controls its permitted sizes and mounted/unmounted combinations. Missing or
+  unknown sizing metadata fails closed on the product page, and checkout independently
+  revalidates the requested configuration on the server.
 - **Studio rotation** is an ordered, presentation-only subset of up to 6 published,
   sellable portrait or landscape photographs.
 - **Considered Collection** is an ordered, presentation-only subset of up to 15

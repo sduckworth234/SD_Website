@@ -10,8 +10,8 @@ checklist in `Shop Checkout — Setup Handoff.md`.
   Its public landing page shows the first 15 sale-enabled photographs in the exact
   order chosen in Admin, while the full sale-enabled collection remains discoverable
   through Galleries, direct product URLs and the sitemap.
-- The primary discovery journey is now **Galleries → Available as a print → product
-  studio → cart → checkout → confirmation**.
+- The primary discovery journey is now **Galleries → photograph → Order a print →
+  product studio → cart → checkout → confirmation**.
 - The shop remains Australia-only, manual fulfilment remains the safe launch mode,
   and Prodigi can be enabled later without changing old orders.
 - Public wording contains no “coming soon” state. Admin access is available at
@@ -32,7 +32,13 @@ checklist in `Shop Checkout — Setup Handoff.md`.
 
 ### Galleries
 
-- Added a discreet “Available as a print” badge to sale-enabled photographs.
+- Every currently published photograph is enabled for print ordering. Removed the
+  repeated “Available as a print” tile badge so the archive remains visually quiet;
+  the lightbox keeps the clear **Order a print** action.
+- Kept the Admin sale-eligibility switch as a future safety control. Print sizes and
+  mounted/unmounted options remain constrained per photograph by source resolution,
+  and missing or unrecognised sizing data fails closed in both the public selector
+  and server-validated checkout.
 - Limited initial rendering to 24 photographs on mobile and 36 on desktop, followed
   by a progressive **Show more** action. This reduces initial image and DOM work.
 - Reduced background image pre-warming to a small representative set.

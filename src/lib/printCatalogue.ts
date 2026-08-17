@@ -244,8 +244,9 @@ export function maxSellableFromSizes(sizes: SellableSizes | null | undefined, mo
 /** Is this exact size/mount combo sellable? Prefers the resolved
  * sellable_sizes map (already override-aware); falls back to the plain
  * maxSellable label (pre-override data, or ships-ahead of the migration)
- * when sellable_sizes hasn't been computed for this photo yet; fails open
- * (true) when there's no gating data at all — never block on missing data. */
+ * when sellable_sizes hasn't been computed for this photo yet. Missing or
+ * unrecognised gating data fails closed so the client never promises a size
+ * that the server-side resolution check could reject at checkout. */
 export function isSizeSellable(
   size: SizeId,
   mounted: boolean,
@@ -253,7 +254,7 @@ export function isSizeSellable(
   fallbackMax: string | null | undefined,
 ): boolean {
   if (sellableSizes) return Boolean(sellableSizes[size]?.[mounted ? "mounted" : "unmounted"]);
-  if (fallbackMax == null) return true;
-  if (!SIZES.some((s) => s.id === fallbackMax)) return true;
+  if (fallbackMax == null) return false;
+  if (!SIZES.some((s) => s.id === fallbackMax)) return false;
   return SIZES.findIndex((s) => s.id === size) <= SIZES.findIndex((s) => s.id === fallbackMax);
 }

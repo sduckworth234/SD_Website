@@ -5488,22 +5488,6 @@ body:has(.contact-overlay) {
 .recent-work > .sd-loader { margin: 12px auto 24px; }
 .map-loading-screen .sd-loader { color: var(--muted); }
 
-.print-available-badge {
-  position: absolute;
-  top: 11px;
-  left: 11px;
-  z-index: 2;
-  padding: 5px 8px;
-  border: 1px solid rgba(255,255,255,.28);
-  border-radius: 999px;
-  background: rgba(9,12,12,.56);
-  color: #fff;
-  font: 600 8px/1 var(--font-mono);
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-}
 .gallery-pagination {
   display: grid;
   justify-items: center;
@@ -5702,7 +5686,6 @@ body:has(.contact-overlay) {
   .gallery-page .collection-rail::-webkit-scrollbar, .gallery-page .location-rail::-webkit-scrollbar { display: none; }
   .axis-switch { overflow: hidden; }
   .axis-note { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .print-available-badge { top: 8px; left: 8px; font-size: 7px; }
   .co-result-actions { display: grid; width: min(360px,100%); }
   .co-result-actions button { margin-top: 0; }
   .legal-nav { gap: 9px 14px; }

@@ -1879,7 +1879,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
         <details>
           <summary id="shop-how-title">How it works</summary>
           <ol>
-            <li><strong>Choose a photograph</strong><span>Explore the galleries and select “Order a print” on any available image.</span></li>
+            <li><strong>Choose a photograph</strong><span>Explore the galleries and select “Order a print” on any photograph.</span></li>
             <li><strong>Preview your size and frame</strong><span>See the work on the wall, then choose the size, frame and mount that suit your space.</span></li>
             <li><strong>Printed and delivered from Australia</strong><span>Each edition is made to order, carefully framed and delivered Australia-wide.</span></li>
           </ol>
@@ -3433,7 +3433,6 @@ function Gallery({
             // never trickles in from the bottom.
             eager={index < EAGER_TILE_COUNT}
           />
-          {photo.inShop ? <span className="print-available-badge">Available as a print</span> : null}
           <div className="photo-meta">
             <span>
               <MapPin size={13} aria-hidden="true" />

@@ -37,8 +37,8 @@ type PreviewMode = "studio" | "detail";
 /** Is `size`/`mounted` sellable for this photo? Prefers the resolved
  * sellable_sizes map (computed resolution merged with any admin override —
  * see supabase/migrations/20260816130000_photo_size_overrides.sql), falls
- * back to the simple maxSellable label for photos that predate it. Fails
- * open when there's no gating data at all — never block on missing data. */
+ * back to the simple maxSellable label for photos that predate it. Missing
+ * gating data fails closed so unsupported sizes never reach checkout. */
 function isSizeAvailable(photo: Photo, size: SizeId, mounted: boolean): boolean {
   return isSizeSellable(size, mounted, photo.sellableSizes, mounted ? photo.maxSellableMounted : photo.maxSellableUnmounted);
 }
