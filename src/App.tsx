@@ -35,7 +35,7 @@ import {
   X,
 } from "lucide-react";
 import type { CSSProperties, DependencyList, ReactNode } from "react";
-import { Fragment, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   assignRecentSlot,
   bulkEditPhotos,
@@ -80,12 +80,11 @@ import type { Collection, GalleryLocation, InstagramPost, LocationBucket, Photo,
 import { collectionTitle } from "./types";
 import { compressToWebp, extractPhotoMetadata } from "./lib/ingest";
 import { prewarmPhoto } from "./lib/viewTransition";
+import { PhotoLightbox } from "./components/PhotoLightbox";
 
 // Shared so the pre-warm resolves the SAME srcset candidate the lightbox <img>
 // will request — warming a different variant would help nothing.
 const LIGHTBOX_SIZES = "(max-width: 920px) 92vw, 60vw";
-// Keep in step with the .lightbox.is-closing animation in styles.css.
-const LIGHTBOX_EXIT_MS = 190;
 import type { ExtractedPhotoMeta } from "./lib/ingest";
 import { reverseGeocode } from "./lib/geocode";
 import type { Placement } from "./lib/geocode";
@@ -793,7 +792,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
       )}
       <Footer />
       {selectedPhoto ? (
-        <Lightbox
+        <PhotoLightbox
           photo={selectedPhoto}
           onClose={closePhoto}
           origin={origin}
@@ -1209,7 +1208,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
       ) : null}
       <Footer />
       {selectedPhoto ? (
-        <Lightbox
+        <PhotoLightbox
           photo={selectedPhoto}
           origin={origin}
           onClose={closePhoto}
@@ -3436,158 +3435,6 @@ function Gallery({
         </div>
       ))}
     </section>
-  );
-}
-
-function Lightbox({
-  photo,
-  origin,
-  onClose,
-  onViewOnMap,
-  onViewGallery,
-  onOrderPrint,
-}: {
-  photo: Photo;
-  // Viewport point the photo was opened from — the tapped tile's centre.
-  origin?: { x: number; y: number } | null;
-  onClose: () => void;
-  onViewOnMap: (photo: Photo) => void;
-  // Only passed on the home page — inside /galleries you're already looking at
-  // the place the photo belongs to, so the button would go nowhere useful.
-  onViewGallery?: (photo: Photo) => void;
-  // Only passed when print_configurator is on — every published photo (not
-  // just the curated /shop grid) gets a way to order it as a print.
-  onOrderPrint?: (photo: Photo) => void;
-}) {
-  // Every published row carries an exact 4dp width/height ratio, so the panel
-  // is laid out correctly on its FIRST render — no measuring, no correcting.
-  //
-  // This used to start null and get fixed up by onMeasure once the image
-  // loaded, which meant the panel picked a layout, then swapped grid template
-  // and width the moment the bytes arrived. During a view transition that
-  // relayout lands mid-animation and is most of what made the morph feel
-  // clunky. tileRatio() falls back to the aspect bucket if a ratio is missing.
-  const ratio = tileRatio(photo);
-  // Only RESERVE a shape when the row actually carries one. tileRatio() falls
-  // back to a nominal bucket value, and reserving that would letterbox the
-  // photo inside its own frame — a guess is fine for choosing the layout, but
-  // not for pinning the box.
-  const exactRatio = photo.ratio ?? null;
-
-  // Grow the panel out of the tile that was tapped instead of out of its own
-  // centre. transform-origin is relative to the panel's own box, so the tile's
-  // viewport point has to be converted into a percentage of it. useLayoutEffect
-  // so it lands before the entry animation's first frame.
-  const panelRef = useRef<HTMLElement>(null);
-  useLayoutEffect(() => {
-    const panel = panelRef.current;
-    if (!panel) return;
-    if (!origin) {
-      panel.style.removeProperty("transform-origin");
-      return;
-    }
-    // The entry animation's from-state is already applied by the time this
-    // runs, so getBoundingClientRect() reports the SCALED box. Recover the
-    // resting box from the layout size, or the origin lands a few px adrift.
-    const box = panel.getBoundingClientRect();
-    const w = panel.offsetWidth;
-    const h = panel.offsetHeight;
-    if (!w || !h) return;
-    const left = box.left + (box.width - w) / 2;
-    const top = box.top + (box.height - h) / 2;
-    // Clamped so a tile far off-screen doesn't fling the origin miles away and
-    // turn a gentle scale into a slide across the viewport.
-    const clamp = (v: number) => Math.max(-40, Math.min(140, v));
-    const x = clamp(((origin.x - left) / w) * 100);
-    const y = clamp(((origin.y - top) / h) * 100);
-    panel.style.transformOrigin = `${x.toFixed(1)}% ${y.toFixed(1)}%`;
-  }, [origin, photo.id]);
-
-  // Play the exit animation, THEN unmount. Without this the panel is ripped out
-  // of the DOM the instant you hit the X — the photo just vanishes, which is
-  // what made closing feel abrupt.
-  const [closing, setClosing] = useState(false);
-  const closeTimer = useRef<number | undefined>(undefined);
-  const dismiss = useCallback(() => {
-    if (closeTimer.current) return; // already on the way out
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      onClose();
-      return;
-    }
-    setClosing(true);
-    closeTimer.current = window.setTimeout(onClose, LIGHTBOX_EXIT_MS);
-  }, [onClose]);
-  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") dismiss();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [dismiss]);
-
-  const hasCoords = photo.latitude != null && photo.longitude != null;
-  // "Unsorted" photos have no place page to land on, so the button is hidden
-  // rather than pointing at an empty gallery.
-  const canViewGallery = Boolean(onViewGallery && photo.location && photo.location !== "Unsorted");
-  const canOrderPrint = Boolean(onOrderPrint);
-  // Taller-than-wide → portrait card (image beside the caption); otherwise the
-  // classic landscape card (image above the caption).
-  const isPortrait = ratio < 1;
-
-  return (
-    <div className={`lightbox${closing ? " is-closing" : ""}`} role="dialog" aria-modal="true" aria-label={photo.title}>
-      <button className="lightbox-backdrop" onClick={dismiss} type="button" aria-label="Close" />
-      <section className={`lightbox-panel${isPortrait ? " is-portrait" : ""}`} ref={panelRef}>
-        <button className="icon-button close-button" onClick={dismiss} type="button" aria-label="Close">
-          <X size={18} aria-hidden="true" />
-        </button>
-        <div
-          className="lightbox-image"
-          style={exactRatio ? ({ "--shot-ratio": String(exactRatio) } as CSSProperties) : undefined}
-        >
-          <SmartImage
-            noFade
-            src={photo.imageUrl}
-            srcSet={srcSetFor(photo)}
-            sizes={LIGHTBOX_SIZES}
-            alt={`${photo.title}, ${photo.location}`}
-          />
-          <AltitudeBadge photo={photo} />
-        </div>
-        <aside className="lightbox-copy">
-          <span className="lightbox-location">
-            <MapPin size={13} aria-hidden="true" />
-            {photo.location}
-          </span>
-          <h2>{photo.title}</h2>
-          {photo.year ? <small>{photo.year}</small> : null}
-          {hasCoords || canViewGallery || canOrderPrint ? (
-            <div className="lightbox-actions">
-              {canOrderPrint ? (
-                <button className="map-link-button order-print-button" onClick={() => onOrderPrint!(photo)} type="button">
-                  <Frame size={14} aria-hidden="true" />
-                  Order a print
-                </button>
-              ) : null}
-              {canViewGallery ? (
-                <button className="map-link-button" onClick={() => onViewGallery!(photo)} type="button">
-                  <Images size={14} aria-hidden="true" />
-                  View gallery
-                </button>
-              ) : null}
-              {hasCoords ? (
-                <button className="map-link-button" onClick={() => onViewOnMap(photo)} type="button">
-                  <Globe size={14} aria-hidden="true" />
-                  View on map
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-        </aside>
-      </section>
-    </div>
   );
 }
 

@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { MapPin, X } from "lucide-react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { getGalleryData } from "./lib/supabase";
 import { useSeo } from "./lib/seo";
 import { Header } from "./components/Header";
+import { PhotoLightbox } from "./components/PhotoLightbox";
 import { SDLoader } from "./components/SDLoader";
-import { SmartImage } from "./components/SmartImage";
 import type { Photo } from "./types";
 
 // Free, keyless vector basemap (OpenStreetMap data). Positron is light + minimal,
@@ -31,8 +30,8 @@ const CLUSTER_RADIUS = 55; // px; photo-proximity clustering
 const CLUSTER_MAXZOOM = 14; // beyond this, every photo shows individually
 
 type LocationProps = { location: string; count: number; imageUrl: string };
-type PhotoProps = { location: string; title: string; imageUrl: string };
-type SelectedPhoto = { location: string; title: string; imageUrl: string };
+type PhotoProps = { id: string; location: string; title: string; imageUrl: string };
+type SelectedPhoto = { photo: Photo; origin: { x: number; y: number } };
 
 // One GeoJSON point per location (centroid of its photos), for the clustered
 // overview bubbles + labels.
@@ -76,7 +75,7 @@ function buildPhotoFeatures(photos: Photo[]): GeoJSON.Feature<GeoJSON.Point, Pho
     features.push({
       type: "Feature",
       geometry: { type: "Point", coordinates: [p.longitude, p.latitude] },
-      properties: { location: p.location, title: p.title, imageUrl: p.imageUrl },
+      properties: { id: p.id, location: p.location, title: p.title, imageUrl: p.imageUrl },
     });
   }
   return features;
@@ -101,14 +100,6 @@ export default function MapPage({ onNavigate, showShop = false }: { onNavigate: 
     onNavigate("/galleries");
   }
 
-  // Esc closes the photo lightbox.
-  useEffect(() => {
-    if (!selected) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setSelected(null); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [selected]);
-
   useEffect(() => {
     let cancelled = false;
     let map: maplibregl.Map | undefined;
@@ -126,6 +117,7 @@ export default function MapPage({ onNavigate, showShop = false }: { onNavigate: 
       if (cancelled || !containerRef.current) return;
       const locationFeatures = buildLocationFeatures(data.photos);
       const photoFeatures = buildPhotoFeatures(data.photos);
+      const photoById = new Map(data.photos.map((photo) => [photo.id, photo]));
       setStats({
         places: locationFeatures.length,
         photos: locationFeatures.reduce((s, f) => s + f.properties.count, 0),
@@ -272,7 +264,13 @@ export default function MapPage({ onNavigate, showShop = false }: { onNavigate: 
         // Click a photo: open it in a lightbox (with a button to its gallery).
         map.on("click", "photo", (e) => {
           const p = e.features?.[0]?.properties as PhotoProps | undefined;
-          if (p) setSelected({ location: p.location, title: p.title, imageUrl: p.imageUrl });
+          const photo = p ? photoById.get(p.id) : undefined;
+          if (!photo) return;
+          const canvasBox = map!.getCanvas().getBoundingClientRect();
+          setSelected({
+            photo,
+            origin: { x: canvasBox.left + e.point.x, y: canvasBox.top + e.point.y },
+          });
         });
 
         // Hover preview on individual photos.
@@ -363,27 +361,12 @@ export default function MapPage({ onNavigate, showShop = false }: { onNavigate: 
       </section>
 
       {selected ? (
-        <div className="lightbox" role="dialog" aria-modal="true" aria-label={selected.title}>
-          <button className="lightbox-backdrop" onClick={() => setSelected(null)} type="button" aria-label="Close" />
-          <section className="lightbox-panel is-map">
-            <button className="icon-button close-button" onClick={() => setSelected(null)} type="button" aria-label="Close">
-              <X size={18} aria-hidden="true" />
-            </button>
-            <div className="lightbox-image">
-              <SmartImage src={selected.imageUrl} alt={`${selected.title}, ${selected.location}`} />
-            </div>
-            <aside className="lightbox-copy">
-              <span className="lightbox-location">
-                <MapPin size={13} aria-hidden="true" />
-                {selected.location}
-              </span>
-              <h2>{selected.title}</h2>
-              <button className="solid-button" onClick={() => openLocation(selected.location)} type="button">
-                View {selected.location} gallery
-              </button>
-            </aside>
-          </section>
-        </div>
+        <PhotoLightbox
+          photo={selected.photo}
+          origin={selected.origin}
+          onClose={() => setSelected(null)}
+          onViewGallery={(photo) => openLocation(photo.location)}
+        />
       ) : null}
     </main>
   );

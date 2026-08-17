@@ -46,6 +46,9 @@ data is stored there.
 - Map & Locations supports creating locations, editing public name/region/description,
   ordering locations and choosing up to five homepage-card photographs per location.
   Display-name changes preserve existing slugs to protect shared URLs.
+- Gallery tiles and map pins now open the same shared photo lightbox. Exact stored
+  ratios choose the portrait or landscape card before the image loads, while
+  metadata, gallery actions, responsive sources and close transitions stay aligned.
 - About & Contact edits typed business identity, public email/Instagram, homepage
   hero eyebrow, About portrait/copy, contact copy and footer label. The same record
   is used by the public footer, Instagram links, contact form, shop policy footer and
