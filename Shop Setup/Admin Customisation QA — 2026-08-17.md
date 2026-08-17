@@ -61,6 +61,11 @@ data is stored there.
   and print configurator: Home, Gallery, Map, About, Shop, Contact and Cart remain
   reachable, with viewport-safe scrolling, active-page state, Escape/backdrop close,
   body-scroll locking and direct About/Contact panel links.
+- Mobile dropdown rows now occupy the full viewport width on the shop landing and
+  print configurator instead of inheriting the narrow right-hand header-control
+  width. Consistent 24-pixel side padding, full-width grid tracks and dedicated
+  arrow spacing keep labels and navigation arrows comfortably separated even at
+  a 320-pixel viewport.
 - The mobile journey now distinguishes the two spaces explicitly: shop menus group
   Photography and Print shop destinations, Framed Editions always means the shop,
   and gallery/policy/footer links provide a clear route back to the photography site.
