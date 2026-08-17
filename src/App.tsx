@@ -726,6 +726,9 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
               />
             </AdminHideable>
           ) : null}
+          <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "ticker_banner")} label="Scrolling banner">
+            <TickerBanner items={TICKER_ITEMS} />
+          </AdminHideable>
           {recentPhotos.length >= 5 ? (
             <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "recent_work")} label="Recent Work">
               <RecentWork
@@ -1162,42 +1165,9 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   );
 }
 
-// One location tile that slowly cross-fades through a handful of its photos.
-// `featured` tiles are the big editorial-mosaic heroes. Admins get a pencil to
-// choose which photos cycle. Bigger tiles pull a higher-res image variant.
-function CollectionCard({ name, photos, onOpen, delay, onEdit, featured = false }: { name: string; photos: Photo[]; onOpen: (name: string) => void; delay: number; onEdit?: () => void; featured?: boolean }) {
-  const [i, setI] = useState(0);
-  useEffect(() => {
-    if (photos.length <= 1) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const timer: { id?: number } = {};
-    const start = window.setTimeout(() => {
-      setI((v) => (v + 1) % photos.length);
-      timer.id = window.setInterval(() => setI((v) => (v + 1) % photos.length), 4600);
-    }, delay);
-    return () => { window.clearTimeout(start); if (timer.id) window.clearInterval(timer.id); };
-  }, [photos.length, delay]);
-
-  return (
-    <div className={`cc-wrap${featured ? " cc-feat" : ""}`}>
-      <button className="collection-card" type="button" onClick={() => onOpen(name)} aria-label={`View the ${name} gallery`}>
-        {photos.map((p, idx) => (
-          <img key={p.id} className={`cc-img${idx === i ? " is-on" : ""}`} src={thumbUrl(p, featured ? 1100 : 700)} alt="" loading="lazy" decoding="async" />
-        ))}
-        <span className="cc-label">{name}</span>
-      </button>
-      {onEdit ? (
-        <button className="cc-edit" type="button" onClick={onEdit} aria-label={`Choose featured photos for ${name}`} title="Choose featured photos">
-          <Pencil size={14} aria-hidden="true" />
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
-// The home page's location collections — one cross-fading card per location.
-// Each card cycles its admin-pinned photos (collectionOrder), else the first
-// few in gallery order.
+// The home page's location collections, as a scroll-highlighted row list (see
+// CollectionCurtain). Each row's peek photo prefers admin-pinned photos
+// (collectionOrder), else the first in gallery order.
 const CURTAIN_LIMIT = 10;
 
 function CollectionCards({ photos, locations, onOpen, onOpenAll, isAdmin = false, onEdit }: { photos: Photo[]; locations: GalleryLocation[]; onOpen: (name: string) => void; onOpenAll?: () => void; isAdmin?: boolean; onEdit?: (location: GalleryLocation) => void }) {
@@ -1229,7 +1199,7 @@ function CollectionCards({ photos, locations, onOpen, onOpenAll, isAdmin = false
       .sort((a, b) => (order.get(a.name) ?? 999) - (order.get(b.name) ?? 999) || a.name.localeCompare(b.name));
   }, [photos, locations]);
 
-  // The phone list is capped at the ten most recent places — all 26 is a long
+  // The list is capped at the ten most recent places — all 26 is a long
   // scroll past a lot of thin galleries. Newest first, photo count breaking
   // ties within a year; places with no year at all sort last.
   //
@@ -1246,58 +1216,19 @@ function CollectionCards({ photos, locations, onOpen, onOpenAll, isAdmin = false
     [cards],
   );
 
-  // Phones get the curtain instead of the tile grid — see CollectionCurtain.
-  // Chosen in JS rather than CSS so only one of the two sets of images is ever
-  // requested; a display:none grid would still download every tile.
-  const narrow = useIsNarrow();
-
   if (!cards.length) return null;
 
-  if (narrow) {
-    return (
-      <CollectionCurtain
-        rows={recent}
-        // Capping the list orphans the remaining places on mobile, so the list
-        // ends with a way through to all of them.
-        remaining={cards.length - recent.length}
-        onOpen={onOpen}
-        onOpenAll={onOpenAll}
-        onEdit={isAdmin && onEdit ? onEdit : undefined}
-      />
-    );
-  }
-
   return (
-    <section className="collection-cards scroll-reveal" aria-label="Browse by location">
-      {cards.map((c, i) => (
-        <CollectionCard
-          key={c.name}
-          name={c.name}
-          photos={c.photos}
-          onOpen={onOpen}
-          delay={i * 650}
-          featured={i % 6 === 0}
-          onEdit={isAdmin && c.loc && onEdit ? () => onEdit(c.loc as GalleryLocation) : undefined}
-        />
-      ))}
-    </section>
+    <CollectionCurtain
+      rows={recent}
+      // Capping the list orphans the remaining places, so the list ends with
+      // a way through to all of them.
+      remaining={cards.length - recent.length}
+      onOpen={onOpen}
+      onOpenAll={onOpenAll}
+      onEdit={isAdmin && onEdit ? onEdit : undefined}
+    />
   );
-}
-
-// True on phones. Kept as a hook so the collections block can pick a layout in
-// JS instead of rendering both and hiding one.
-function useIsNarrow(query = "(max-width: 760px)") {
-  const [narrow, setNarrow] = useState(
-    () => typeof window !== "undefined" && window.matchMedia(query).matches,
-  );
-  useEffect(() => {
-    const mq = window.matchMedia(query);
-    const onChange = () => setNarrow(mq.matches);
-    mq.addEventListener("change", onChange);
-    onChange();
-    return () => mq.removeEventListener("change", onChange);
-  }, [query]);
-  return narrow;
 }
 
 type CurtainRow = {
@@ -1308,11 +1239,11 @@ type CurtainRow = {
   years: readonly [number, number] | null;
 };
 
-// The mobile index of places. On a phone the tile grid becomes a tall wall of
-// near-identical thumbnails you scroll past; this reads as a contents page, and
-// the "live" row — expanded, in colour — follows SCROLL POSITION rather than
-// hover, because hover doesn't exist on touch and the list would otherwise sit
-// grey forever.
+// The index of places, as a stack of rows rather than a thumbnail grid — reads
+// as a contents page. The "live" row — expanded, in colour — follows SCROLL
+// POSITION rather than hover, because hover doesn't exist on touch and the
+// list would otherwise sit grey forever there; desktop keeps hover as well so
+// a mouse still feels direct.
 function CollectionCurtain({
   rows,
   remaining = 0,
@@ -1396,8 +1327,8 @@ function CollectionCurtain({
         <div className="curtain-row curtain-all">
           <button className="curtain-hit" type="button" onClick={onOpenAll}>
             <span className="curtain-txt">
-              <span className="curtain-nm">All places</span>
-              <span className="curtain-meta">{remaining} more · view the full archive</span>
+              <span className="curtain-nm">See the full collection</span>
+              <span className="curtain-meta">{remaining} more places · view the full archive</span>
             </span>
             <span className="curtain-arrow" aria-hidden="true">
               <ChevronRight size={20} />
@@ -1411,10 +1342,16 @@ function CollectionCurtain({
 
 function CollectionsSkeleton() {
   return (
-    <section className="collection-cards" aria-hidden="true">
-      {Array.from({ length: 7 }, (_, i) => (
-        <div className={`cc-wrap${i % 6 === 0 ? " cc-feat" : ""}`} key={i}>
-          <div className="skeleton-tile cc-skel" />
+    <section className="collection-curtain" aria-hidden="true">
+      {Array.from({ length: 10 }, (_, i) => (
+        <div className="curtain-row" key={i}>
+          <div className="curtain-hit">
+            <span className="curtain-txt">
+              <span className="skeleton-tile curtain-skel-nm" />
+              <span className="skeleton-tile curtain-skel-meta" />
+            </span>
+            <span className="curtain-peek skeleton-tile" />
+          </div>
         </div>
       ))}
     </section>
@@ -1861,6 +1798,34 @@ function InstagramFeed({ posts }: { posts: InstagramPost[] }) {
   );
 }
 
+// A continuously scrolling promo strip between the Europe hero and Recent
+// Work. Purely decorative marketing copy — aria-hidden, since the doubled
+// track would otherwise read twice to a screen reader and everything it says
+// is already stated plainly elsewhere on the page (hero subtitle, Framed
+// Editions banner).
+const TICKER_ITEMS = [
+  "AERIAL & LANDSCAPE PHOTOGRAPHY",
+  "NORTHERN BEACHES, SYDNEY",
+  "FRAMED EDITIONS — PRINTS COMING SOON",
+  "SHOT ON LOCATION, WORLDWIDE",
+];
+
+function TickerBanner({ items }: { items: string[] }) {
+  if (!items.length) return null;
+  // Doubled so a translateX(-50%) loop is seamless — the second copy picks up
+  // exactly where the first ends.
+  const track = [...items, ...items];
+  return (
+    <section className="ticker-banner" aria-hidden="true">
+      <div className="ticker-track">
+        {track.map((text, i) => (
+          <span className="ticker-item" key={i}>{text}</span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function RecentWork({
   isAdmin,
   onChangePhoto,
@@ -1876,15 +1841,20 @@ function RecentWork({
   onWarm?: (photo: Photo) => void;
   photos: Photo[];
 }) {
-  const tiles = photos.slice(0, 9);
+  // Always exactly two rows — the column count grows with however many recent
+  // photos there are (row-major fill: row 1 first, then row 2), rather than a
+  // fixed 2×2. Phones cap lower so tiles stay legible.
+  const isPhone = useMediaQuery("(max-width: 560px)");
+  const tiles = photos.slice(0, isPhone ? 4 : 8);
+  const cols = Math.max(1, Math.ceil(tiles.length / 2));
 
   return (
     <section className="recent-work scroll-reveal" aria-label="Recent work">
       <h2 className="recent-heading">Recent Work</h2>
-      <div className="recent-mosaic">
+      <div className="recent-mosaic" style={{ "--recent-cols": cols } as CSSProperties}>
         {tiles.map((photo, index) => (
           <div
-            className={`recent-tile recent-tile-${index + 1} scroll-reveal${isAdmin ? " is-admin" : ""}`}
+            className={`recent-tile scroll-reveal${isAdmin ? " is-admin" : ""}`}
             key={photo.id}
             onClick={(event) => onSelect(photo, event.currentTarget)}
             onPointerDown={() => onWarm?.(photo)}
@@ -2348,16 +2318,10 @@ function CollectionRail({
 }) {
   return (
     // Reuses .location-rail for the scrolling flex row, then overrides it to sit
-    // static (only the places rail sticks) with taller two-line tabs.
+    // static (only the places rail sticks) with taller two-line tabs. The "view
+    // everything" tab sits LAST, not first — same destination-at-the-end
+    // pattern as the home page's location rows (see CollectionCurtain).
     <section className="location-rail collection-rail" aria-label="Filter gallery by collection">
-      <button
-        className={activeId === ALL_COLLECTIONS ? "active" : ""}
-        onClick={() => onChange(ALL_COLLECTIONS)}
-        type="button"
-      >
-        <span className="rail-period">All</span>
-        <span className="rail-name">All work</span>
-      </button>
       {collections.map((collection) => {
         const count = counts.get(collection.id) ?? 0;
         return (
@@ -2376,6 +2340,14 @@ function CollectionRail({
           </button>
         );
       })}
+      <button
+        className={activeId === ALL_COLLECTIONS ? "active" : ""}
+        onClick={() => onChange(ALL_COLLECTIONS)}
+        type="button"
+      >
+        <span className="rail-period">All</span>
+        <span className="rail-name">View the whole gallery</span>
+      </button>
     </section>
   );
 }
@@ -2862,8 +2834,8 @@ function RecentWorkSkeleton() {
     <section className="recent-work" aria-label="Loading recent work">
       <h2 className="recent-heading">Recent Work</h2>
       <div className="recent-mosaic" aria-hidden="true">
-        {Array.from({ length: 9 }, (_, index) => (
-          <div className={`recent-tile recent-tile-${index + 1} skeleton-tile`} key={index} />
+        {Array.from({ length: 4 }, (_, index) => (
+          <div className="recent-tile skeleton-tile" key={index} />
         ))}
       </div>
     </section>
@@ -3698,9 +3670,10 @@ function CollectionsAdmin({ photos }: { photos: Photo[] }) {
 // the DB) so the panel reads well even if a seed row is missing.
 const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
   { key: "hero_2026", label: "Home — 2026 Europe hero", hint: "The crossfading trip banner near the top of the home page." },
+  { key: "ticker_banner", label: "Home — Scrolling banner", hint: "The horizontal scrolling promo strip between the Europe hero and Recent Work." },
   { key: "recent_work", label: "Home — Recent Work mosaic", hint: "The editorial photo mosaic near the top of the home page." },
   { key: "map_promo", label: "Home — Map promo", hint: "The interactive-map teaser on the home page." },
-  { key: "collection_cards", label: "Home — Collection cards", hint: "The cycling location tiles on the home page." },
+  { key: "collection_cards", label: "Home — Collection cards", hint: "The scroll-highlighted list of places on the home page." },
   { key: "framed_banner", label: "Home — Framed Editions banner", hint: "The print-shop banner near the bottom of the home page." },
   { key: "contact_prompt", label: "Home — Contact / Work with me", hint: "The “Let’s work together” prompt + contact popup." },
   { key: "instagram_feed", label: "Home — Instagram feed", hint: "The live strip of your latest Instagram posts, above the footer." },

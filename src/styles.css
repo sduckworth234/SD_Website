@@ -1782,29 +1782,89 @@ body:has(.contact-overlay) {
 
 .ig-tile:focus-visible { outline: 2px solid var(--sea); outline-offset: 3px; }
 
-/* "Recent Work" — editorial mosaic of the latest photos above the gallery */
+/* ================= Home: scrolling promo banner ================= */
+/* A continuous marquee — the track holds two copies of the item list and
+   scrolls exactly one copy's width (translateX(-50%)), so the loop point is
+   invisible. Forced light regardless of site theme, same as .recent-work,
+   so it reads as a distinct band against the dark hero above it. */
+.ticker-banner {
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.9);
+  border-block: 1px solid rgba(27, 25, 22, 0.15);
+  padding-block: clamp(12px, 2vw, 16px);
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  gap: clamp(28px, 5vw, 56px);
+  animation: ticker-scroll 28s linear infinite;
+}
+
+.ticker-banner:hover .ticker-track {
+  animation-play-state: paused;
+}
+
+.ticker-item {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: clamp(0.62rem, 1.4vw, 0.72rem);
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #1b1916;
+  white-space: nowrap;
+}
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .ticker-track {
+    gap: 22px;
+    animation-duration: 20s;
+  }
+}
+
+/* "Recent Work" — editorial mosaic of the latest photos above the gallery.
+   No background/card of its own — it blends straight into the page, so it
+   follows light/dark mode via the same tokens as everything around it. */
 .recent-work {
-  padding: clamp(36px, 7vw, 84px) clamp(18px, 4vw, 56px) clamp(18px, 2.6vw, 34px);
+  padding: clamp(28px, 5vw, 56px) clamp(18px, 4vw, 56px) clamp(36px, 6vw, 72px);
   --reveal-distance: 16px;
   --reveal-scale: 0.995;
 }
 
 .recent-heading {
-  margin: 0 0 clamp(22px, 4vw, 44px);
+  margin: 0 0 clamp(18px, 2.6vw, 28px);
   font-family: var(--font-sans);
-  font-size: clamp(2.6rem, 6vw, 4.6rem);
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
   font-weight: var(--head-weight);
   letter-spacing: var(--head-track);
   line-height: 1;
-  text-align: center;
+  text-align: left;
   color: var(--ink-soft);
 }
 
+/* Always exactly two rows (grid-template-rows below) — --recent-cols is set
+   inline per render from the actual tile count, so it grows past 2 columns
+   when there are more than 4 recent photos rather than being locked to 2×2. */
 .recent-mosaic {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: clamp(118px, 14vw, 186px);
-  gap: clamp(12px, 1.6vw, 24px);
+  grid-template-columns: repeat(var(--recent-cols, 2), 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: clamp(12px, 1.6vw, 22px);
   max-width: 1120px;
   margin-inline: auto;
 }
@@ -1813,6 +1873,8 @@ body:has(.contact-overlay) {
   position: relative;
   overflow: hidden;
   border: 0;
+  border-radius: 4px;
+  aspect-ratio: 4 / 3;
   background: var(--paper-deep);
   cursor: var(--circle-cursor), pointer;
   padding: 0;
@@ -1829,45 +1891,8 @@ body:has(.contact-overlay) {
   }
 }
 
-/* Editorial brick: 4 cols × 3 rows, with a staggered wide banner per row
-   (tiles 1, 5, 9 span two columns). All tiles are one row tall. */
-.recent-tile-1 { grid-column: 1 / 3; grid-row: 1; }
-.recent-tile-2 { grid-column: 3;     grid-row: 1; }
-.recent-tile-3 { grid-column: 4;     grid-row: 1; }
-.recent-tile-4 { grid-column: 1;     grid-row: 2; }
-.recent-tile-5 { grid-column: 2 / 4; grid-row: 2; }
-.recent-tile-6 { grid-column: 4;     grid-row: 2; }
-.recent-tile-7 { grid-column: 1;     grid-row: 3; }
-.recent-tile-8 { grid-column: 2;     grid-row: 3; }
-.recent-tile-9 { grid-column: 3 / 5; grid-row: 3; }
-
-/* Tablet: drop the brick to 2 columns with a full-width lead banner so the
-   tiles don't get cramped. (Phones get an even simpler version below.) */
-@media (max-width: 900px) {
-  .recent-mosaic {
-    grid-template-columns: 1fr 1fr;
-    grid-auto-rows: clamp(150px, 28vw, 220px);
-  }
-  .recent-tile-1,
-  .recent-tile-2,
-  .recent-tile-3,
-  .recent-tile-4,
-  .recent-tile-5,
-  .recent-tile-6,
-  .recent-tile-7,
-  .recent-tile-8,
-  .recent-tile-9 {
-    grid-column: auto;
-    grid-row: auto;
-  }
-  .recent-tile-1 {
-    grid-column: 1 / 3;
-  }
-}
-
 /* Slightly rounded corners on all image surfaces */
 .photo-tile,
-.recent-tile,
 .admin-card-image,
 .edit-overlay-preview,
 .picker-tile,
@@ -3414,7 +3439,7 @@ body:has(.contact-overlay) {
   }
 
   .recent-work {
-    padding: 40px clamp(16px, 5vw, 28px);
+    padding: 22px 16px 32px;
   }
 
   .intro-panel {
@@ -3490,28 +3515,6 @@ body:has(.contact-overlay) {
   .edit-overlay-preview {
     min-height: 0;
     aspect-ratio: 3 / 2;
-  }
-
-  .recent-mosaic {
-    grid-template-columns: 1fr 1fr;
-    grid-auto-rows: 42vw;
-  }
-
-  .recent-tile-1,
-  .recent-tile-2,
-  .recent-tile-3,
-  .recent-tile-4,
-  .recent-tile-5,
-  .recent-tile-6,
-  .recent-tile-7,
-  .recent-tile-8,
-  .recent-tile-9 {
-    grid-column: auto;
-    grid-row: auto;
-  }
-
-  .recent-tile-1 {
-    grid-column: 1 / 3;
   }
 
   .lightbox-copy h2 {
@@ -4065,55 +4068,10 @@ body:has(.contact-overlay) {
   box-shadow: inset 0 0 22px rgba(0,0,0,.1);
 }
 
-/* ================= Home: location collection cards ================= */
-/* Editorial mosaic: 6-col grid, fixed-height rows. Most images are landscape,
-   so tiles are wide; one hero per band of six spans 4 cols × 2 rows. */
-.collection-cards {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  grid-auto-rows: clamp(104px, 12.5vw, 168px);
-  grid-auto-flow: row dense;
-  gap: clamp(10px, 1.4vw, 20px);
-  max-width: 1120px; margin: 0 auto;
-  padding: clamp(18px, 3vw, 40px) clamp(12px, 2vw, 28px) clamp(46px, 6vw, 86px);
-}
-.cc-wrap { position: relative; grid-column: span 2; grid-row: span 1; min-width: 0; }
-.cc-wrap.cc-feat { grid-column: span 4; grid-row: span 2; }
-.collection-card {
-  position: relative; display: block; width: 100%; height: 100%; overflow: hidden; border: 0; padding: 0;
-  border-radius: 8px; background: var(--paper-deep); cursor: var(--circle-cursor), pointer;
-}
-.cc-img {
-  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-  opacity: 0; transform: scale(1.05); transition: opacity 1400ms ease, transform 6000ms ease;
-}
-.cc-img.is-on { opacity: 1; transform: scale(1.1); }
-.cc-skel { width: 100%; height: 100%; border-radius: 8px; }
-.collection-card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 52%, rgba(0,0,0,.55)); }
-/* Set like every other heading on the site — Archivo, heavy, tight. These read
-   as titles on each card, so the wide-tracked uppercase label treatment made
-   them the one thing on the page in a different type system. */
-.cc-label {
-  position: absolute; left: 16px; bottom: 14px; z-index: 1; color: var(--on-photo);
-  font-family: var(--font-sans);
-  font-weight: var(--head-weight); font-size: 1.5rem; letter-spacing: var(--head-track);
-}
-.cc-feat .cc-label { font-size: clamp(1.9rem, 3vw, 2.8rem); left: 22px; bottom: 18px; }
-
-/* Tablet: 4 cols, hero becomes a full-width banner (1 row) so there are no gaps. */
-@media (max-width: 900px) {
-  .collection-cards { grid-template-columns: repeat(4, 1fr); grid-auto-rows: clamp(128px, 22vw, 188px); }
-  .cc-wrap { grid-column: span 2; }
-  .cc-wrap.cc-feat { grid-column: span 4; grid-row: span 1; }
-}
-/* Phone: 2-up, hero is a full-width banner. */
-@media (max-width: 560px) {
-  .collection-cards { grid-template-columns: 1fr 1fr; grid-auto-rows: clamp(116px, 30vw, 168px); gap: 10px; }
-  .cc-wrap { grid-column: span 1; }
-  .cc-wrap.cc-feat { grid-column: span 2; grid-row: span 1; }
-  .cc-label { font-size: 1.2rem; left: 12px; bottom: 10px; }
-  .cc-feat .cc-label { font-size: 1.7rem; }
-}
+/* ================= Home: location collection cards =================
+   See `.collection-curtain` further down for the row list itself — this used
+   to be a separate desktop-only tile grid (cross-fading photo tiles), replaced
+   by the same scroll-highlighted row list on every breakpoint. */
 
 /* ================= Lightbox open / close =================
    This replaced a shared-element view-transition morph that animated the tile
@@ -4260,8 +4218,19 @@ body:has(.contact-overlay) {
   gap: 1px;
   background: var(--line);
   border-block: 1px solid var(--line);
-  margin: clamp(10px, 3vw, 22px) 0 clamp(46px, 8vw, 70px);
+  margin: clamp(10px, 3vw, 22px) auto clamp(46px, 8vw, 70px);
+  max-width: 1120px;
 }
+
+/* Skeleton placeholder bars for the loading state — the shimmer itself comes
+   from the shared .skeleton-tile class. */
+.curtain-skel-nm,
+.curtain-skel-meta {
+  display: block;
+  border-radius: 3px;
+}
+.curtain-skel-nm { width: clamp(120px, 30vw, 220px); height: 1.5rem; }
+.curtain-skel-meta { width: clamp(80px, 20vw, 140px); height: 0.66rem; margin-top: 8px; }
 
 .curtain-row {
   position: relative;
@@ -4405,6 +4374,39 @@ body:has(.contact-overlay) {
   }
 }
 
+/* Desktop: the row list gets more room to breathe — bigger type and a larger
+   peek image — now that it's the primary layout on every breakpoint, not just
+   the phone fallback. Hover works alongside the scroll-driven highlight. */
+@media (min-width: 761px) {
+  .curtain-hit {
+    padding: 22px clamp(16px, 2vw, 28px);
+    gap: 24px;
+  }
+  .curtain-nm {
+    font-size: clamp(1.6rem, 2.6vw, 2.3rem);
+  }
+  .curtain-meta {
+    font-size: 0.72rem;
+  }
+  .curtain-peek {
+    width: min(28vw, 320px);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .curtain-row:hover {
+      background: var(--foam);
+    }
+    .curtain-row:hover .curtain-peek {
+      transform: scale(1);
+      filter: none;
+      opacity: 1;
+    }
+    .curtain-row:hover .curtain-nm {
+      color: var(--sea);
+      transform: translateX(5px);
+    }
+  }
+}
+
 /* ================= Home: Framed Editions banner ================= */
 .framed-hero {
   display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px, 5vw, 72px); align-items: center;
@@ -4502,18 +4504,6 @@ body:has(.contact-overlay) {
 }
 
 /* ================= Phase 3: curation, pickers, visibility ================= */
-
-/* Collection card admin edit affordance (the card itself is a <button>, so the
-   pencil sits in a wrapper as a sibling rather than nested inside it). */
-.cc-edit {
-  position: absolute; top: 10px; right: 10px; z-index: 2;
-  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px;
-  border: 0; cursor: pointer; color: var(--ink);
-  background: rgba(var(--foam-rgb), .82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  opacity: 0; transition: opacity 160ms ease, transform 160ms ease;
-}
-.cc-wrap:hover .cc-edit, .cc-edit:focus-visible { opacity: 1; }
-.cc-edit:hover { transform: scale(1.06); }
 
 /* Admin-only preview of a section the public can't see (flag is off). */
 .admin-hidden { position: relative; outline: 1px dashed var(--line); outline-offset: -1px; }
@@ -4670,11 +4660,6 @@ body:has(.contact-overlay) {
 /* ===================================================================
    Mobile / iPhone refinements (whole-site pass)
    =================================================================== */
-
-/* Touch devices: hover-revealed controls must always show (no hover state). */
-@media (hover: none) {
-  .cc-edit { opacity: 1; }
-}
 
 /* No input zoom-on-focus in iOS Safari (it zooms when font-size < 16px). */
 @media (max-width: 620px) {
