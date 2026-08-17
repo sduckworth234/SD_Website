@@ -808,7 +808,15 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
       {editingPhoto ? (
         <PhotoEditOverlay locations={locations} onClose={() => setEditingPhoto(null)} onSaved={loadGallery} photo={editingPhoto} />
       ) : null}
-      {isAboutOpen ? <AboutOverlay onClose={() => setIsAboutOpen(false)} /> : null}
+      {isAboutOpen ? (
+        <AboutOverlay
+          onClose={() => setIsAboutOpen(false)}
+          onContact={() => {
+            setIsAboutOpen(false);
+            setIsContactOpen(true);
+          }}
+        />
+      ) : null}
       {isContactOpen ? <ContactOverlay onClose={() => setIsContactOpen(false)} /> : null}
       {recentSlot !== null ? (
         <RecentPicker
@@ -6634,7 +6642,7 @@ function BatchRow({
   );
 }
 
-function AboutOverlay({ onClose }: { onClose: () => void }) {
+function AboutOverlay({ onClose, onContact }: { onClose: () => void; onContact: () => void }) {
   const content = usePublicContent();
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -6659,6 +6667,10 @@ function AboutOverlay({ onClose }: { onClose: () => void }) {
           <h2>{content.aboutHeading}</h2>
           <p>{content.aboutIntro}</p>
           <p>{content.aboutBody}</p>
+          <div className="about-contact">
+            <p>Want to chat, find out more or ask a question?</p>
+            <button className="solid-button" type="button" onClick={onContact}>Contact me</button>
+          </div>
         </div>
       </section>
     </div>
