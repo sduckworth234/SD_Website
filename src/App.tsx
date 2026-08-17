@@ -64,6 +64,7 @@ import {
   setMapFeature,
   setPhotoShop,
   setPhotoSizeOverride,
+  setRecentWorkPicks,
   removeUploadedAsset,
   setSiteFlag,
   setSiteSetting,
@@ -686,6 +687,16 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
   // crop). "0" = no rotation (covers/centre-crops as usual).
   const heroRotate = settingValue.hero_mobile_rotate ?? "0";
 
+  const displayedRecentPhotos = useMemo(() => {
+    if (settingValue.recent_work_mode !== "automatic") return recentPhotos.slice(0, 8);
+    return automaticRecentSelection(publicPhotos, {
+      orientation: settingValue.recent_work_orientation ?? "all",
+      sort: settingValue.recent_work_sort ?? "newest",
+      year: settingValue.recent_work_year ?? "all",
+      perPlace: Number.parseInt(settingValue.recent_work_per_place ?? "2", 10) || 2,
+    });
+  }, [publicPhotos, recentPhotos, settingValue.recent_work_mode, settingValue.recent_work_orientation, settingValue.recent_work_per_place, settingValue.recent_work_sort, settingValue.recent_work_year]);
+
   // The 2026 Europe hero: an admin-curated, ordered photo list stored as a
   // JSON id array in site_settings (same pattern as the shop's "wall" preview).
   // Empty/unset = the section doesn't render at all (see Hero2026).
@@ -721,7 +732,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
   }, [settingValue.hero_2026_collection, hero2026Photos, collections]);
 
   useSeo("Sam Duckworth Photography — Aerial & Landscape, Northern Beaches", { path: "/" });
-  useScrollReveal([isLoading, recentPhotos.length, locationNames.length]);
+  useScrollReveal([isLoading, displayedRecentPhotos.length, locationNames.length]);
 
   return (
     <main>
@@ -747,15 +758,15 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "ticker_banner")} label="Scrolling banner">
             <TickerBanner items={TICKER_ITEMS} onOpen={goToShop} />
           </AdminHideable>
-          {recentPhotos.length >= 5 ? (
+          {displayedRecentPhotos.length >= 5 ? (
             <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "recent_work")} label="Recent Work">
               <RecentWork
-                isAdmin={isAdmin}
+                isAdmin={isAdmin && settingValue.recent_work_mode !== "automatic"}
                 onChangePhoto={setRecentSlot}
                 onEditPhoto={setEditingPhoto}
                 onSelect={openPhoto}
                 onWarm={warmPhoto}
-                photos={recentPhotos}
+                photos={displayedRecentPhotos}
               />
             </AdminHideable>
           ) : null}
@@ -1504,6 +1515,53 @@ function ShopProduct({ photo, onAdd, productHref, onOpen }: { photo: Photo; onAd
 // back into its own print configurator.
 const orientOf = (p: Photo) => (p.aspect === "portrait" || p.aspect === "square" ? "portrait" : "landscape");
 
+type RecentWorkRules = {
+  orientation: string;
+  sort: string;
+  year: string;
+  perPlace: number;
+};
+
+function photoCaptureTime(photo: Photo) {
+  const captured = photo.capturedAt ? Date.parse(photo.capturedAt) : Number.NaN;
+  if (Number.isFinite(captured)) return captured;
+  const year = Number.parseInt(photo.year || "0", 10);
+  return Number.isFinite(year) ? Date.UTC(year, 0, 1) : 0;
+}
+
+// Build a varied eight-photo landing selection from a large archive. Random
+// order is intentionally calculated once by the caller's useMemo per visit.
+function automaticRecentSelection(photos: Photo[], rules: RecentWorkRules, maximum = 8) {
+  const eligible = photos.filter((photo) => {
+    const year = photo.capturedAt?.slice(0, 4) || photo.year;
+    return (rules.orientation === "all" || orientOf(photo) === rules.orientation)
+      && (rules.year === "all" || year === rules.year);
+  });
+
+  const ordered = [...eligible];
+  if (rules.sort === "random") {
+    for (let index = ordered.length - 1; index > 0; index -= 1) {
+      const swap = Math.floor(Math.random() * (index + 1));
+      [ordered[index], ordered[swap]] = [ordered[swap], ordered[index]];
+    }
+  } else {
+    const direction = rules.sort === "oldest" ? 1 : -1;
+    ordered.sort((a, b) => direction * (photoCaptureTime(a) - photoCaptureTime(b)) || a.id.localeCompare(b.id));
+  }
+
+  const selected: Photo[] = [];
+  const placeCounts = new Map<string, number>();
+  const perPlace = Math.max(1, Math.min(8, rules.perPlace));
+  for (const photo of ordered) {
+    const place = photo.location || "Unsorted";
+    if ((placeCounts.get(place) ?? 0) >= perPlace) continue;
+    selected.push(photo);
+    placeCounts.set(place, (placeCounts.get(place) ?? 0) + 1);
+    if (selected.length === maximum) break;
+  }
+  return selected;
+}
+
 // Keep the admin's chosen first-15 membership and the relative order within
 // each orientation, but alternate portrait and landscape works on the public
 // rail. This stops a run of one shape making the selection feel accidental.
@@ -2242,6 +2300,7 @@ function OrderedPhotoPicker({
   hint,
   photos,
   initialIds,
+  min,
   max,
   preview,
   onClose,
@@ -2251,6 +2310,7 @@ function OrderedPhotoPicker({
   hint: string;
   photos: Photo[];
   initialIds: string[];
+  min?: number;
   max?: number;
   // Optional live preview shown above the grid, given the current ordered picks
   // (e.g. a mini mockup so you see which photo lands in which frame).
@@ -2329,6 +2389,7 @@ function OrderedPhotoPicker({
   }
 
   async function save() {
+    if (min != null && picks.length < min) return;
     setSaving(true);
     try {
       await onSave(picks);
@@ -2441,7 +2502,7 @@ function OrderedPhotoPicker({
           <button className="ghost-button" type="button" onClick={() => setPicks([])} disabled={!picks.length || saving}>
             Clear
           </button>
-          <button className="solid-button" type="button" onClick={save} disabled={saving}>
+          <button className="solid-button" type="button" onClick={save} disabled={saving || (min != null && picks.length < min)}>
             {saving ? "Saving…" : "Save"}
           </button>
         </div>
@@ -3930,13 +3991,21 @@ function HomepageDisplayAdmin({ photos, onChanged }: { photos: Photo[]; onChange
   const published = useMemo(() => photos.filter((photo) => photo.published), [photos]);
   const [settings, setSettings] = useState<SiteSetting[]>([]);
   const [recent, setRecent] = useState<Photo[]>([]);
-  const [picker, setPicker] = useState<"hero" | number | null>(null);
+  const [picker, setPicker] = useState<"hero" | "recent" | null>(null);
   const [busy, setBusy] = useState(false);
+  const [rules, setRules] = useState<RecentWorkRules>({ orientation: "all", sort: "newest", year: "all", perPlace: 2 });
 
   const load = useCallback(async () => {
     const [nextSettings, nextRecent] = await Promise.all([getSiteSettings(), getRecentPhotos(8)]);
+    const nextValues = Object.fromEntries(nextSettings.map((setting) => [setting.key, setting.value]));
     setSettings(nextSettings);
     setRecent(nextRecent.slice(0, 8));
+    setRules({
+      orientation: nextValues.recent_work_orientation ?? "all",
+      sort: nextValues.recent_work_sort ?? "newest",
+      year: nextValues.recent_work_year ?? "all",
+      perPlace: Number.parseInt(nextValues.recent_work_per_place ?? "2", 10) || 2,
+    });
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -3945,6 +4014,15 @@ function HomepageDisplayAdmin({ photos, onChanged }: { photos: Photo[]; onChange
     ?? published.find((photo) => photo.featured && (photo.aspect === "landscape" || photo.aspect === "wide"))
     ?? published[0];
   const heroRotate = values.hero_mobile_rotate ?? "0";
+  const recentMode = values.recent_work_mode === "automatic" ? "automatic" : "curated";
+  const years = useMemo(
+    () => [...new Set(published.map((photo) => photo.capturedAt?.slice(0, 4) || photo.year).filter(Boolean))].sort((a, b) => b.localeCompare(a)),
+    [published],
+  );
+  const recentPreview = useMemo(
+    () => recentMode === "automatic" ? automaticRecentSelection(published, rules) : recent,
+    [published, recent, recentMode, rules],
+  );
 
   async function saveHero(ids: string[]) {
     if (!ids[0]) return;
@@ -3969,14 +4047,42 @@ function HomepageDisplayAdmin({ photos, onChanged }: { photos: Photo[]; onChange
     }
   }
 
-  async function saveRecent(slot: number, ids: string[]) {
-    if (!ids[0]) return;
+  async function setRecentMode(mode: "curated" | "automatic") {
     setBusy(true);
     try {
-      await assignRecentSlot(slot, ids[0]);
+      await setSiteSetting("recent_work_mode", mode);
+      await load();
+      await onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveRecent(ids: string[]) {
+    setBusy(true);
+    try {
+      await setRecentWorkPicks(ids);
+      await setSiteSetting("recent_work_mode", "curated");
       await load();
       await onChanged();
       setPicker(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveRules() {
+    setBusy(true);
+    try {
+      await Promise.all([
+        setSiteSetting("recent_work_mode", "automatic"),
+        setSiteSetting("recent_work_orientation", rules.orientation),
+        setSiteSetting("recent_work_sort", rules.sort),
+        setSiteSetting("recent_work_year", rules.year),
+        setSiteSetting("recent_work_per_place", String(rules.perPlace)),
+      ]);
+      await load();
+      await onChanged();
     } finally {
       setBusy(false);
     }
@@ -3995,21 +4101,40 @@ function HomepageDisplayAdmin({ photos, onChanged }: { photos: Photo[]; onChange
           <label>Phone orientation<select value={heroRotate} disabled={busy} onChange={(event) => saveHeroRotation(event.target.value)}><option value="0">Natural crop</option><option value="90">Rotate 90°</option><option value="270">Rotate 270°</option></select></label>
         </div>
       </div>
-      <div className="homepage-recent-head"><div><b>Recent Work</b><span>Eight public mosaic positions</span></div><a href="/#galleries" target="_blank" rel="noreferrer">Preview section →</a></div>
+      <div className="homepage-recent-head"><div><b>Recent Work</b><span>Eight photographs shown on the homepage</span></div><a href="/#galleries" target="_blank" rel="noreferrer">Preview section →</a></div>
+      <div className="homepage-recent-mode" aria-label="Recent Work selection mode">
+        <button className={recentMode === "curated" ? "on" : ""} disabled={busy} onClick={() => setRecentMode("curated")} type="button"><b>Curated 8</b><span>Fixed selection in your chosen order</span></button>
+        <button className={recentMode === "automatic" ? "on" : ""} disabled={busy} onClick={() => setRecentMode("automatic")} type="button"><b>Automatic mix</b><span>Fresh selection on every page visit</span></button>
+      </div>
+      {recentMode === "curated" ? (
+        <div className="homepage-recent-actions">
+          <p>These eight stay fixed until you change or reorder them.</p>
+          <button className="solid-button" disabled={busy || published.length < 8} onClick={() => setPicker("recent")} type="button">Choose & order 8</button>
+        </div>
+      ) : (
+        <div className="homepage-recent-rules">
+          <label><span>Orientation</span><select value={rules.orientation} onChange={(event) => setRules((current) => ({ ...current, orientation: event.target.value }))}><option value="all">Horizontal & vertical</option><option value="landscape">Horizontal only</option><option value="portrait">Vertical / square only</option></select></label>
+          <label><span>Capture year</span><select value={rules.year} onChange={(event) => setRules((current) => ({ ...current, year: event.target.value }))}><option value="all">All years</option>{years.map((year) => <option key={year} value={year}>{year}</option>)}</select></label>
+          <label><span>Order</span><select value={rules.sort} onChange={(event) => setRules((current) => ({ ...current, sort: event.target.value }))}><option value="newest">Newest captured first</option><option value="oldest">Oldest captured first</option><option value="random">Random every visit</option></select></label>
+          <label><span>Maximum per place</span><select value={rules.perPlace} onChange={(event) => setRules((current) => ({ ...current, perPlace: Number(event.target.value) }))}><option value={1}>1 photograph</option><option value={2}>2 photographs</option><option value={3}>3 photographs</option></select></label>
+          <p>The preview below is one possible visit. Random mode reshuffles only when a visitor refreshes or returns, never while they are looking.</p>
+          <button className="solid-button" disabled={busy} onClick={saveRules} type="button">{busy ? "Saving…" : "Save automatic rules"}</button>
+        </div>
+      )}
       <div className="homepage-recent-grid">
         {Array.from({ length: 8 }, (_, index) => {
-          const photo = recent[index];
+          const photo = recentPreview[index];
           return (
-            <button key={index} className="homepage-recent-slot" disabled={busy || !published.length} onClick={() => setPicker(index + 1)} type="button">
-              {photo ? <SmartImage src={thumbUrl(photo, 360)} alt="" /> : <span>No photograph</span>}
+            <div key={index} className="homepage-recent-slot">
+              {photo ? <SmartImage src={thumbUrl(photo, 360)} alt="" /> : <span>No matching photograph</span>}
               <strong>{index + 1}</strong>
               <small>{photo?.title ?? "Choose"}</small>
-            </button>
+            </div>
           );
         })}
       </div>
       {picker === "hero" ? <OrderedPhotoPicker title="Opening hero" hint="Choose the main homepage photograph. Use the phone-orientation control after saving if an aerial landscape should rotate vertically on mobile." max={1} photos={published} initialIds={hero ? [hero.id] : []} onClose={() => setPicker(null)} onSave={saveHero} /> : null}
-      {typeof picker === "number" ? <OrderedPhotoPicker title={`Recent Work · position ${picker}`} hint="Choose one published photograph for this exact homepage mosaic position." max={1} photos={published} initialIds={recent[picker - 1] ? [recent[picker - 1].id] : []} onClose={() => setPicker(null)} onSave={(ids) => saveRecent(picker, ids)} /> : null}
+      {picker === "recent" ? <OrderedPhotoPicker title="Recent Work · ordered selection" hint="Choose exactly 8 published photographs. Their numbered order is the order used by the homepage mosaic; use the arrows above to rearrange them." min={8} max={8} photos={published} initialIds={recent.map((photo) => photo.id)} onClose={() => setPicker(null)} onSave={saveRecent} /> : null}
     </section>
   );
 }

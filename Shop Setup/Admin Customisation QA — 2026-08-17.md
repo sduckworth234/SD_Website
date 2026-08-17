@@ -33,9 +33,14 @@ data is stored there.
   Locations, Shop Presentation, Products & Pricing, Orders, About & Contact, and
   Media Archive.
 - Overview provides live archive/shop/location counts and page-based shortcuts.
-- Homepage starts with the opening hero and eight exact Recent Work positions,
-  followed by section visibility, campaign/banner selections and map-promo curation.
-- Recent Work selection can be narrowed by capture year and print-sale status, then
+- Homepage starts with the opening hero and a unified Recent Work manager, followed
+  by section visibility, campaign/banner selections and map-promo curation.
+- Recent Work supports two explicit modes: eight curated photographs selected and
+  reordered in one archive picker, or an automatic eight-photo mix recalculated per
+  visit. Automatic rules cover horizontal/vertical orientation, capture year,
+  newest/oldest/random order and a one-to-three photograph maximum per place. The
+  admin preview shows the resulting eight photographs before they reach visitors.
+- The 600+ photo picker can be narrowed by capture year and print-sale status, then
   ordered by newest or oldest captured date. Candidate thumbnails show year and a
   visible Print marker alongside the existing search/location/orientation filters.
 - Map & Locations supports creating locations, editing public name/region/description,

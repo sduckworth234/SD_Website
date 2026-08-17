@@ -819,6 +819,31 @@ export async function assignRecentSlot(slot: number, photoId: string) {
   if (error) throw error;
 }
 
+// Replace the complete ordered Recent Work selection in one admin action.
+// Recent Work slots are the featured rows whose shared sort_order is 1..8;
+// featured rows outside that range are left alone.
+export async function setRecentWorkPicks(photoIds: string[]) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const uniqueIds = [...new Set(photoIds)].slice(0, 8);
+  if (uniqueIds.length !== 8) throw new Error("Choose exactly 8 different photographs.");
+
+  const { error: clearError } = await supabase
+    .from("photos")
+    .update({ is_featured: false })
+    .eq("is_featured", true)
+    .gte("sort_order", 1)
+    .lte("sort_order", 8);
+  if (clearError) throw clearError;
+
+  for (const [index, photoId] of uniqueIds.entries()) {
+    const { error } = await supabase
+      .from("photos")
+      .update({ is_featured: true, sort_order: index + 1 })
+      .eq("id", photoId);
+    if (error) throw error;
+  }
+}
+
 export async function setHeroSlot(photoId: string, slot: 1 | 2 | 3) {
   if (!supabase) throw new Error("Supabase is not configured.");
 
