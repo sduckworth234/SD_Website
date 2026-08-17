@@ -5268,9 +5268,14 @@ body:has(.contact-overlay) {
 @media (max-width: 800px) {
   .co-header { grid-template-columns: 1fr auto; }
   .co-header .co-brand { display: none; }
-  .co-layout { display: flex; flex-direction: column; }
+  .co-layout { display: flex; flex-direction: column; width: 100%; }
   .co-main { border-right: 0; }
-  .co-summary { position: static; min-height: 0; order: -1; padding-top: 30px; padding-bottom: 30px; border-bottom: 1px solid var(--co-line); }
+  /* align-self: start means something different once the layout switches from
+     grid to a column flexbox — there it controlled the sticky sidebar's
+     vertical stretch, but on a flex column it controls the CROSS axis
+     (horizontal), so it was shrinking this panel to its content width
+     instead of the full viewport. Reset it back to a full-width block here. */
+  .co-summary { position: static; align-self: stretch; width: 100%; min-height: 0; order: -1; padding-top: 30px; padding-bottom: 30px; border-bottom: 1px solid var(--co-line); }
   .co-summary-items { max-height: 190px; overflow: auto; }
 }
 @media (max-width: 560px) {
