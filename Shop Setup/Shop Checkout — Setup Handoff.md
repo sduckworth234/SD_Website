@@ -194,6 +194,15 @@ without a deploy. Do not use live Stripe or Prodigi credentials in Preview.
   proof and the provider locked to that order. In manual orders, upload the
   original JPEG when useful, start fulfilment, enter tracking and mark shipped;
   this immediately sends the customer dispatch email. Refund remains available.
+- **Start fulfilment** changes only the internal order status to `in_production`.
+  It does not contact Prodigi, charge anything or send the customer an email.
+- **Mark shipped** stores the carrier/tracking fields, sets `shipped_at`, closes
+  the order as `shipped` and sends the customer dispatch email once.
+- **Refund** creates the real Stripe refund using the stored PaymentIntent and
+  closes the order as `refunded`. It is disabled after shipping or Prodigi
+  submission. Stripe may retain the original processing fee.
+- **Receipt** is a read-only link to Stripe's hosted payment receipt. Opening it
+  does not change the order or payment.
 - Prodigi orders show an explicit Submit to Prodigi action only when the global
   provider is also Prodigi and the API key is configured.
 - Admin test purchases may create paid/held orders while public checkout is off,
@@ -236,6 +245,11 @@ Put its signing secret into Vercel as `STRIPE_WEBHOOK_SECRET`.
 
 Create Promotion Codes in Stripe. The custom checkout applies them through
 Stripe's own API; there is no readable frontend code list anymore.
+
+Website and product questions submit to `/api/contact` and are delivered by
+Resend to `SHOP_ALERT_EMAIL`. The form validates server-side, uses a same-origin
+check, a honeypot and a small rate limit, and sets the visitor's email as the
+reply-to address.
 
 In **Settings → Business → Customer emails**, enable successful-payment and
 refund receipts. Complete Stripe Branding and Public details (legal name,

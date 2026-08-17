@@ -68,6 +68,8 @@ export type ShopAnalyticsEvents = {
     item_name: string;
     source: "gallery" | "map" | "similar_images" | "shop_showcase" | string;
   };
+  contact_form_opened: { source: string };
+  contact_form_submitted: { source: string };
 };
 
 type Gtag = (command: "event", eventName: string, params?: Record<string, unknown>) => void;
@@ -133,3 +135,9 @@ export const trackSizeGuideOpened = (params: ShopAnalyticsEvents["size_guide_ope
 export const trackProductLinkClicked = (
   params: ShopAnalyticsEvents["product_link_clicked"],
 ) => trackAnalyticsEvent("product_link_clicked", params);
+
+export const trackContactFormOpened = (params: ShopAnalyticsEvents["contact_form_opened"]) =>
+  trackAnalyticsEvent("contact_form_opened", params);
+
+export const trackContactFormSubmitted = (params: ShopAnalyticsEvents["contact_form_submitted"]) =>
+  trackAnalyticsEvent("contact_form_submitted", params);

@@ -95,9 +95,10 @@ import { SDLoader } from "./components/SDLoader";
 import { PrintConfigurator } from "./components/PrintConfigurator";
 import { CartDrawer } from "./components/CartDrawer";
 import { LegalPage, ShopLegalFooter, type LegalPageId } from "./components/LegalPages";
+import { ContactOverlay } from "./components/ContactOverlay";
 import { useCart } from "./lib/cart";
 import { trackPageView, trackProductLinkClicked, trackSelectItem } from "./lib/analytics";
-import { CONTACT_EMAIL, SIZES, isSizeSellable, money, priceFor } from "./lib/printCatalogue";
+import { SIZES, isSizeSellable, money, priceFor } from "./lib/printCatalogue";
 import type { SizeId } from "./lib/printCatalogue";
 import { SHOP_FEATURE_ENABLED } from "./lib/features";
 
@@ -1501,6 +1502,25 @@ function ShopProduct({ photo, onAdd, productHref, onOpen }: { photo: Photo; onAd
 // back into its own print configurator.
 const orientOf = (p: Photo) => (p.aspect === "portrait" || p.aspect === "square" ? "portrait" : "landscape");
 
+// Keep the admin's chosen first-15 membership and the relative order within
+// each orientation, but alternate portrait and landscape works on the public
+// rail. This stops a run of one shape making the selection feel accidental.
+function balanceShopOrientations(photos: Photo[]) {
+  const groups = {
+    portrait: photos.filter((photo) => orientOf(photo) === "portrait"),
+    landscape: photos.filter((photo) => orientOf(photo) === "landscape"),
+  };
+  let next: keyof typeof groups = photos[0] ? orientOf(photos[0]) : "landscape";
+  const balanced: Photo[] = [];
+  while (groups.portrait.length || groups.landscape.length) {
+    const preferred = groups[next];
+    const alternate = groups[next === "portrait" ? "landscape" : "portrait"];
+    balanced.push((preferred.length ? preferred : alternate).shift() as Photo);
+    next = next === "portrait" ? "landscape" : "portrait";
+  }
+  return balanced;
+}
+
 // Live mini-mockup of the glimpse wall: each picked photo in its actual frame,
 // numbered to match the picker — so there's no guessing which goes where.
 function WallPreview({ ids, photos }: { ids: string[]; photos: Photo[] }) {
@@ -1533,6 +1553,8 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   const [curating, setCurating] = useState<null | "shop" | "wall">(null);
   const [studioIndex, setStudioIndex] = useState(0);
   const [studioPaused, setStudioPaused] = useState(false);
+  const [studioDirection, setStudioDirection] = useState<"next" | "prev">("next");
+  const editionsTrackRef = useRef<HTMLDivElement | null>(null);
 
   useSeo("Framed Editions — Sam Duckworth Photography", {
     description: "Fine-art aerial and coastal photography prints by Sam Duckworth, professionally framed in Australia and delivered Australia-wide.",
@@ -1559,9 +1581,9 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
     () => publicPhotos.filter((p) => p.inShop).sort((a, b) => (a.shopOrder ?? 1e9) - (b.shopOrder ?? 1e9)),
     [publicPhotos],
   );
-  // Preserve the exact admin order, but keep the public landing page an edited
-  // showcase rather than loading the entire sale archive at once.
-  const curatedShopPhotos = useMemo(() => shopPhotos.slice(0, 15), [shopPhotos]);
+  // Keep the first 15 admin-selected works as the landing edit, then balance
+  // their display order by orientation for a more coherent public rail.
+  const curatedShopPhotos = useMemo(() => balanceShopOrientations(shopPhotos.slice(0, 15)), [shopPhotos]);
   const filtered = filter === "All" ? curatedShopPhotos : curatedShopPhotos.filter((p) => region(p) === filter);
   const representedRegions = ["Europe", "Australia"].filter((candidate) => curatedShopPhotos.some((p) => region(p) === candidate));
   const visibleFilters = representedRegions.length > 1 ? ["All", ...representedRegions] : [];
@@ -1577,6 +1599,18 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   );
   const studioPhoto = studioPhotos[studioIndex % Math.max(studioPhotos.length, 1)];
 
+  function moveStudio(direction: 1 | -1) {
+    if (studioPhotos.length < 2) return;
+    setStudioDirection(direction > 0 ? "next" : "prev");
+    setStudioIndex((current) => (current + direction + studioPhotos.length) % studioPhotos.length);
+  }
+
+  function scrollEditions(direction: 1 | -1) {
+    const track = editionsTrackRef.current;
+    if (!track) return;
+    track.scrollBy({ left: direction * Math.max(320, track.clientWidth * 0.78), behavior: "smooth" });
+  }
+
   useEffect(() => {
     setStudioIndex(0);
   }, [studioPhotos]);
@@ -1584,8 +1618,9 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   useEffect(() => {
     if (studioPaused || studioPhotos.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
     const timer = window.setInterval(() => {
+      setStudioDirection("next");
       setStudioIndex((current) => (current + 1) % studioPhotos.length);
-    }, 4800);
+    }, 3600);
     return () => window.clearInterval(timer);
   }, [studioPaused, studioPhotos]);
 
@@ -1731,8 +1766,8 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
               </div>
               <div className="shop-studio-wall" aria-live="off">
                 <OakFrame
-                  key={studioPhoto.id}
-                  className="shop-studio-frame"
+                  key={`${studioPhoto.id}-${studioIndex}`}
+                  className={`shop-studio-frame is-${studioDirection}`}
                   src={thumbUrl(studioPhoto, 1200)}
                   orientation="portrait"
                   alt={`${studioPhoto.title}, ${studioPhoto.location}, shown as an A1 framed print`}
@@ -1740,7 +1775,10 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
                 <p><strong>{studioPhoto.title}</strong><span>{studioPhoto.location} · A1 vertical</span></p>
                 {studioPhotos.length > 1 ? (
                   <div className="shop-studio-controls">
-                    <div aria-label="Choose a studio photograph">
+                    <button type="button" onClick={() => moveStudio(-1)} aria-label="Previous studio photograph">
+                      <ChevronLeft size={17} aria-hidden="true" />
+                    </button>
+                    <div className="shop-studio-dots" aria-label="Choose a studio photograph">
                       {studioPhotos.map((photo, index) => (
                         <button
                           key={photo.id}
@@ -1748,12 +1786,18 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
                           className={index === studioIndex ? "active" : ""}
                           aria-label={`Show ${photo.title} in the studio`}
                           aria-pressed={index === studioIndex}
-                          onClick={() => setStudioIndex(index)}
+                          onClick={() => {
+                            setStudioDirection(index < studioIndex ? "prev" : "next");
+                            setStudioIndex(index);
+                          }}
                         />
                       ))}
                     </div>
-                    <button type="button" onClick={() => setStudioPaused((paused) => !paused)}>
-                      {studioPaused ? "Play showcase" : "Pause showcase"}
+                    <button type="button" onClick={() => moveStudio(1)} aria-label="Next studio photograph">
+                      <ChevronRight size={17} aria-hidden="true" />
+                    </button>
+                    <button className="shop-studio-pause" type="button" onClick={() => setStudioPaused((paused) => !paused)}>
+                      {studioPaused ? "Play" : "Pause"}
                     </button>
                   </div>
                 ) : null}
@@ -1767,11 +1811,17 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
               <h2>A considered collection</h2>
               <p className="shop-selection-lead">A small edit of photographs that work beautifully in print. For the full archive, explore the galleries and choose “Order a print”.</p>
             </div>
-            {isAdmin ? (
-              <button className="sec-edit" type="button" onClick={() => setCurating("shop")} aria-label="Choose the prints for sale" title="Choose the prints for sale">
-                <Pencil size={15} aria-hidden="true" />
-              </button>
-            ) : null}
+            <div className="shop-sec-actions">
+              <div className="shop-edition-nav" aria-label="Browse selected editions">
+                <button type="button" onClick={() => scrollEditions(-1)} aria-label="Previous selected editions"><ChevronLeft size={17} aria-hidden="true" /></button>
+                <button type="button" onClick={() => scrollEditions(1)} aria-label="Next selected editions"><ChevronRight size={17} aria-hidden="true" /></button>
+              </div>
+              {isAdmin ? (
+                <button className="sec-edit" type="button" onClick={() => setCurating("shop")} aria-label="Choose the prints for sale" title="Choose the prints for sale">
+                  <Pencil size={15} aria-hidden="true" />
+                </button>
+              ) : null}
+            </div>
           </div>
           {visibleFilters.length ? (
             <div className="shop-filters">
@@ -1781,7 +1831,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
             </div>
           ) : null}
           {filtered.length ? (
-            <div className="shop-grid">
+            <div className="shop-grid" ref={editionsTrackRef}>
               {filtered.map((p) => (
                 <ShopProduct
                   key={p.id}
@@ -1849,7 +1899,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
       {curating === "shop" ? (
         <OrderedPhotoPicker
           title="Prints for sale"
-          hint="Pick the photos sold in the shop — they appear in this order. The first 15 form the curated shop landing-page selection."
+          hint="Pick the photos sold in the shop. The first 15 form the landing-page selection; the public rail gently alternates portrait and landscape works while preserving the relative order within each orientation."
           photos={publicPhotos}
           initialIds={shopPhotos.map((p) => p.id)}
           onClose={() => setCurating(null)}
@@ -6112,60 +6162,6 @@ function ContactPrompt({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-// Simple contact popup. The form composes an email via the visitor's mail app
-// (no backend); a real in-page send (Formspree/Resend) can come later.
-function ContactOverlay({ onClose }: { onClose: () => void }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
-
-  function submit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const subject = encodeURIComponent(`Website enquiry${name ? ` from ${name}` : ""}`);
-    const body = encodeURIComponent(`${message}\n\n— ${name || ""}${email ? `\n${email}` : ""}`);
-    window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
-  }
-
-  return (
-    <div className="contact-overlay" role="dialog" aria-modal="true" aria-label="Contact Sam Duckworth">
-      <button className="lightbox-backdrop" onClick={onClose} type="button" aria-label="Close" />
-      <section className="contact-panel">
-        <button className="icon-button close-button" onClick={onClose} type="button" aria-label="Close">
-          <X size={18} aria-hidden="true" />
-        </button>
-        <p className="eyebrow">Get in touch</p>
-        <h2>Let&rsquo;s work together.</h2>
-        <p className="contact-lead">Commissions, prints &amp; licensing — drop a note and I&rsquo;ll get back to you.</p>
-        <form className="contact-form" onSubmit={submit}>
-          <label>Name
-            <input value={name} onChange={(e) => setName(e.target.value)} type="text" autoComplete="name" placeholder="Your name" />
-          </label>
-          <label>Email
-            <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="email" placeholder="you@example.com" />
-          </label>
-          <label>Message
-            <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={4} placeholder="What can I help with?" required />
-          </label>
-          <button className="solid-button" type="submit">Send message</button>
-        </form>
-        <p className="contact-alt">
-          or email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
-          {" · "}
-          <a href="https://instagram.com/sam.duckworth" target="_blank" rel="noopener noreferrer">@sam.duckworth</a>
-        </p>
-      </section>
-    </div>
-  );
-}
-
 // Shown for any unknown path (the router falls through to here).
 function NotFound({ onNavigate }: { onNavigate: (route: string) => void }) {
   useSeo("Page not found — Sam Duckworth Photography", {
@@ -6188,7 +6184,7 @@ function NotFound({ onNavigate }: { onNavigate: (route: string) => void }) {
 
 function Footer() {
   return (
-    <footer>
+    <footer className="site-footer">
       <span>SD Gallery</span>
       <a className="footer-ig" href="https://instagram.com/sam.duckworth" target="_blank" rel="noopener noreferrer" aria-label="Instagram: sam.duckworth">
         <Instagram size={15} aria-hidden="true" /> sam.duckworth

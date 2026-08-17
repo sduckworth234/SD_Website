@@ -192,6 +192,17 @@ export function AdminOrders({ session }: { session: Session }) {
         <span className={features.paidInvoicesEnabled ? "is-on" : ""}><b>Stripe paid invoices</b>{features.paidInvoicesEnabled ? "Enabled" : "Off · receipts still available"}</span>
       </div>
 
+      <details className="admin-order-help">
+        <summary>Manual order workflow and button guide</summary>
+        <ol>
+          <li><b>Check the paid order</b><span>Open Receipt to confirm Stripe’s payment record, then check the customer, address, print, size, frame and mount.</span></li>
+          <li><b>Prepare the artwork</b><span>Add the print-master JPEG if you want it stored against this photograph. In manual mode you can also supply the file directly to your chosen lab.</span></li>
+          <li><b>Start fulfilment</b><span>Marks the order “in production”. It does not charge anything, email the customer or send the order to Prodigi.</span></li>
+          <li><b>Mark shipped</b><span>Saves the carrier and tracking details, marks the order shipped and immediately sends the customer’s dispatch email.</span></li>
+        </ol>
+        <p><b>Refund</b> creates a real Stripe refund and closes the order. Use it before shipping; the original Stripe processing fee may not be returned. <b>Receipt</b> only opens Stripe’s hosted payment receipt and changes nothing.</p>
+      </details>
+
       <form className="admin-search" onSubmit={(event) => { event.preventDefault(); load(query); }}>
         <Search size={16} aria-hidden="true" />
         <input aria-label="Search orders" onChange={(event) => setQuery(event.target.value)} placeholder="Search customer name or email…" value={query} />
@@ -249,13 +260,13 @@ export function AdminOrders({ session }: { session: Session }) {
                 <footer>
                   {manual ? (
                     <>
-                      <button className="text-button" disabled={Boolean(working) || closed || shipped || order.status === "in_production"} onClick={() => action(order.id, "mark_processing")} type="button">Start fulfilment</button>
-                      <button className="solid-button" disabled={Boolean(working) || closed || shipped} onClick={() => action(order.id, "mark_shipped")} type="button">Mark shipped</button>
+                      <button className="text-button" disabled={Boolean(working) || closed || shipped || order.status === "in_production"} onClick={() => action(order.id, "mark_processing")} title="Set this manual order to in production. No email is sent." type="button">Start fulfilment</button>
+                      <button className="solid-button" disabled={Boolean(working) || closed || shipped} onClick={() => action(order.id, "mark_shipped")} title="Save tracking, close fulfilment and email the customer." type="button">Mark shipped</button>
                     </>
                   ) : (
                     <button className="solid-button" disabled={features.fulfilmentProvider !== "prodigi" || !features.prodigiConfigured || Boolean(working) || ["submitted", "in_production", "shipped", "refunded", "cancelled"].includes(order.status)} onClick={() => action(order.id, "submit_now")} title={features.fulfilmentProvider === "prodigi" ? undefined : "Prodigi mode is disabled"} type="button">Submit to Prodigi</button>
                   )}
-                  <button className="text-button danger" disabled={Boolean(working) || Boolean(order.prodigi_order_id) || ["refunded", "cancelled", "shipped"].includes(order.status)} onClick={() => action(order.id, "refund")} type="button">Refund</button>
+                  <button className="text-button danger" disabled={Boolean(working) || Boolean(order.prodigi_order_id) || ["refunded", "cancelled", "shipped"].includes(order.status)} onClick={() => action(order.id, "refund")} title="Create a Stripe refund and close this order." type="button">Refund</button>
                   <div className="admin-order-links">
                     {order.tracking_url ? <a href={order.tracking_url} rel="noreferrer" target="_blank">Tracking{order.tracking_carrier ? ` (${order.tracking_carrier})` : ""} <ExternalLink size={12} /></a> : null}
                     {!order.tracking_url && order.tracking_carrier ? <span className="admin-order-tracking-plain">{order.tracking_carrier}{order.tracking_number ? ` · ${order.tracking_number}` : ""}</span> : null}

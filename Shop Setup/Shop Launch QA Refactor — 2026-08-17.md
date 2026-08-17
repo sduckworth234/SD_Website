@@ -65,6 +65,22 @@ checklist in `Shop Checkout — Setup Handoff.md`.
 - Confirmation explains next steps, supplies support and Instagram links, and offers
   clear paths back to the shop and Galleries.
 
+### Follow-up commerce polish
+
+- Centred the public gallery footer on desktop and mobile.
+- Tightened the How it works → Studio spacing and changed the studio to a
+  continuously looping directional carousel with previous, next, direct selection
+  and pause/play controls.
+- Replaced the irregular mixed-orientation edition mosaic with a horizontal salon
+  rail. Portrait and landscape works share a controlled display height, use their
+  natural widths and alternate automatically while preserving each orientation's
+  relative admin order. The rail supports touch, trackpad and explicit arrow controls.
+- Replaced mail-app-only print questions with an in-page Resend contact form. It
+  includes required field validation, same-origin enforcement, honeypot and rate-limit
+  spam protection, clear success/failure states and a mailto fallback.
+- Added an expandable manual-workflow guide inside Admin → Shop Orders describing
+  Start fulfilment, Mark shipped, Refund and Receipt at the point of use.
+
 ## Policies and search presentation
 
 The following customer-facing routes are live and linked from the shop, product,
@@ -104,6 +120,8 @@ Events implemented:
 | Confirmed paid order | `purchase` |
 | Studio/detail tab changes | `product_view_changed` |
 | Size guidance opens | `size_guide_opened` |
+| Contact form opens | `contact_form_opened` |
+| Contact form succeeds | `contact_form_submitted` |
 
 ## Verification completed
 

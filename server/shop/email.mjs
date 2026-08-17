@@ -93,3 +93,14 @@ export async function sendFulfilmentAlert(subject, detail) {
     html: shell(subject, `<p>${escapeHtml(detail)}</p>`),
   });
 }
+
+export async function sendContactEnquiry({ name, email, message, context }) {
+  const to = process.env.SHOP_ALERT_EMAIL ?? "samduckworthphoto@gmail.com";
+  const safeContext = String(context ?? "Website enquiry").slice(0, 160);
+  return send({
+    to,
+    replyTo: email,
+    subject: `${safeContext} · ${name}`,
+    html: shell("A new website enquiry.", `<p><strong>${escapeHtml(name)}</strong><br><a style="color:#d1ad79" href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></p><p style="white-space:pre-wrap;line-height:1.7">${escapeHtml(message)}</p><p style="color:#aaa;font-size:13px">Source: ${escapeHtml(safeContext)}</p>`),
+  });
+}

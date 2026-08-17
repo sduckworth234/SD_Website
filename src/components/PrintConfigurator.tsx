@@ -11,7 +11,6 @@ import { productStructuredData, useSeo } from "../lib/seo";
 import type { Photo } from "../types";
 import {
   COLOURS,
-  CONTACT_EMAIL,
   MOULDING_CM,
   ROOM,
   SIZES,
@@ -26,6 +25,7 @@ import type { ColourId, SizeId } from "../lib/printCatalogue";
 import { makeCartItem, useCart } from "../lib/cart";
 import { CartDrawer } from "./CartDrawer";
 import { ShopLegalFooter } from "./LegalPages";
+import { ContactOverlay } from "./ContactOverlay";
 
 function thumb(photo: Photo, width: number): string {
   return photo.storagePath ? getTransformedPublicUrl(photoBucket, photo.storagePath, width) : photo.imageUrl;
@@ -61,6 +61,7 @@ export function PrintConfigurator({
   const [addError, setAddError] = useState<string | null>(null);
   const [pulseCart, setPulseCart] = useState(false);
   const [previewMode, setPreviewMode] = useState<PreviewMode>("studio");
+  const [questionOpen, setQuestionOpen] = useState(false);
   const pairTrackRef = useRef<HTMLDivElement | null>(null);
 
   const roomWrapRef = useRef<HTMLDivElement | null>(null);
@@ -517,14 +518,21 @@ export function PrintConfigurator({
           <b>Not sure which size is right, or have a question about this print?</b>
           <span>Sam answers these personally — sizing, framing, shipping, anything about {photo.title}.</span>
         </div>
-        <a className="pc-help-btn" href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Question about "${photo.title}"`)}`}>
+        <button className="pc-help-btn" type="button" onClick={() => setQuestionOpen(true)}>
           Email a question
-        </a>
+        </button>
       </section>
 
       <ShopLegalFooter className="pc-legal-footer" />
 
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onNavigate={onNavigate} />
+      {questionOpen ? (
+        <ContactOverlay
+          context={`Print question: ${photo.title}`}
+          intro={`Ask about sizing, framing, shipping or anything else related to “${photo.title}”.`}
+          onClose={() => setQuestionOpen(false)}
+        />
+      ) : null}
     </main>
   );
 }
