@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { fallbackLocations, photos as fallbackPhotos } from "../data/photos";
-import type { Collection, GalleryLocation, InstagramPost, Photo, SiteSetting } from "../types";
+import type { Collection, GalleryLocation, InstagramPost, Photo, RealPrintPhoto, SiteSetting } from "../types";
 import { applyLivePricing, computeSellableSizes, maxSellableFromSizes } from "./printCatalogue";
 import type { SellableSizes, SizeId, SizeOverrides } from "./printCatalogue";
 
@@ -1196,4 +1196,118 @@ export async function setSiteSetting(key: string, value: string | null) {
     .from("site_settings")
     .upsert({ key, value }, { onConflict: "key" });
   if (error) throw error;
+}
+
+export function realPrintPhotoUrl(photo: RealPrintPhoto, width = 1400) {
+  return getTransformedPublicUrl(photoBucket, photo.storagePath, width, 80);
+}
+
+export async function getRealPrintPhotos(): Promise<RealPrintPhoto[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", "shop_real_print_gallery")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.value) return [];
+  try {
+    const parsed = JSON.parse(data.value) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item): item is RealPrintPhoto => Boolean(
+        item && typeof item === "object"
+        && typeof (item as RealPrintPhoto).id === "string"
+        && typeof (item as RealPrintPhoto).storagePath === "string"
+        && typeof (item as RealPrintPhoto).altText === "string",
+      ))
+      .slice(0, 24)
+      .map((item, index) => ({
+        id: item.id,
+        storagePath: item.storagePath,
+        altText: item.altText,
+        caption: typeof item.caption === "string" ? item.caption : null,
+        sortOrder: index,
+        published: item.published !== false,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+async function saveRealPrintPhotos(photos: RealPrintPhoto[]) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const value = JSON.stringify(photos.slice(0, 24).map((photo, index) => ({ ...photo, sortOrder: index })));
+  const { data: existing, error: readError } = await supabase
+    .from("site_settings")
+    .select("key")
+    .eq("key", "shop_real_print_gallery")
+    .maybeSingle();
+  if (readError) throw readError;
+  const query = existing
+    ? supabase.from("site_settings").update({ value }).eq("key", "shop_real_print_gallery")
+    : supabase.from("site_settings").insert({ key: "shop_real_print_gallery", enabled: false, value, label: "Shop — real print gallery" });
+  const { error } = await query;
+  if (error) throw error;
+}
+
+export async function uploadRealPrintAsset(file: Blob, originalName: string) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const extension = file.type === "image/webp" ? "webp" : originalName.split(".").pop()?.toLowerCase() ?? "jpg";
+  const safeName = slugify(originalName.replace(/\.[^/.]+$/, "")) || "real-print";
+  const token = Math.random().toString(36).slice(2, 8);
+  const path = `real-prints/${Date.now()}-${token}-${safeName}.${extension}`;
+  const { data, error } = await supabase.storage.from(photoBucket).upload(path, file, {
+    cacheControl: "31536000",
+    contentType: file.type || undefined,
+    upsert: false,
+  });
+  if (error) throw error;
+  return data.path;
+}
+
+export async function removeRealPrintAsset(storagePath: string) {
+  if (!supabase || !storagePath) return;
+  const { error } = await supabase.storage.from(photoBucket).remove([storagePath]);
+  if (error) console.warn("Could not clean up real print asset", error);
+}
+
+export async function createRealPrintPhoto(input: { storagePath: string; altText: string; caption?: string; sortOrder: number }) {
+  const current = await getRealPrintPhotos();
+  if (current.length >= 24) throw new Error("The real print gallery supports up to 24 photographs.");
+  const photo: RealPrintPhoto = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    storagePath: input.storagePath,
+    altText: input.altText.trim(),
+    caption: input.caption?.trim() || null,
+    sortOrder: input.sortOrder,
+    published: true,
+  };
+  await saveRealPrintPhotos([...current, photo]);
+  return photo;
+}
+
+export async function updateRealPrintPhoto(id: string, patch: Partial<Pick<RealPrintPhoto, "altText" | "caption" | "sortOrder" | "published">>) {
+  const current = await getRealPrintPhotos();
+  await saveRealPrintPhotos(current.map((photo) => photo.id === id ? {
+    ...photo,
+    ...(patch.altText !== undefined ? { altText: patch.altText.trim() } : {}),
+    ...(patch.caption !== undefined ? { caption: patch.caption?.trim() || null } : {}),
+    ...(patch.sortOrder !== undefined ? { sortOrder: patch.sortOrder } : {}),
+    ...(patch.published !== undefined ? { published: patch.published } : {}),
+  } : photo).sort((a, b) => a.sortOrder - b.sortOrder));
+}
+
+export async function reorderRealPrintPhotos(ids: string[]) {
+  const current = await getRealPrintPhotos();
+  const byId = new Map(current.map((photo) => [photo.id, photo]));
+  await saveRealPrintPhotos(ids.map((id) => byId.get(id)).filter((photo): photo is RealPrintPhoto => Boolean(photo)));
+}
+
+export async function deleteRealPrintPhoto(photo: RealPrintPhoto) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const current = await getRealPrintPhotos();
+  await saveRealPrintPhotos(current.filter((item) => item.id !== photo.id));
+  const { error: storageError } = await supabase.storage.from(photoBucket).remove([photo.storagePath]);
+  if (storageError) console.warn("Real print asset row was removed, but storage cleanup failed", storageError);
 }

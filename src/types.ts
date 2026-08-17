@@ -126,3 +126,12 @@ export type SiteSetting = {
   value: string | null;
   label: string | null;
 };
+
+export type RealPrintPhoto = {
+  id: string;
+  storagePath: string;
+  altText: string;
+  caption: string | null;
+  sortOrder: number;
+  published: boolean;
+};

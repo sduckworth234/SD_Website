@@ -201,3 +201,18 @@ After the production deployment:
   legal policies and transactional email identity.
 - The Admin-managed live contact heading and introduction were updated alongside
   the source defaults so production does not retain the superseded copy.
+
+## Studio mockups and real-print proof
+
+- The shop Studio carries a discreet information disclosure: room scenes are
+  mockups and the delivered scale, colour, frame and finish may vary.
+- Admin → Shop Presentation includes a bounded real-print gallery manager for up
+  to 24 compressed photographs, accessible descriptions, captions, ordering and
+  individual include/hide controls.
+- The gallery has its own public switch and remains disabled by default. The
+  “See real prints” action is rendered only when the switch is enabled and at
+  least one included photograph exists.
+- Assets use the existing admin-protected `photos/real-prints` storage path;
+  ordered presentation metadata is stored in the public-safe
+  `shop_real_print_gallery` setting. No secret or private order data is stored
+  there.

@@ -4628,6 +4628,7 @@ body:has(.contact-overlay) {
 
 @media (max-width: 820px) {
   .shop-curation-grid { grid-template-columns: 1fr; }
+  .real-print-admin-grid { grid-template-columns: 1fr; }
   .framed-hero, .shop-hero { grid-template-columns: 1fr; }
   .fh-stage { margin-top: 8px; }
 }
@@ -4997,6 +4998,11 @@ body:has(.contact-overlay) {
 .pc-stage-tag .pc-k { margin: 0; font: 500 10px/1 var(--font-mono); letter-spacing: .16em; text-transform: uppercase; opacity: .75; }
 .pc-stage-tag h1 { margin: 0; font: 600 clamp(1.3rem, 3vw, 1.8rem)/1.1 var(--font-sans); letter-spacing: -.02em; }
 .pc-stage-tag .pc-loc { font-size: 11px; opacity: .8; margin: 0; }
+.pc-stage-tag button { align-self: flex-start; margin-top: 8px; padding: 0 0 4px; border: 0; border-bottom: 1px solid currentColor; background: transparent; color: #fff; font: 600 9px/1 var(--font-mono); letter-spacing: .1em; text-transform: uppercase; text-shadow: inherit; cursor: pointer; }
+.pc-studio-disclaimer { position: absolute; right: 18px; bottom: 18px; z-index: 4; }
+.pc-studio-disclaimer summary { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid rgba(255,255,255,.42); border-radius: 50%; background: rgba(30,29,27,.48); color: #fff; cursor: pointer; list-style: none; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.pc-studio-disclaimer summary::-webkit-details-marker { display: none; }
+.pc-studio-disclaimer > p { position: absolute; right: 0; bottom: 38px; width: min(250px,calc(100vw - 68px)); box-sizing: border-box; margin: 0; padding: 12px 14px; border: 1px solid rgba(255,255,255,.18); background: rgba(30,29,27,.9); color: rgba(255,255,255,.88); font-size: 10px; line-height: 1.55; box-shadow: 0 12px 30px rgba(0,0,0,.18); }
 
 .pc-frame { position: absolute; transform: translate(-50%, -50%); box-shadow: 14px 22px 34px rgba(0, 0, 0, .38), 3px 5px 9px rgba(0, 0, 0, .22); will-change: width, height, left, top; transition: width 460ms cubic-bezier(.16,1,.3,1), height 460ms cubic-bezier(.16,1,.3,1), left 460ms cubic-bezier(.16,1,.3,1), top 460ms cubic-bezier(.16,1,.3,1); }
 .pc-frame-band { width: 100%; height: 100%; box-sizing: border-box; position: relative; transition: background 220ms ease, padding 460ms cubic-bezier(.16,1,.3,1); }
@@ -5324,6 +5330,23 @@ body:has(.contact-overlay) {
 .shop-curation-meta, .shop-curation-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .shop-curation-meta { color: var(--muted); font: 500 8px var(--font-mono); letter-spacing: .04em; text-transform: uppercase; }
 .shop-curation-actions { justify-content: flex-start; }
+.real-print-admin { display: grid; gap: 16px; padding: 18px; border: 1px solid var(--line); background: var(--foam); }
+.real-print-admin .shop-runtime-heading p:not(.eyebrow) { max-width: 700px; margin: 7px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.real-print-admin-status { flex: none; padding: 7px 10px; border: 1px solid var(--line); color: var(--muted); font: 600 8px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.real-print-admin-status.on { border-color: var(--success); color: var(--success); }
+.real-print-admin-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line); }
+.real-print-admin-controls label { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; }
+.real-print-admin-controls label input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.real-print-admin-controls > span { color: var(--muted); font: 500 9px/1.4 var(--font-mono); }
+.real-print-admin-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.real-print-admin-grid article { display: grid; grid-template-columns: minmax(120px,.7fr) minmax(180px,1fr); gap: 12px; padding: 12px; border: 1px solid var(--line); background: var(--paper-deep); }
+.real-print-admin-grid article.is-hidden { opacity: .58; }
+.real-print-admin-grid article > img { width: 100%; height: 170px; object-fit: cover; background: var(--line); }
+.real-print-admin-fields { display: grid; align-content: start; gap: 9px; }
+.real-print-admin-fields label { display: grid; gap: 4px; color: var(--muted); font: 600 8px var(--font-mono); letter-spacing: .05em; text-transform: uppercase; }
+.real-print-admin-fields input, .real-print-admin-fields textarea { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font: 400 10px/1.45 var(--font-sans); resize: vertical; }
+.real-print-admin-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 7px 12px; }
+.real-print-admin-empty { margin: 0; padding: 22px; border: 1px dashed var(--line); color: var(--muted); font-size: 10px; text-align: center; }
 .admin-section-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
 .admin-section-intro h2 { margin: 2px 0 8px; font: 600 clamp(2rem, 4vw, 3.5rem)/1 var(--font-sans); letter-spacing: var(--head-track); }
 .admin-section-intro p:not(.eyebrow) { max-width: 680px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
@@ -5579,6 +5602,8 @@ body:has(.contact-overlay) {
 .shop-studio-copy h2 { margin: 8px 0 16px; font: 600 clamp(2rem, 4.5vw, 4rem)/.95 var(--font-sans); letter-spacing: -.045em; }
 .shop-studio-copy p:not(.eyebrow) { margin: 0 0 25px; color: rgba(243,238,229,.74); font-size: 12px; line-height: 1.65; }
 .shop-studio-copy a { color: #f3eee5; font: 600 10px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid currentColor; padding-bottom: 4px; }
+.shop-studio-copy-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 22px; }
+.shop-studio-copy-actions button { padding: 0 0 4px; border: 0; border-bottom: 1px solid currentColor; background: transparent; color: #d4b283; font: 600 10px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
 .shop-studio-wall { position: relative; display: grid; place-items: center; min-height: 650px; overflow: hidden; padding: 60px 24px 90px; background: linear-gradient(112deg, rgba(255,255,255,.5), transparent 34%), #e8e5de; }
 .shop-studio-wall::after { content: ""; position: absolute; right: 0; bottom: 0; left: 0; height: 18%; background: linear-gradient(#bba98f,#a58e70); clip-path: polygon(0 48%,100% 0,100% 100%,0 100%); opacity: .32; }
 .shop-studio-frame { position: relative; z-index: 1; width: min(285px, 48%); filter: drop-shadow(12px 18px 16px rgba(38,32,25,.25)); }
@@ -5595,11 +5620,32 @@ body:has(.contact-overlay) {
 .shop-studio-dots button::after { content: ""; position: absolute; top: 50%; left: 50%; width: 6px; height: 6px; border: 1px solid #292622; border-radius: 50%; transform: translate(-50%,-50%); }
 .shop-studio-dots button.active::after { background: #292622; }
 .shop-studio-controls .shop-studio-pause { min-width: 52px; font: 600 8px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.shop-studio-disclaimer { position: absolute; right: 20px; bottom: 69px; z-index: 4; }
+.shop-studio-disclaimer summary { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid rgba(41,38,34,.2); border-radius: 50%; background: rgba(245,242,236,.82); color: #565048; cursor: pointer; list-style: none; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.shop-studio-disclaimer summary::-webkit-details-marker { display: none; }
+.shop-studio-disclaimer > p { position: absolute; right: 0; bottom: 38px; width: min(240px, calc(100vw - 70px)); box-sizing: border-box; margin: 0; padding: 12px 14px; border: 1px solid rgba(41,38,34,.16); background: rgba(245,242,236,.96); color: #565048; font-size: 10px; line-height: 1.55; box-shadow: 0 12px 30px rgba(41,38,34,.12); }
 @keyframes studio-frame-next { from { opacity: 0; transform: translateX(42px) scale(.985); } to { opacity: 1; transform: none; } }
 @keyframes studio-frame-prev { from { opacity: 0; transform: translateX(-42px) scale(.985); } to { opacity: 1; transform: none; } }
 
 .shop-selection-lead { max-width: 60ch; margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .shop-studio-showcase { scroll-margin-top: 72px; }
+.real-print-overlay { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: clamp(12px,3vw,36px); }
+.real-print-overlay .lightbox-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: rgba(17,17,16,.78); cursor: default; }
+.real-print-gallery { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0,1fr) minmax(220px,310px); grid-template-rows: auto minmax(0,1fr); gap: 22px 28px; width: min(1060px,100%); max-height: min(850px,calc(100dvh - 30px)); box-sizing: border-box; padding: clamp(22px,4vw,42px); overflow: auto; background: var(--paper); color: var(--ink); box-shadow: 0 30px 90px rgba(0,0,0,.3); }
+.real-print-gallery > .close-button { position: absolute; top: 12px; right: 12px; z-index: 2; }
+.real-print-gallery header { grid-column: 2; align-self: end; padding-right: 28px; }
+.real-print-gallery header h2 { margin: 7px 0 12px; font: 600 clamp(2rem,4vw,3.4rem)/.96 var(--font-sans); letter-spacing: -.04em; }
+.real-print-gallery header > p:last-child { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.real-print-stage { grid-column: 1; grid-row: 1 / span 2; display: grid; align-content: center; justify-items: center; min-height: 480px; background: var(--paper-deep); }
+.real-print-stage > img { display: block; width: 100%; height: min(650px,68dvh); object-fit: contain; }
+.real-print-stage > p { width: 100%; box-sizing: border-box; margin: 0; padding: 11px 14px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.real-print-nav { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 10px; }
+.real-print-nav button { display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer; }
+.real-print-nav span { min-width: 46px; color: var(--muted); font: 600 9px var(--font-mono); text-align: center; }
+.real-print-thumbs { grid-column: 2; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); align-content: start; gap: 6px; }
+.real-print-thumbs button { aspect-ratio: 1; padding: 0; overflow: hidden; border: 2px solid transparent; background: var(--paper-deep); cursor: pointer; }
+.real-print-thumbs button.active { border-color: var(--ink); }
+.real-print-thumbs img { width: 100%; height: 100%; object-fit: cover; }
 .shop-sec-actions { display: flex; align-items: center; gap: 10px; }
 .shop-edition-nav { display: flex; gap: 6px; }
 .shop-edition-nav button { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer; }
@@ -5709,6 +5755,7 @@ body:has(.contact-overlay) {
   .shop-mobile-nav [aria-current="page"]::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 3px; background: var(--sea); }
 
   .pc-header { min-height: 67px; padding: 11px 14px; }
+  .pc-studio-disclaimer { right: 16px; bottom: 54px; }
   .pc-back { min-width: 0; overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
   .pc-header-actions { position: relative; z-index: 3; flex: 0 0 auto; }
   .pc-menu-toggle { display: grid; width: 44px; height: 44px; padding: 0; place-items: center; border: 0; background: transparent; color: var(--ink); cursor: pointer; }
@@ -5724,6 +5771,7 @@ body:has(.contact-overlay) {
   .shop-strip span { min-width: 0; line-height: 1.45; }
   .shop-studio-copy { padding: 32px 24px; }
   .shop-studio-wall { min-height: 480px; padding-top: 45px; }
+  .shop-studio-disclaimer { right: 14px; bottom: 68px; }
   .shop-studio-frame { width: min(235px,58%); }
   .shop-studio-frame.landscape { width: min(315px,98%); }
   .shop .shop-grid { grid-template-columns: 1fr; gap: 42px; }
@@ -5743,6 +5791,15 @@ body:has(.contact-overlay) {
   .co-result-actions { display: grid; width: min(360px,100%); }
   .co-result-actions button { margin-top: 0; }
   .legal-nav { gap: 9px 14px; }
+  .real-print-overlay { padding: 8px; }
+  .real-print-gallery { grid-template-columns: 1fr; grid-template-rows: auto auto auto; gap: 18px; max-height: calc(100dvh - 16px); padding: 26px 18px 20px; }
+  .real-print-gallery header { grid-column: 1; grid-row: 1; padding-right: 30px; }
+  .real-print-stage { grid-column: 1; grid-row: 2; min-height: 0; }
+  .real-print-stage > img { height: min(52dvh,520px); }
+  .real-print-thumbs { grid-column: 1; grid-row: 3; display: flex; overflow-x: auto; }
+  .real-print-thumbs button { flex: 0 0 66px; }
+  .real-print-admin-grid article { grid-template-columns: 100px minmax(0,1fr); }
+  .real-print-admin-grid article > img { height: 130px; }
   .site-footer { grid-auto-flow: row; }
   .admin-order-help ol { grid-template-columns: 1fr; }
   .admin-order-help li { min-height: 0; }

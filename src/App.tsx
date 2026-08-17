@@ -11,6 +11,7 @@ import {
   EyeOff,
   Frame,
   Globe,
+  Info,
   Images,
   Instagram,
   LayoutDashboard,
@@ -42,6 +43,7 @@ import {
   bulkEditPhotos,
   createCollection,
   createLocation,
+  createRealPrintPhoto,
   setLocationOrder,
   createPhotoRecord,
   deleteCollection,
@@ -52,6 +54,7 @@ import {
   getCollectionMembership,
   getGalleryData,
   getInstagramPosts,
+  getRealPrintPhotos,
   getRecentPhotos,
   getSiteSettings,
   getTransformedPublicUrl,
@@ -67,6 +70,10 @@ import {
   setPhotoSizeOverride,
   setRecentWorkPicks,
   removeUploadedAsset,
+  removeRealPrintAsset,
+  deleteRealPrintPhoto,
+  realPrintPhotoUrl,
+  reorderRealPrintPhotos,
   setSiteFlag,
   setSiteSetting,
   supabase,
@@ -75,9 +82,11 @@ import {
   updatePhotoDetails,
   updatePhotoCuration,
   updatePhotoVisibility,
+  updateRealPrintPhoto,
   uploadPhotoAsset,
+  uploadRealPrintAsset,
 } from "./lib/supabase";
-import type { Collection, GalleryLocation, InstagramPost, LocationBucket, Photo, SiteSetting } from "./types";
+import type { Collection, GalleryLocation, InstagramPost, LocationBucket, Photo, RealPrintPhoto, SiteSetting } from "./types";
 import { collectionTitle } from "./types";
 import { compressToWebp, extractPhotoMetadata } from "./lib/ingest";
 import { prewarmPhoto } from "./lib/viewTransition";
@@ -1671,6 +1680,9 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   const [studioIndex, setStudioIndex] = useState(0);
   const [studioPaused, setStudioPaused] = useState(false);
   const [studioDirection, setStudioDirection] = useState<"next" | "prev">("next");
+  const [realPrints, setRealPrints] = useState<RealPrintPhoto[]>([]);
+  const [realPrintGalleryOpen, setRealPrintGalleryOpen] = useState(false);
+  const [realPrintIndex, setRealPrintIndex] = useState(0);
   const editionsTrackRef = useRef<HTMLDivElement | null>(null);
 
   useSeo("Framed Editions — Sam Duckworth Photography", {
@@ -1701,6 +1713,16 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   // bypasses public visibility so the real configurator remains testable.
   const configuratorOn = isAdmin || (SHOP_FEATURE_ENABLED && flags.print_configurator === true);
   const cartCount = configuratorOn ? realCart.items.length : cart;
+  const realPrintGalleryEnabled = flags.shop_real_print_gallery === true;
+
+  useEffect(() => {
+    if (!realPrintGalleryEnabled) {
+      setRealPrints([]);
+      setRealPrintGalleryOpen(false);
+      return;
+    }
+    getRealPrintPhotos().then((photos) => setRealPrints(photos.filter((photo) => photo.published))).catch(() => setRealPrints([]));
+  }, [realPrintGalleryEnabled]);
 
   const shopPhotos = useMemo(
     () => publicPhotos.filter((p) => p.inShop).sort((a, b) => (a.shopOrder ?? 1e9) - (b.shopOrder ?? 1e9)),
@@ -1768,6 +1790,17 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [shopMenuOpen]);
+
+  useEffect(() => {
+    if (!realPrintGalleryOpen) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setRealPrintGalleryOpen(false);
+      if (event.key === "ArrowLeft") setRealPrintIndex((current) => (current - 1 + realPrints.length) % realPrints.length);
+      if (event.key === "ArrowRight") setRealPrintIndex((current) => (current + 1) % realPrints.length);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [realPrintGalleryOpen, realPrints.length]);
 
   // The "collection glimpse" wall is curated SEPARATELY from the shop products —
   // its ordered photo ids live in the shop_preview site setting. If unset, fall
@@ -1912,18 +1945,25 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
                 <p className="eyebrow">Preview the possibilities</p>
                 <h2 id="studio-showcase-title">See it in the studio</h2>
                 <p>Each photograph is framed vertically or horizontally to suit its composition, shown at scale with a generous mat. Choose any available work in the galleries to create your own.</p>
-                <a
-                  href={`/shop/${studioPhoto.slug}`}
-                  onClick={(event) => {
-                    if (!configuratorOn) return;
-                    event.preventDefault();
-                    trackProductLinkClicked({ item_id: studioPhoto.id, item_name: studioPhoto.title, source: "shop_showcase" });
-                    window.history.pushState({}, "", `/shop/${studioPhoto.slug}`);
-                    onNavigate(`/shop/${studioPhoto.slug}`);
-                  }}
-                >
-                  Preview {studioPhoto.title}
-                </a>
+                <div className="shop-studio-copy-actions">
+                  <a
+                    href={`/shop/${studioPhoto.slug}`}
+                    onClick={(event) => {
+                      if (!configuratorOn) return;
+                      event.preventDefault();
+                      trackProductLinkClicked({ item_id: studioPhoto.id, item_name: studioPhoto.title, source: "shop_showcase" });
+                      window.history.pushState({}, "", `/shop/${studioPhoto.slug}`);
+                      onNavigate(`/shop/${studioPhoto.slug}`);
+                    }}
+                  >
+                    Preview {studioPhoto.title}
+                  </a>
+                  {realPrintGalleryEnabled && realPrints.length ? (
+                    <button type="button" onClick={() => { setRealPrintIndex(0); setRealPrintGalleryOpen(true); }}>
+                      See real prints
+                    </button>
+                  ) : null}
+                </div>
               </div>
               <div className="shop-studio-wall" aria-live="off">
                 <OakFrame
@@ -1934,6 +1974,10 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
                   alt={`${studioPhoto.title}, ${studioPhoto.location}, shown as a ${studioOrientation} framed print`}
                 />
                 <p><strong>{studioPhoto.title}</strong><span>{studioPhoto.location} · {studioOrientation}</span></p>
+                <details className="shop-studio-disclaimer">
+                  <summary aria-label="About this studio preview"><Info size={14} aria-hidden="true" /></summary>
+                  <p>Studio images are mockups only. Scale, colour, frame and finish may vary from the delivered product.</p>
+                </details>
                 {studioPhotos.length > 1 ? (
                   <div className="shop-studio-controls">
                     <button type="button" onClick={() => moveStudio(-1)} aria-label="Previous studio photograph">
@@ -2057,6 +2101,39 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
 
       <ShopLegalFooter />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onNavigate={onNavigate} />
+      {realPrintGalleryOpen && realPrints.length ? (
+        <div className="real-print-overlay" role="dialog" aria-modal="true" aria-labelledby="real-print-gallery-title">
+          <button className="lightbox-backdrop" type="button" onClick={() => setRealPrintGalleryOpen(false)} aria-label="Close real print gallery" />
+          <section className="real-print-gallery">
+            <button className="icon-button close-button" type="button" onClick={() => setRealPrintGalleryOpen(false)} aria-label="Close real print gallery"><X size={18} aria-hidden="true" /></button>
+            <header>
+              <p className="eyebrow">Made in Australia</p>
+              <h2 id="real-print-gallery-title">Real prints, in real spaces.</h2>
+              <p>A closer look at finished pieces, photographed after printing and framing.</p>
+            </header>
+            <div className="real-print-stage" aria-live="polite">
+              <img src={realPrintPhotoUrl(realPrints[realPrintIndex], 1800)} alt={realPrints[realPrintIndex].altText} />
+              {realPrints[realPrintIndex].caption ? <p>{realPrints[realPrintIndex].caption}</p> : null}
+              {realPrints.length > 1 ? (
+                <div className="real-print-nav">
+                  <button type="button" onClick={() => setRealPrintIndex((current) => (current - 1 + realPrints.length) % realPrints.length)} aria-label="Previous real print"><ChevronLeft size={18} /></button>
+                  <span>{realPrintIndex + 1} / {realPrints.length}</span>
+                  <button type="button" onClick={() => setRealPrintIndex((current) => (current + 1) % realPrints.length)} aria-label="Next real print"><ChevronRight size={18} /></button>
+                </div>
+              ) : null}
+            </div>
+            {realPrints.length > 1 ? (
+              <div className="real-print-thumbs" aria-label="Choose a real print photograph">
+                {realPrints.map((photo, index) => (
+                  <button className={index === realPrintIndex ? "active" : ""} type="button" key={photo.id} onClick={() => setRealPrintIndex(index)} aria-label={`Show real print ${index + 1}`} aria-pressed={index === realPrintIndex}>
+                    <img src={realPrintPhotoUrl(photo, 260)} alt="" />
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
       {curating === "considered" ? (
         <OrderedPhotoPicker
           title="Considered Collection"
@@ -4709,6 +4786,178 @@ function SizeOverridePanel({ photo, onSaved, setMessage }: { photo: Photo; onSav
   );
 }
 
+function ShopRealPrintGalleryAdmin({ setMessage }: { setMessage: (message: string) => void }) {
+  const [items, setItems] = useState<RealPrintPhoto[]>([]);
+  const [enabled, setEnabled] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [settings, photos] = await Promise.all([getSiteSettings(), getRealPrintPhotos()]);
+      setEnabled(settings.find((setting) => setting.key === "shop_real_print_gallery")?.enabled === true);
+      setItems(photos);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load().catch(() => setMessage("The real print gallery could not be loaded.")); }, [load, setMessage]);
+
+  async function upload(files: FileList | null) {
+    if (!files?.length) return;
+    setWorking(true);
+    try {
+      let nextOrder = items.length;
+      for (const file of Array.from(files)) {
+        const compressed = await compressToWebp(file);
+        const outputName = `${file.name.replace(/\.[^/.]+$/, "")}.webp`;
+        const storagePath = await uploadRealPrintAsset(compressed.blob, outputName);
+        try {
+          const label = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]+/g, " ").trim();
+          const created = await createRealPrintPhoto({
+            storagePath,
+            altText: label ? `Finished framed print — ${label}` : "Finished framed photographic print",
+            sortOrder: nextOrder++,
+          });
+          setItems((current) => [...current, created]);
+        } catch (error) {
+          await removeRealPrintAsset(storagePath);
+          throw error;
+        }
+      }
+      setMessage(`${files.length} real print photo${files.length === 1 ? "" : "s"} uploaded. The public gallery remains ${enabled ? "enabled" : "disabled"}.`);
+      await load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The real print photos could not be uploaded.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function save(photo: RealPrintPhoto) {
+    setWorking(true);
+    try {
+      await updateRealPrintPhoto(photo.id, { altText: photo.altText, caption: photo.caption });
+      setMessage("Real print details saved.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The real print details could not be saved.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function togglePublished(photo: RealPrintPhoto) {
+    setWorking(true);
+    try {
+      await updateRealPrintPhoto(photo.id, { published: !photo.published });
+      setItems((current) => current.map((item) => item.id === photo.id ? { ...item, published: !item.published } : item));
+      setMessage(photo.published ? "Photo hidden from the real print gallery." : "Photo included in the real print gallery.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The photo visibility could not be saved.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function move(index: number, direction: -1 | 1) {
+    const target = index + direction;
+    if (target < 0 || target >= items.length) return;
+    const next = [...items];
+    [next[index], next[target]] = [next[target], next[index]];
+    setItems(next);
+    setWorking(true);
+    try {
+      await reorderRealPrintPhotos(next.map((photo) => photo.id));
+      setMessage("Real print gallery order updated.");
+    } catch (error) {
+      await load();
+      setMessage(error instanceof Error ? error.message : "The gallery order could not be saved.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function remove(photo: RealPrintPhoto) {
+    if (!window.confirm("Remove this real print photo from the gallery and storage?")) return;
+    setWorking(true);
+    try {
+      await deleteRealPrintPhoto(photo);
+      const next = items.filter((item) => item.id !== photo.id);
+      setItems(next);
+      await reorderRealPrintPhotos(next.map((item) => item.id));
+      setMessage("Real print photo removed.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The real print photo could not be removed.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function toggleGallery() {
+    if (!enabled && !items.some((photo) => photo.published)) {
+      setMessage("Upload and publish at least one real print photo before enabling the public gallery.");
+      return;
+    }
+    setWorking(true);
+    try {
+      await setSiteFlag("shop_real_print_gallery", !enabled);
+      setEnabled(!enabled);
+      setMessage(enabled ? "The real print gallery is hidden from the public." : "The real print gallery is now visible from the Studio showcase.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The real print gallery setting could not be saved.");
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  return (
+    <section className="real-print-admin" aria-labelledby="real-print-admin-title">
+      <div className="shop-runtime-heading">
+        <div>
+          <p className="eyebrow">Studio · physical product proof</p>
+          <h2 id="real-print-admin-title">Real print gallery</h2>
+          <p>Upload photographs of finished prints, arrange them, then enable the gallery when it is ready. It appears in both customer Studio previews.</p>
+        </div>
+        <span className={`real-print-admin-status ${enabled ? "on" : "off"}`}>{enabled ? "Public" : "Disabled"}</span>
+      </div>
+      {loading ? <p className="loading-note"><LoaderCircle className="spin" size={15} /> Loading real print gallery…</p> : (
+        <>
+          <div className="real-print-admin-controls">
+            <label className="solid-button">
+              <Upload size={14} aria-hidden="true" /> {working ? "Working…" : "Upload real print photos"}
+              <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" multiple disabled={working} onChange={(event) => { void upload(event.target.files); event.currentTarget.value = ""; }} />
+            </label>
+            <button className={`vis-toggle${enabled ? " on" : ""}`} type="button" aria-pressed={enabled} aria-label={`${enabled ? "Disable" : "Enable"} public real print gallery`} disabled={working} onClick={toggleGallery}><span className="vis-knob" /></button>
+            <span>{enabled ? "Visible publicly" : "Safely hidden until you enable it"}</span>
+          </div>
+          {items.length ? (
+            <div className="real-print-admin-grid">
+              {items.map((photo, index) => (
+                <article key={photo.id} className={!photo.published ? "is-hidden" : ""}>
+                  <img src={realPrintPhotoUrl(photo, 520)} alt="" />
+                  <div className="real-print-admin-fields">
+                    <label>Accessible description<input value={photo.altText} onChange={(event) => setItems((current) => current.map((item) => item.id === photo.id ? { ...item, altText: event.target.value } : item))} /></label>
+                    <label>Optional caption<textarea rows={2} value={photo.caption ?? ""} onChange={(event) => setItems((current) => current.map((item) => item.id === photo.id ? { ...item, caption: event.target.value } : item))} /></label>
+                  </div>
+                  <div className="real-print-admin-actions">
+                    <button className="text-button" type="button" onClick={() => move(index, -1)} disabled={working || index === 0} aria-label="Move photo earlier">← Earlier</button>
+                    <button className="text-button" type="button" onClick={() => move(index, 1)} disabled={working || index === items.length - 1} aria-label="Move photo later">Later →</button>
+                    <button className="text-button" type="button" onClick={() => togglePublished(photo)} disabled={working}>{photo.published ? "Hide" : "Include"}</button>
+                    <button className="text-button" type="button" onClick={() => save(photo)} disabled={working}>Save text</button>
+                    <button className="text-button danger" type="button" onClick={() => remove(photo)} disabled={working}>Remove</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : <p className="real-print-admin-empty">No real print photographs yet. This entire feature is disabled and invisible to customers.</p>}
+        </>
+      )}
+    </section>
+  );
+}
+
 function ShopCatalogueAdmin({
   photos,
   onChanged,
@@ -5124,6 +5373,7 @@ function ShopCatalogueAdmin({
           </div>
         )}
       </section>
+      <ShopRealPrintGalleryAdmin setMessage={setMessage} />
       <div className="admin-section-intro">
         <div>
           <p className="eyebrow">Shop catalogue</p>

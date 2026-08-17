@@ -3,12 +3,12 @@
 // Gated behind the `print_configurator` visibility flag (Admin → Visibility) so
 // it can ship disabled until it's ready; see ShopProduct in App.tsx for the
 // fallback to the old inline picker when the flag is off.
-import { ChevronLeft, ChevronRight, Menu, ShoppingCart, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, Menu, ShoppingCart, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { getTransformedPublicUrl, photoBucket } from "../lib/supabase";
+import { getRealPrintPhotos, getSiteSettings, getTransformedPublicUrl, photoBucket, realPrintPhotoUrl } from "../lib/supabase";
 import { trackAddToCart, trackProductLinkClicked, trackProductViewChanged, trackViewItem } from "../lib/analytics";
 import { productStructuredData, useSeo } from "../lib/seo";
-import type { Photo } from "../types";
+import type { Photo, RealPrintPhoto } from "../types";
 import {
   COLOURS,
   MOULDING_CM,
@@ -64,6 +64,9 @@ export function PrintConfigurator({
   const [previewMode, setPreviewMode] = useState<PreviewMode>("studio");
   const [finishesOpen, setFinishesOpen] = useState(false);
   const [questionKind, setQuestionKind] = useState<"print" | "finishes" | null>(null);
+  const [realPrints, setRealPrints] = useState<RealPrintPhoto[]>([]);
+  const [realPrintGalleryOpen, setRealPrintGalleryOpen] = useState(false);
+  const [realPrintIndex, setRealPrintIndex] = useState(0);
   const pairTrackRef = useRef<HTMLDivElement | null>(null);
   const finishCloseRef = useRef<HTMLButtonElement | null>(null);
 
@@ -76,6 +79,26 @@ export function PrintConfigurator({
     bandPx: number;
     matPx: number;
   } | null>(null);
+
+  useEffect(() => {
+    Promise.all([getSiteSettings(), getRealPrintPhotos()])
+      .then(([settings, photos]) => {
+        const enabled = settings.find((setting) => setting.key === "shop_real_print_gallery")?.enabled === true;
+        setRealPrints(enabled ? photos.filter((item) => item.published) : []);
+      })
+      .catch(() => setRealPrints([]));
+  }, []);
+
+  useEffect(() => {
+    if (!realPrintGalleryOpen) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setRealPrintGalleryOpen(false);
+      if (event.key === "ArrowLeft") setRealPrintIndex((current) => (current - 1 + realPrints.length) % realPrints.length);
+      if (event.key === "ArrowRight") setRealPrintIndex((current) => (current + 1) % realPrints.length);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [realPrintGalleryOpen, realPrints.length]);
 
   function navigate(route: string) {
     setNavOpen(false);
@@ -408,7 +431,12 @@ export function PrintConfigurator({
                 <p className="pc-k">Framed Editions</p>
                 <h1>{photo.title}</h1>
                 <p className="pc-loc">{photo.location}</p>
+                {realPrints.length ? <button type="button" onClick={() => { setRealPrintIndex(0); setRealPrintGalleryOpen(true); }}>See real prints</button> : null}
               </div>
+              <details className="pc-studio-disclaimer">
+                <summary aria-label="About this Studio mockup"><Info size={14} aria-hidden="true" /></summary>
+                <p>Studio images are mockups only. Scale, colour, frame and finish may vary from the delivered product.</p>
+              </details>
             </div>
           ) : (
             <div className="pc-detail-wrap pc-preview-panel" id="pc-detail-panel" role="tabpanel" aria-labelledby="pc-detail-tab">
@@ -586,6 +614,39 @@ export function PrintConfigurator({
       <ShopLegalFooter className="pc-legal-footer" />
 
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onNavigate={onNavigate} />
+      {realPrintGalleryOpen && realPrints.length ? (
+        <div className="real-print-overlay" role="dialog" aria-modal="true" aria-labelledby="pc-real-print-gallery-title">
+          <button className="lightbox-backdrop" type="button" onClick={() => setRealPrintGalleryOpen(false)} aria-label="Close real print gallery" />
+          <section className="real-print-gallery">
+            <button className="icon-button close-button" type="button" onClick={() => setRealPrintGalleryOpen(false)} aria-label="Close real print gallery"><X size={18} aria-hidden="true" /></button>
+            <header>
+              <p className="eyebrow">Made in Australia</p>
+              <h2 id="pc-real-print-gallery-title">Real prints, in real spaces.</h2>
+              <p>A closer look at finished pieces, photographed after printing and framing.</p>
+            </header>
+            <div className="real-print-stage" aria-live="polite">
+              <img src={realPrintPhotoUrl(realPrints[realPrintIndex], 1800)} alt={realPrints[realPrintIndex].altText} />
+              {realPrints[realPrintIndex].caption ? <p>{realPrints[realPrintIndex].caption}</p> : null}
+              {realPrints.length > 1 ? (
+                <div className="real-print-nav">
+                  <button type="button" onClick={() => setRealPrintIndex((current) => (current - 1 + realPrints.length) % realPrints.length)} aria-label="Previous real print"><ChevronLeft size={18} /></button>
+                  <span>{realPrintIndex + 1} / {realPrints.length}</span>
+                  <button type="button" onClick={() => setRealPrintIndex((current) => (current + 1) % realPrints.length)} aria-label="Next real print"><ChevronRight size={18} /></button>
+                </div>
+              ) : null}
+            </div>
+            {realPrints.length > 1 ? (
+              <div className="real-print-thumbs" aria-label="Choose a real print photograph">
+                {realPrints.map((item, index) => (
+                  <button className={index === realPrintIndex ? "active" : ""} type="button" key={item.id} onClick={() => setRealPrintIndex(index)} aria-label={`Show real print ${index + 1}`} aria-pressed={index === realPrintIndex}>
+                    <img src={realPrintPhotoUrl(item, 260)} alt="" />
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
       {finishesOpen ? (
         <div className="pc-finishes-overlay" role="dialog" aria-modal="true" aria-labelledby="pc-finishes-title">
           <button className="lightbox-backdrop" type="button" onClick={() => setFinishesOpen(false)} aria-label="Close finish previews" />
