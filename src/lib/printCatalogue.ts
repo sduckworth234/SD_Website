@@ -26,6 +26,13 @@ export type PrintSize = {
   cfpm: number;
 };
 
+// Prices below are the fallback only — display-purposes-only shown before
+// the live fetch resolves, or if it fails. The real, editable prices live in
+// public.print_pricing (supabase/migrations/20260817010000_print_pricing.sql,
+// admin Pricing tab); applyLivePricing patches these objects in place once
+// fetched (see getPrintPricing() in src/lib/supabase.ts, called from
+// useSiteData). Checkout never trusts this — server/shop/catalogue.mjs reads
+// the same table independently for the amount actually charged.
 export const SIZES: PrintSize[] = [
   { id: "A5", outer: [14.8, 21.0], mat: 2.5, cfp: 51.10, cfpm: 57.10 },
   { id: "A4", outer: [21.0, 29.7], mat: 3.7, cfp: 57.10, cfpm: 57.10 },
@@ -33,6 +40,19 @@ export const SIZES: PrintSize[] = [
   { id: "A2", outer: [41.9, 59.4], mat: 5.0, cfp: 95.10, cfpm: 110.10 },
   { id: "A1", outer: [59.4, 84.1], mat: 4.8, cfp: 136.55, cfpm: 161.55 },
 ];
+
+/** Patches SIZES' cfp/cfpm in place from live-fetched prices — mutates the
+ * existing objects (not the array reference) so components reading via
+ * sizeById()/priceFor() see the update without needing their own re-fetch
+ * plumbing. Missing/partial data for a size leaves that size's fallback
+ * value untouched rather than blanking it. */
+export function applyLivePricing(pricing: Partial<Record<SizeId, { cfp?: number; cfpm?: number }>>): void {
+  for (const s of SIZES) {
+    const p = pricing[s.id];
+    if (p?.cfp != null) s.cfp = p.cfp;
+    if (p?.cfpm != null) s.cfpm = p.cfpm;
+  }
+}
 
 /** Visible timber width carved out of the mounted border (portion of the mat
  * closest to the outer edge that reads as frame, not mat). */

@@ -119,15 +119,15 @@ export function AdminOrders({ session }: { session: Session }) {
     if (kind === "mark_shipped" && !window.confirm("Mark this order shipped and email the customer now?")) return;
     setWorking(`${orderId}-${kind}`);
     try {
+      // Only mark_shipped reads tracking fields server-side — sending them
+      // on every action was harmless dead payload, but pointless.
       const draft = tracking[orderId] ?? { carrier: "", number: "", url: "" };
       const data = await request({
         method: "POST",
         body: JSON.stringify({
           action: kind,
           orderId,
-          trackingCarrier: draft.carrier,
-          trackingNumber: draft.number,
-          trackingUrl: draft.url,
+          ...(kind === "mark_shipped" ? { trackingCarrier: draft.carrier, trackingNumber: draft.number, trackingUrl: draft.url } : {}),
         }),
       });
       const notes: Record<typeof kind, string> = {
@@ -208,18 +208,21 @@ export function AdminOrders({ session }: { session: Session }) {
           const draft = tracking[order.id] ?? { carrier: "", number: "", url: "" };
           return (
             <article className="admin-order" key={order.id}>
-              <header>
-                <div><b>{order.customer_name}</b><span>{order.customer_email}</span><small>{orderAddress(order)}</small></div>
-                <div><strong>${(order.total_cents / 100).toFixed(2)}</strong><span>{new Date(order.created_at).toLocaleString("en-AU")}</span></div>
-              </header>
-              <div className="admin-order-status">
-                <span className={`status ${order.status}`}>{order.status.replace(/_/g, " ")}</span>
-                <span className={`provider ${manual ? "manual" : "prodigi"}`}>{manual ? "Manual fulfilment" : "Prodigi"}</span>
-                <code>{order.id.slice(0, 8).toUpperCase()}</code>
-                {order.prodigi_order_id ? <code>{order.prodigi_order_id}</code> : null}
+              <div className="admin-order-col admin-order-info">
+                <header>
+                  <div><b>{order.customer_name}</b><span>{order.customer_email}</span><small>{orderAddress(order)}</small></div>
+                  <div><strong>${(order.total_cents / 100).toFixed(2)}</strong><span>{new Date(order.created_at).toLocaleString("en-AU")}</span></div>
+                </header>
+                <div className="admin-order-status">
+                  <span className={`status ${order.status}`}>{order.status.replace(/_/g, " ")}</span>
+                  <span className={`provider ${manual ? "manual" : "prodigi"}`}>{manual ? "Manual fulfilment" : "Prodigi"}</span>
+                  <code>{order.id.slice(0, 8).toUpperCase()}</code>
+                  {order.prodigi_order_id ? <code>{order.prodigi_order_id}</code> : null}
+                </div>
+                {order.last_fulfilment_error ? <p className="admin-order-error">{order.last_fulfilment_error}</p> : null}
               </div>
-              {order.last_fulfilment_error ? <p className="admin-order-error">{order.last_fulfilment_error}</p> : null}
-              <div className="admin-order-items">
+
+              <div className="admin-order-col admin-order-items">
                 {order.order_items.map((item) => (
                   <div key={item.id}>
                     {item.thumb_url ? <img alt="" src={item.thumb_url} /> : null}
@@ -231,31 +234,36 @@ export function AdminOrders({ session }: { session: Session }) {
                 ))}
               </div>
 
-              {manual && !closed ? (
-                <div className="manual-fulfilment">
-                  <div>
-                    <label>Carrier<input onChange={(event) => setTrackingField(order.id, "carrier", event.target.value)} placeholder="e.g. Australia Post" value={draft.carrier} /></label>
-                    <label>Tracking number<input onChange={(event) => setTrackingField(order.id, "number", event.target.value)} placeholder="Optional" value={draft.number} /></label>
-                    <label>Tracking link<input onChange={(event) => setTrackingField(order.id, "url", event.target.value)} placeholder="https://…" type="url" value={draft.url} /></label>
+              <div className="admin-order-col admin-order-actions">
+                {manual && !closed ? (
+                  <div className="manual-fulfilment">
+                    <div>
+                      <label>Carrier<input onChange={(event) => setTrackingField(order.id, "carrier", event.target.value)} placeholder="e.g. Australia Post" value={draft.carrier} /></label>
+                      <label>Tracking number<input onChange={(event) => setTrackingField(order.id, "number", event.target.value)} placeholder="Optional" value={draft.number} /></label>
+                      <label>Tracking link<input onChange={(event) => setTrackingField(order.id, "url", event.target.value)} placeholder="https://…" type="url" value={draft.url} /></label>
+                    </div>
+                    <p>Marking shipped sends the customer their dispatch email immediately.</p>
                   </div>
-                  <p>Marking shipped sends the customer their dispatch email immediately.</p>
-                </div>
-              ) : null}
+                ) : null}
 
-              <footer>
-                {manual ? (
-                  <>
-                    <button className="text-button" disabled={Boolean(working) || closed || shipped || order.status === "in_production"} onClick={() => action(order.id, "mark_processing")} type="button">Start fulfilment</button>
-                    <button className="solid-button" disabled={Boolean(working) || closed || shipped} onClick={() => action(order.id, "mark_shipped")} type="button">Mark shipped</button>
-                  </>
-                ) : (
-                  <button className="solid-button" disabled={features.fulfilmentProvider !== "prodigi" || !features.prodigiConfigured || Boolean(working) || ["submitted", "in_production", "shipped", "refunded", "cancelled"].includes(order.status)} onClick={() => action(order.id, "submit_now")} title={features.fulfilmentProvider === "prodigi" ? undefined : "Prodigi mode is disabled"} type="button">Submit to Prodigi</button>
-                )}
-                <button className="text-button danger" disabled={Boolean(working) || Boolean(order.prodigi_order_id) || ["refunded", "cancelled", "shipped"].includes(order.status)} onClick={() => action(order.id, "refund")} type="button">Refund</button>
-                {order.tracking_url ? <a href={order.tracking_url} rel="noreferrer" target="_blank">Tracking <ExternalLink size={12} /></a> : null}
-                {order.stripe_receipt_url ? <a href={order.stripe_receipt_url} rel="noreferrer" target="_blank">Receipt <ExternalLink size={12} /></a> : null}
-                {order.stripe_invoice_url || order.stripe_invoice_pdf ? <a href={order.stripe_invoice_url ?? order.stripe_invoice_pdf ?? "#"} rel="noreferrer" target="_blank">Invoice <ExternalLink size={12} /></a> : null}
-              </footer>
+                <footer>
+                  {manual ? (
+                    <>
+                      <button className="text-button" disabled={Boolean(working) || closed || shipped || order.status === "in_production"} onClick={() => action(order.id, "mark_processing")} type="button">Start fulfilment</button>
+                      <button className="solid-button" disabled={Boolean(working) || closed || shipped} onClick={() => action(order.id, "mark_shipped")} type="button">Mark shipped</button>
+                    </>
+                  ) : (
+                    <button className="solid-button" disabled={features.fulfilmentProvider !== "prodigi" || !features.prodigiConfigured || Boolean(working) || ["submitted", "in_production", "shipped", "refunded", "cancelled"].includes(order.status)} onClick={() => action(order.id, "submit_now")} title={features.fulfilmentProvider === "prodigi" ? undefined : "Prodigi mode is disabled"} type="button">Submit to Prodigi</button>
+                  )}
+                  <button className="text-button danger" disabled={Boolean(working) || Boolean(order.prodigi_order_id) || ["refunded", "cancelled", "shipped"].includes(order.status)} onClick={() => action(order.id, "refund")} type="button">Refund</button>
+                  <div className="admin-order-links">
+                    {order.tracking_url ? <a href={order.tracking_url} rel="noreferrer" target="_blank">Tracking{order.tracking_carrier ? ` (${order.tracking_carrier})` : ""} <ExternalLink size={12} /></a> : null}
+                    {!order.tracking_url && order.tracking_carrier ? <span className="admin-order-tracking-plain">{order.tracking_carrier}{order.tracking_number ? ` · ${order.tracking_number}` : ""}</span> : null}
+                    {order.stripe_receipt_url ? <a href={order.stripe_receipt_url} rel="noreferrer" target="_blank">Receipt <ExternalLink size={12} /></a> : null}
+                    {order.stripe_invoice_url || order.stripe_invoice_pdf ? <a href={order.stripe_invoice_url ?? order.stripe_invoice_pdf ?? "#"} rel="noreferrer" target="_blank">Invoice <ExternalLink size={12} /></a> : null}
+                  </div>
+                </footer>
+              </div>
             </article>
           );
         })}

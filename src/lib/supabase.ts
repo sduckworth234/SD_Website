@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { fallbackLocations, photos as fallbackPhotos } from "../data/photos";
 import type { Collection, GalleryLocation, InstagramPost, Photo, SiteSetting } from "../types";
-import { computeSellableSizes, maxSellableFromSizes } from "./printCatalogue";
+import { applyLivePricing, computeSellableSizes, maxSellableFromSizes } from "./printCatalogue";
 import type { SellableSizes, SizeId, SizeOverrides } from "./printCatalogue";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -215,6 +215,30 @@ async function fetchCollections(): Promise<typeof NO_COLLECTIONS> {
   }
 }
 
+// Live sell prices from public.print_pricing (20260817010000_photo migration
+// name aside — see 20260817010000_print_pricing.sql), admin-editable from
+// the Pricing tab. Patches src/lib/printCatalogue.ts's SIZES in place on
+// success; any failure (table not migrated yet, network blip) just leaves
+// the fallback prices in SIZES untouched — same "ships ahead" posture as
+// collections above, never blocks or breaks the gallery fetch.
+async function fetchPricingSettings(): Promise<void> {
+  if (!supabase) return;
+  try {
+    const { data, error } = await supabase.from("print_pricing").select("size, mounted, sell_cents");
+    if (error || !data?.length) return;
+    const pricing: Partial<Record<SizeId, { cfp?: number; cfpm?: number }>> = {};
+    for (const row of data as { size: string; mounted: boolean; sell_cents: number }[]) {
+      const id = row.size as SizeId;
+      pricing[id] ??= {};
+      if (row.mounted) pricing[id]!.cfpm = row.sell_cents / 100;
+      else pricing[id]!.cfp = row.sell_cents / 100;
+    }
+    applyLivePricing(pricing);
+  } catch {
+    // fallback prices in SIZES stand.
+  }
+}
+
 // The bundled fallback (dev / outage). Strip storage_path so the consumers fall
 // back to the rows' own imageUrl instead of generating Supabase transform URLs
 // for objects that don't exist (which would 404-storm the CDN on a phone).
@@ -268,6 +292,7 @@ async function getGalleryDataInner() {
       // columns that don't exist yet).
       photoQuery(`ratio, max_sellable_mounted, max_sellable_unmounted, sellable_sizes, ${PUBLIC_PHOTO_COLUMNS}`),
       fetchCollections(),
+      fetchPricingSettings(),
     ]);
   if (photoError) {
     ({ data: photos, error: photoError } = await photoQuery(PUBLIC_PHOTO_COLUMNS));

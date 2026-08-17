@@ -1,10 +1,10 @@
 import Stripe from "stripe";
-import { normaliseCart } from "../server/shop/catalogue.mjs";
+import { fetchPricing, normaliseCart } from "../server/shop/catalogue.mjs";
 import { checkoutEnabled, paidInvoicesEnabled } from "../server/shop/features.mjs";
 import { json, methodAllowed, publicOrigin, readJson, safeError } from "../server/shop/http.mjs";
 import { sizeIsSellable } from "../server/shop/printSizing.mjs";
 import { quoteShippingCents } from "../server/shop/prodigi.mjs";
-import { fetchShopPhotos, requireAdmin, shopRuntimeConfig } from "../server/shop/supabase.mjs";
+import { fetchShopPhotos, requireAdmin, shopRuntimeConfig, supabaseRest } from "../server/shop/supabase.mjs";
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 const rateBuckets = new Map();
@@ -49,7 +49,8 @@ export default async function handler(req, res) {
     if (rateLimited(req)) return json(res, 429, { error: "Too many checkout attempts. Please wait a minute and try again." });
     if (!stripe) return json(res, 503, { error: "Stripe test mode is not configured yet." });
     const body = await readJson(req);
-    const cart = normaliseCart(body.cart);
+    const pricing = await fetchPricing(supabaseRest);
+    const cart = normaliseCart(body.cart, pricing);
     const customer = customerFrom(body);
     const photos = await fetchShopPhotos(cart.map((item) => item.photoId));
     // Reject any size that isn't sellable for this photo — sellable_sizes

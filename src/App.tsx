@@ -6,6 +6,7 @@ import {
   Check,
   Copy,
   Crosshair,
+  DollarSign,
   Eye,
   EyeOff,
   Frame,
@@ -4078,7 +4079,7 @@ function NotAdmin({ email }: { email: string }) {
   );
 }
 
-type AdminTab = "photos" | "collections" | "homepage" | "locations" | "shop" | "orders" | "settings";
+type AdminTab = "photos" | "collections" | "homepage" | "locations" | "shop" | "pricing" | "orders" | "settings";
 
 const ADMIN_TABS: { id: AdminTab; label: string; description: string; icon: ReactNode }[] = [
   { id: "photos", label: "Photos", description: "Upload, publish and edit the archive", icon: <Images size={16} /> },
@@ -4086,6 +4087,7 @@ const ADMIN_TABS: { id: AdminTab; label: string; description: string; icon: Reac
   { id: "homepage", label: "Homepage", description: "Curate the homepage photo feed", icon: <LayoutDashboard size={16} /> },
   { id: "locations", label: "Locations", description: "Arrange places and gallery order", icon: <MapPin size={16} /> },
   { id: "shop", label: "Shop", description: "Choose which photographs are for sale", icon: <Frame size={16} /> },
+  { id: "pricing", label: "Pricing", description: "Sell prices, live Prodigi cost and margin", icon: <DollarSign size={16} /> },
   { id: "orders", label: "Shop Orders", description: "Payments, fulfilment, tracking and refunds", icon: <PackageCheck size={16} /> },
   { id: "settings", label: "Site settings", description: "Visibility, banners and feature switches", icon: <Eye size={16} /> },
 ];
@@ -4452,6 +4454,190 @@ function ShopCatalogueAdmin({
   );
 }
 
+// print_pricing row shape as returned by GET /api/admin-pricing (full admin
+// view — includes cost/shipping, which anon/authenticated never see via the
+// direct table grant; this endpoint reads with the service-role key).
+type PricingRow = {
+  size: SizeId;
+  mounted: boolean;
+  sell_cents: number;
+  cost_cents: number | null;
+  shipping_cents: number | null;
+  cost_source: string | null;
+  cost_checked_at: string | null;
+};
+
+const centsToDollarsStr = (cents: number) => (cents / 100).toFixed(2);
+const dollarsStrToCents = (value: string) => Math.round(Number.parseFloat(value || "0") * 100);
+
+// Live Prodigi cost + admin-editable sell prices, one flat price per
+// size/mount combo for every photo (Sam's instruction, 2026-08-17). Backed
+// by public.print_pricing (supabase/migrations/20260817010000_print_pricing.sql)
+// via api/admin-pricing.mjs — the same table server/shop/catalogue.mjs reads
+// for the amount actually charged at checkout, so a save here takes effect
+// on the very next order, no redeploy.
+function PricingAdmin({ session, setMessage }: { session: Session; setMessage: (message: string) => void }) {
+  const [rows, setRows] = useState<PricingRow[]>([]);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [prodigiConfigured, setProdigiConfigured] = useState(true);
+
+  const request = useCallback(async (init?: RequestInit) => {
+    const response = await fetch("/api/admin-pricing", {
+      ...init,
+      headers: { authorization: `Bearer ${session.access_token}`, "content-type": "application/json", ...(init?.headers ?? {}) },
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Pricing request failed.");
+    return data;
+  }, [session.access_token]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await request();
+      setRows(data.rows ?? []);
+      setProdigiConfigured(Boolean(data.prodigiConfigured));
+      const nextDrafts: Record<string, string> = {};
+      for (const row of data.rows ?? []) nextDrafts[`${row.size}-${row.mounted}`] = centsToDollarsStr(row.sell_cents);
+      setDrafts(nextDrafts);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Pricing could not be loaded.");
+    } finally {
+      setLoading(false);
+    }
+  }, [request, setMessage]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const dirty = useMemo(
+    () => rows.some((row) => drafts[`${row.size}-${row.mounted}`] !== centsToDollarsStr(row.sell_cents)),
+    [rows, drafts],
+  );
+
+  async function savePrices() {
+    setSaving(true);
+    try {
+      const prices = rows
+        .map((row) => ({ size: row.size, mounted: row.mounted, sellCents: dollarsStrToCents(drafts[`${row.size}-${row.mounted}`] ?? "") }))
+        .filter((p) => Number.isFinite(p.sellCents) && p.sellCents >= 0);
+      const data = await request({ method: "POST", body: JSON.stringify({ action: "save_prices", prices }) });
+      setRows(data.rows ?? []);
+      setMessage("Prices saved — live on the shop now.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Prices could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function refreshCosts() {
+    setRefreshing(true);
+    try {
+      const data = await request({ method: "POST", body: JSON.stringify({ action: "refresh_costs" }) });
+      setRows(data.rows ?? []);
+      if (data.errors?.length) setMessage(`Refreshed with ${data.errors.length} error(s): ${data.errors[0]}`);
+      else setMessage("Live Prodigi costs refreshed.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Live costs could not be refreshed.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  const bySize = useMemo(() => {
+    const map = new Map<SizeId, { unmounted?: PricingRow; mounted?: PricingRow }>();
+    for (const row of rows) {
+      const entry = map.get(row.size) ?? {};
+      if (row.mounted) entry.mounted = row; else entry.unmounted = row;
+      map.set(row.size, entry);
+    }
+    return map;
+  }, [rows]);
+
+  const checkedDates = rows.map((r) => r.cost_checked_at).filter(Boolean).sort();
+  const lastChecked = checkedDates[checkedDates.length - 1];
+
+  function priceCell(row: PricingRow | undefined) {
+    if (!row) return null;
+    const key = `${row.size}-${row.mounted}`;
+    const cost = row.cost_cents != null ? row.cost_cents : null;
+    const shipping = row.shipping_cents != null ? row.shipping_cents : null;
+    const sellCents = dollarsStrToCents(drafts[key] ?? "");
+    const margin = cost != null && shipping != null && Number.isFinite(sellCents) ? sellCents - cost - shipping : null;
+    return (
+      <div className="pricing-cell">
+        <label>
+          <span>$</span>
+          <input
+            inputMode="decimal"
+            type="text"
+            value={drafts[key] ?? ""}
+            onChange={(event) => setDrafts((prev) => ({ ...prev, [key]: event.target.value }))}
+          />
+        </label>
+        <small>
+          {cost != null ? `Cost $${centsToDollarsStr(cost)}` : "Cost —"}
+          {shipping != null ? ` · Ship $${centsToDollarsStr(shipping)}` : ""}
+        </small>
+        {margin != null ? (
+          <small className={margin < 0 ? "pricing-margin-bad" : "pricing-margin-ok"}>
+            Margin {margin < 0 ? "-" : ""}${centsToDollarsStr(Math.abs(margin))}
+          </small>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <section className="pricing-admin" aria-label="Print pricing">
+      <div className="admin-section-intro">
+        <div>
+          <p className="eyebrow">Pricing</p>
+          <h2>Set what customers pay.</h2>
+          <p>One flat price per size, mounted or unmounted — every photo costs the same for now. Live Prodigi cost and shipping shown alongside for margin, refreshed on demand (never automatically).</p>
+        </div>
+        <div className={`admin-feature-state${prodigiConfigured ? " is-on" : ""}`}>
+          <b>{prodigiConfigured ? "Prodigi API connected" : "Prodigi API not configured"}</b>
+          <span>{prodigiConfigured ? "Live cost refresh is available." : "Set PRODIGI_API_KEY to pull live costs."}</span>
+        </div>
+      </div>
+      <div className="pricing-toolbar">
+        <button className="text-button" type="button" onClick={refreshCosts} disabled={refreshing || !prodigiConfigured}>
+          <RotateCw size={13} aria-hidden="true" /> {refreshing ? "Refreshing…" : "Refresh live Prodigi prices"}
+        </button>
+        {lastChecked ? <span className="pricing-checked-at">Costs as of {new Date(lastChecked).toLocaleString("en-AU")}</span> : <span className="pricing-checked-at">Costs never checked yet</span>}
+        <button className="solid-button" type="button" onClick={savePrices} disabled={saving || !dirty}>
+          {saving ? "Saving…" : "Save prices"}
+        </button>
+      </div>
+      {loading ? (
+        <p className="loading-note"><LoaderCircle className="spin" /> Loading pricing…</p>
+      ) : (
+        <div className="pricing-table">
+          <div className="pricing-row pricing-head">
+            <span>Size</span>
+            <span>Unmounted</span>
+            <span>Mounted</span>
+          </div>
+          {SIZES.map((s) => {
+            const entry = bySize.get(s.id);
+            return (
+              <div className="pricing-row" key={s.id}>
+                <span className="pricing-size">{s.id}<small>{s.outer[0].toFixed(0)}×{s.outer[1].toFixed(0)}cm</small></span>
+                {priceCell(entry?.unmounted)}
+                {priceCell(entry?.mounted)}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function AdminDashboard({ session }: { session: Session }) {
   const [activeTab, setActiveTab] = useState<AdminTab>("photos");
   const [locations, setLocations] = useState<GalleryLocation[]>([]);
@@ -4680,6 +4866,7 @@ function AdminDashboard({ session }: { session: Session }) {
       {activeTab === "shop" ? (
         <ShopCatalogueAdmin photos={adminPhotos} onChanged={refresh} session={session} setMessage={setMessage} />
       ) : null}
+      {activeTab === "pricing" ? <PricingAdmin session={session} setMessage={setMessage} /> : null}
       {activeTab === "orders" ? (
         <Suspense fallback={<p className="loading-note">Loading shop orders…</p>}>
           <AdminOrders session={session} />
