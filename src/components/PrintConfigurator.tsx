@@ -3,7 +3,7 @@
 // Gated behind the `print_configurator` visibility flag (Admin → Visibility) so
 // it can ship disabled until it's ready; see ShopProduct in App.tsx for the
 // fallback to the old inline picker when the flag is off.
-import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
+import { ChevronLeft, ChevronRight, Menu, ShoppingCart, X } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { getTransformedPublicUrl, photoBucket } from "../lib/supabase";
 import { trackAddToCart, trackProductLinkClicked, trackProductViewChanged, trackViewItem } from "../lib/analytics";
@@ -57,6 +57,7 @@ export function PrintConfigurator({
   const [mounted, setMounted] = useState(true);
   const [colour, setColour] = useState<ColourId>("natural");
   const [cartOpen, setCartOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [pulseCart, setPulseCart] = useState(false);
@@ -73,6 +74,19 @@ export function PrintConfigurator({
     bandPx: number;
     matPx: number;
   } | null>(null);
+
+  function navigate(route: string) {
+    setNavOpen(false);
+    window.history.pushState({}, "", route);
+    onNavigate(route);
+  }
+
+  useEffect(() => {
+    if (!navOpen) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setNavOpen(false); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [navOpen]);
 
   // Snap to the largest available size whenever the photo or mount option
   // changes and the currently-selected size is no longer offered for it —
@@ -273,16 +287,31 @@ export function PrintConfigurator({
   return (
     <main className="pc">
       <header className="pc-header">
-        <button className="pc-back" type="button" onClick={() => { window.history.pushState({}, "", "/shop"); onNavigate("/shop"); }}>
+        <button className="pc-back" type="button" onClick={() => navigate("/shop")}>
           ◀ Framed Editions
         </button>
-        <button className="pc-cart-btn" type="button" onClick={() => setCartOpen(true)}>
-          <ShoppingCart size={15} aria-hidden="true" />
-          Cart
-          <span className={`pc-cart-count${cart.items.length === 0 ? " is-empty" : ""}${pulseCart ? " pulse" : ""}`} onAnimationEnd={() => setPulseCart(false)}>
-            {cart.items.length}
-          </span>
-        </button>
+        <div className="pc-header-actions">
+          <button className="pc-cart-btn" type="button" onClick={() => setCartOpen(true)}>
+            <ShoppingCart size={15} aria-hidden="true" />
+            Cart
+            <span className={`pc-cart-count${cart.items.length === 0 ? " is-empty" : ""}${pulseCart ? " pulse" : ""}`} onAnimationEnd={() => setPulseCart(false)}>
+              {cart.items.length}
+            </span>
+          </button>
+          <button className="pc-menu-toggle" type="button" aria-expanded={navOpen} aria-controls="pc-mobile-navigation" aria-label={navOpen ? "Close shop navigation" : "Open shop navigation"} onClick={() => setNavOpen((open) => !open)}>
+            {navOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
+          </button>
+        </div>
+        {navOpen ? <button className="pc-nav-dismiss" onClick={() => setNavOpen(false)} type="button" aria-label="Close shop navigation" /> : null}
+        <nav id="pc-mobile-navigation" className={`pc-mobile-nav${navOpen ? " is-open" : ""}`} aria-label="Product mobile navigation" aria-hidden={!navOpen} inert={!navOpen}>
+          <a href="/" onClick={(event) => { event.preventDefault(); navigate("/"); }}>Home</a>
+          <a href="/galleries" onClick={(event) => { event.preventDefault(); navigate("/galleries"); }}>Gallery</a>
+          <a href="/map" onClick={(event) => { event.preventDefault(); navigate("/map"); }}>Map</a>
+          <a href="/?panel=about" onClick={(event) => { event.preventDefault(); navigate("/?panel=about"); }}>About Me</a>
+          <a href="/shop" aria-current="page" onClick={(event) => { event.preventDefault(); navigate("/shop"); }}>Shop</a>
+          <a href="/?panel=contact" onClick={(event) => { event.preventDefault(); navigate("/?panel=contact"); }}>Contact</a>
+          <button type="button" onClick={() => { setNavOpen(false); setCartOpen(true); }}>Cart <span>{cart.items.length}</span></button>
+        </nav>
       </header>
 
       <div className="pc-shop">

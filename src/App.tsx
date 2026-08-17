@@ -19,6 +19,7 @@ import {
   LogOut,
   Heart,
   MapPin,
+  Menu,
   MessageCircle,
   PackageCheck,
   ChevronLeft,
@@ -631,8 +632,9 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [recentSlot, setRecentSlot] = useState<number | null>(null);
   const [editingCollection, setEditingCollection] = useState<GalleryLocation | null>(null);
-  const [isAboutOpen, setIsAboutOpen] = useState(false);
-  const [isContactOpen, setIsContactOpen] = useState(false);
+  const initialPanel = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("panel") : null;
+  const [isAboutOpen, setIsAboutOpen] = useState(initialPanel === "about");
+  const [isContactOpen, setIsContactOpen] = useState(initialPanel === "contact");
   const [heroPicking, setHeroPicking] = useState(false);
 
   function goToMap() { window.history.pushState({}, "", "/map"); onNavigate("/map"); }
@@ -646,6 +648,13 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
     if (photo.latitude == null || photo.longitude == null) return;
     window.history.pushState({}, "", `/map?lat=${photo.latitude}&lng=${photo.longitude}`);
     onNavigate("/map");
+  }
+
+  function closeHomePanel(setOpen: (open: boolean) => void) {
+    setOpen(false);
+    if (new URLSearchParams(window.location.search).has("panel")) {
+      window.history.replaceState({}, "", "/");
+    }
   }
   function openLocation(name: string) {
     window.history.pushState({}, "", `/galleries?location=${encodeURIComponent(name)}`);
@@ -735,7 +744,13 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
 
   return (
     <main>
-      <Header isScrolled={isScrolled} onNavigate={onNavigate} onOpenAbout={() => setIsAboutOpen(true)} showShop={isAdmin} />
+      <Header
+        isScrolled={isScrolled}
+        onNavigate={onNavigate}
+        onOpenAbout={() => setIsAboutOpen(true)}
+        onOpenContact={() => setIsContactOpen(true)}
+        showShop={isAdmin}
+      />
       <Hero photo={heroPhoto} locations={locationNames} isAdmin={isAdmin} rotate={heroRotate} onPickHero={() => setHeroPicking(true)} />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
       {isLoading ? (
@@ -810,14 +825,14 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
       ) : null}
       {isAboutOpen ? (
         <AboutOverlay
-          onClose={() => setIsAboutOpen(false)}
+          onClose={() => closeHomePanel(setIsAboutOpen)}
           onContact={() => {
             setIsAboutOpen(false);
             setIsContactOpen(true);
           }}
         />
       ) : null}
-      {isContactOpen ? <ContactOverlay onClose={() => setIsContactOpen(false)} /> : null}
+      {isContactOpen ? <ContactOverlay onClose={() => closeHomePanel(setIsContactOpen)} /> : null}
       {recentSlot !== null ? (
         <RecentPicker
           onClose={() => setRecentSlot(null)}
@@ -1632,6 +1647,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   const [cart, setCart] = useState(0);
   const realCart = useCart();
   const [cartOpen, setCartOpen] = useState(false);
+  const [shopMenuOpen, setShopMenuOpen] = useState(false);
   const [filter, setFilter] = useState("All");
   const [curating, setCurating] = useState<null | "considered" | "wall">(null);
   const [studioIndex, setStudioIndex] = useState(0);
@@ -1644,8 +1660,13 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
     path: "/shop",
   });
 
-  function goHome() { window.history.pushState({}, "", "/"); onNavigate("/"); }
-  function goGalleries() { window.history.pushState({}, "", "/galleries"); onNavigate("/galleries"); }
+  function goTo(route: string) {
+    setShopMenuOpen(false);
+    window.history.pushState({}, "", route);
+    onNavigate(route);
+  }
+  function goHome() { goTo("/"); }
+  function goGalleries() { goTo("/galleries"); }
   // Classify by the location's DB region (no hardcoded place list — a newly
   // created Australian location should never file under Europe).
   const regionByLocation = useMemo(() => new Map(locations.map((l) => [l.name, l.region])), [locations]);
@@ -1720,6 +1741,13 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
     return () => window.clearInterval(timer);
   }, [studioPaused, studioPhotos]);
 
+  useEffect(() => {
+    if (!shopMenuOpen) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setShopMenuOpen(false); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [shopMenuOpen]);
+
   // The "collection glimpse" wall is curated SEPARATELY from the shop products —
   // its ordered photo ids live in the shop_preview site setting. If unset, fall
   // back to a pleasing landscape/portrait mix from the gallery.
@@ -1758,12 +1786,32 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   }
 
   const ShopNav = (
-    <div className="shop-nav">
+    <div className={`shop-nav${shopMenuOpen ? " menu-open" : ""}`}>
       <button className="shop-logo" onClick={goHome} type="button">FRAMED EDITIONS</button>
       <div className="shop-nav-links">
-        <a href="/" onClick={(e) => { e.preventDefault(); goHome(); }}>← samduckworth.com</a>
+        <a className="shop-back-link" href="/" onClick={(e) => { e.preventDefault(); goHome(); }}>← samduckworth.com</a>
         {shopLive ? <button className="shop-cart" type="button" onClick={() => setCartOpen(true)}>Cart · {cartCount}</button> : null}
+        <button
+          className="shop-menu-toggle"
+          type="button"
+          aria-expanded={shopMenuOpen}
+          aria-controls="shop-mobile-navigation"
+          aria-label={shopMenuOpen ? "Close shop navigation" : "Open shop navigation"}
+          onClick={() => setShopMenuOpen((open) => !open)}
+        >
+          {shopMenuOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
+        </button>
       </div>
+      {shopMenuOpen ? <button className="shop-nav-dismiss" onClick={() => setShopMenuOpen(false)} type="button" aria-label="Close shop navigation" /> : null}
+      <nav id="shop-mobile-navigation" className={`shop-mobile-nav${shopMenuOpen ? " is-open" : ""}`} aria-label="Shop mobile navigation" aria-hidden={!shopMenuOpen} inert={!shopMenuOpen}>
+        <a href="/" onClick={(event) => { event.preventDefault(); goTo("/"); }}>Home</a>
+        <a href="/galleries" onClick={(event) => { event.preventDefault(); goTo("/galleries"); }}>Gallery</a>
+        <a href="/map" onClick={(event) => { event.preventDefault(); goTo("/map"); }}>Map</a>
+        <a href="/?panel=about" onClick={(event) => { event.preventDefault(); goTo("/?panel=about"); }}>About Me</a>
+        <a href="/shop" aria-current="page" onClick={(event) => { event.preventDefault(); setShopMenuOpen(false); }}>Shop</a>
+        <a href="/?panel=contact" onClick={(event) => { event.preventDefault(); goTo("/?panel=contact"); }}>Contact</a>
+        {shopLive ? <button type="button" onClick={() => { setShopMenuOpen(false); setCartOpen(true); }}>Cart <span>{cartCount}</span></button> : null}
+      </nav>
     </div>
   );
 

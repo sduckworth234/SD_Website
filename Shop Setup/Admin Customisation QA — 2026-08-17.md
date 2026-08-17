@@ -49,6 +49,10 @@ data is stored there.
 - Gallery tiles and map pins now open the same shared photo lightbox. Exact stored
   ratios choose the portrait or landscape card before the image loads, while
   metadata, gallery actions, responsive sources and close transitions stay aligned.
+- Mobile navigation is complete and consistent across the main site, shop landing
+  and print configurator: Home, Gallery, Map, About, Shop, Contact and Cart remain
+  reachable, with viewport-safe scrolling, active-page state, Escape/backdrop close,
+  body-scroll locking and direct About/Contact panel links.
 - About & Contact edits typed business identity, public email/Instagram, homepage
   hero eyebrow, About portrait/copy, contact copy and footer label. The same record
   is used by the public footer, Instagram links, contact form, shop policy footer and

@@ -61,11 +61,13 @@ export function Header({
   isScrolled,
   onNavigate,
   onOpenAbout,
+  onOpenContact,
   showShop = false,
 }: {
   isScrolled: boolean;
   onNavigate: (route: string) => void;
   onOpenAbout?: () => void;
+  onOpenContact?: () => void;
   showShop?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -82,8 +84,21 @@ export function Header({
   function handleAbout(event: React.MouseEvent) {
     setMenuOpen(false);
     if (onOpenAbout) { onOpenAbout(); return; }
-    navTo(event, "/");
+    navTo(event, "/?panel=about");
   }
+
+  function handleContact(event: React.MouseEvent) {
+    setMenuOpen(false);
+    if (onOpenContact) { onOpenContact(); return; }
+    navTo(event, "/?panel=contact");
+  }
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setMenuOpen(false); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [menuOpen]);
 
   return (
     <header className={`site-header${isScrolled ? " is-visible" : ""}`}>
@@ -129,6 +144,7 @@ export function Header({
           {menuOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
         </button>
       </nav>
+      {menuOpen ? <button className="mobile-nav-dismiss" onClick={() => setMenuOpen(false)} type="button" aria-label="Close navigation" /> : null}
       <nav
         id="mobile-primary-navigation"
         className={`mobile-nav-panel${menuOpen ? " is-open" : ""}`}
@@ -136,12 +152,14 @@ export function Header({
         aria-hidden={!menuOpen}
         inert={!menuOpen}
       >
-        <a href="/galleries" onClick={(event) => navTo(event, "/galleries")}>Gallery</a>
-        <a href="/map" onClick={(event) => navTo(event, "/map")}>Map</a>
+        <a href="/" aria-current={isHome ? "page" : undefined} onClick={(event) => navTo(event, "/")}>Home</a>
+        <a href="/galleries" aria-current={path.startsWith("/galleries") ? "page" : undefined} onClick={(event) => navTo(event, "/galleries")}>Gallery</a>
+        <a href="/map" aria-current={path.startsWith("/map") ? "page" : undefined} onClick={(event) => navTo(event, "/map")}>Map</a>
         <button onClick={handleAbout} type="button">About Me</button>
         {SHOP_FEATURE_ENABLED || showShop ? (
-          <a href="/shop" onClick={(event) => navTo(event, "/shop")}>Shop</a>
+          <a href="/shop" aria-current={path.startsWith("/shop") ? "page" : undefined} onClick={(event) => navTo(event, "/shop")}>Shop</a>
         ) : null}
+        <button onClick={handleContact} type="button">Contact</button>
       </nav>
     </header>
   );
