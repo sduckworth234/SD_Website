@@ -2263,22 +2263,41 @@ function OrderedPhotoPicker({
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("all");
   const [orientation, setOrientation] = useState("all");
+  const [year, setYear] = useState("all");
+  const [saleStatus, setSaleStatus] = useState("all");
+  const [dateOrder, setDateOrder] = useState("default");
   const [visibleCount, setVisibleCount] = useState(60);
 
   const locations = useMemo(
     () => [...new Set(photos.map((photo) => photo.location).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     [photos],
   );
+  const years = useMemo(
+    () => [...new Set(photos.map((photo) => photo.capturedAt?.slice(0, 4) || photo.year).filter(Boolean))].sort((a, b) => b.localeCompare(a)),
+    [photos],
+  );
   const filteredPhotos = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return photos.filter((photo) =>
-      (location === "all" || photo.location === location)
-      && (orientation === "all" || orientOf(photo) === orientation)
-      && (!term || photo.title.toLowerCase().includes(term) || photo.location.toLowerCase().includes(term)),
-    );
-  }, [location, orientation, photos, query]);
+    const timestamp = (photo: Photo) => {
+      const captured = photo.capturedAt ? Date.parse(photo.capturedAt) : Number.NaN;
+      if (Number.isFinite(captured)) return captured;
+      const fallbackYear = Number.parseInt(photo.year || "0", 10);
+      return Number.isFinite(fallbackYear) ? Date.UTC(fallbackYear, 0, 1) : 0;
+    };
+    const matches = photos.filter((photo) => {
+      const photoYear = photo.capturedAt?.slice(0, 4) || photo.year;
+      return (location === "all" || photo.location === location)
+        && (orientation === "all" || orientOf(photo) === orientation)
+        && (year === "all" || photoYear === year)
+        && (saleStatus === "all" || (saleStatus === "sale" ? photo.inShop : !photo.inShop))
+        && (!term || photo.title.toLowerCase().includes(term) || photo.location.toLowerCase().includes(term));
+    });
+    if (dateOrder === "newest") return [...matches].sort((a, b) => timestamp(b) - timestamp(a));
+    if (dateOrder === "oldest") return [...matches].sort((a, b) => timestamp(a) - timestamp(b));
+    return matches;
+  }, [dateOrder, location, orientation, photos, query, saleStatus, year]);
 
-  useEffect(() => setVisibleCount(60), [query, location, orientation]);
+  useEffect(() => setVisibleCount(60), [query, location, orientation, year, saleStatus, dateOrder]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -2368,6 +2387,29 @@ function OrderedPhotoPicker({
               <option value="landscape">Landscape</option>
             </select>
           </label>
+          <label>
+            <span>Capture year</span>
+            <select value={year} onChange={(event) => setYear(event.target.value)}>
+              <option value="all">All years</option>
+              {years.map((candidate) => <option value={candidate} key={candidate}>{candidate}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>Print status</span>
+            <select value={saleStatus} onChange={(event) => setSaleStatus(event.target.value)}>
+              <option value="all">All photographs</option>
+              <option value="sale">Available for sale</option>
+              <option value="not_sale">Not for sale</option>
+            </select>
+          </label>
+          <label>
+            <span>Date order</span>
+            <select value={dateOrder} onChange={(event) => setDateOrder(event.target.value)}>
+              <option value="default">Current gallery order</option>
+              <option value="newest">Newest captured first</option>
+              <option value="oldest">Oldest captured first</option>
+            </select>
+          </label>
         </div>
         <p className="picker-results">Showing {Math.min(visibleCount, filteredPhotos.length)} of {filteredPhotos.length} matches · {photos.length} eligible</p>
         <div className="picker-grid">
@@ -2383,6 +2425,7 @@ function OrderedPhotoPicker({
               >
                 <SmartImage src={thumbUrl(photo, 420)} alt={`${photo.title}, ${photo.location}`} />
                 {idx >= 0 ? <span className="picker-badge">{idx + 1}</span> : null}
+                <span className="picker-tile-meta">{photo.capturedAt?.slice(0, 4) || photo.year || "Date unknown"}{photo.inShop ? " · Print" : ""}</span>
               </button>
             );
           })}
@@ -3942,7 +3985,7 @@ function HomepageDisplayAdmin({ photos, onChanged }: { photos: Photo[]; onChange
   return (
     <section className="homepage-display-admin" aria-label="Homepage displayed photographs">
       <div className="admin-sec-head"><Images size={16} aria-hidden="true" /><h2>Opening hero & Recent Work</h2></div>
-      <p className="admin-sec-hint">The first photographs visitors meet. Each picker searches and filters the published archive in batches, so it stays manageable as the library grows.</p>
+      <p className="admin-sec-hint">The first photographs visitors meet. Search the published archive, then filter by capture year, newest/oldest date, print availability, location and orientation.</p>
       <div className="homepage-hero-admin">
         <div className="homepage-hero-preview">{hero ? <SmartImage src={thumbUrl(hero, 1000)} alt={hero.title} /> : null}<span>Opening hero</span></div>
         <div>

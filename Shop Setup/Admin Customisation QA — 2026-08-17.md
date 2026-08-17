@@ -35,6 +35,9 @@ data is stored there.
 - Overview provides live archive/shop/location counts and page-based shortcuts.
 - Homepage starts with the opening hero and eight exact Recent Work positions,
   followed by section visibility, campaign/banner selections and map-promo curation.
+- Recent Work selection can be narrowed by capture year and print-sale status, then
+  ordered by newest or oldest captured date. Candidate thumbnails show year and a
+  visible Print marker alongside the existing search/location/orientation filters.
 - Map & Locations supports creating locations, editing public name/region/description,
   ordering locations and choosing up to five homepage-card photographs per location.
   Display-name changes preserve existing slugs to protect shared URLs.
