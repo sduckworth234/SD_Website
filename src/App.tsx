@@ -1592,12 +1592,13 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   const heroL = curatedShopPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? curatedShopPhotos[1]
     ?? publicPhotos.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? publicPhotos[1];
   const studioPhotos = useMemo(
-    () => shopPhotos
-      .filter((p) => p.aspect === "portrait" && isSizeSellable("A1", true, p.sellableSizes, p.maxSellableMounted))
-      .slice(0, 6),
+    () => balanceShopOrientations(
+      shopPhotos.filter((p) => p.aspect !== "square" && isSizeSellable("A1", true, p.sellableSizes, p.maxSellableMounted)),
+    ).slice(0, 6),
     [shopPhotos],
   );
   const studioPhoto = studioPhotos[studioIndex % Math.max(studioPhotos.length, 1)];
+  const studioOrientation = studioPhoto ? orientOf(studioPhoto) : "portrait";
 
   function moveStudio(direction: 1 | -1) {
     if (studioPhotos.length < 2) return;
@@ -1750,7 +1751,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
               <div className="shop-studio-copy">
                 <p className="eyebrow">Preview the possibilities</p>
                 <h2 id="studio-showcase-title">See it in the studio</h2>
-                <p>An A1 vertical edition with a generous mat, shown at scale. Choose any available photograph in the galleries to create your own.</p>
+                <p>A1 editions are framed vertically or horizontally to suit the photograph, each shown at scale with a generous mat. Choose any available work in the galleries to create your own.</p>
                 <a
                   href={`/shop/${studioPhoto.slug}`}
                   onClick={(event) => {
@@ -1767,12 +1768,12 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
               <div className="shop-studio-wall" aria-live="off">
                 <OakFrame
                   key={`${studioPhoto.id}-${studioIndex}`}
-                  className={`shop-studio-frame is-${studioDirection}`}
+                  className={`shop-studio-frame ${studioOrientation} is-${studioDirection}`}
                   src={thumbUrl(studioPhoto, 1200)}
-                  orientation="portrait"
-                  alt={`${studioPhoto.title}, ${studioPhoto.location}, shown as an A1 framed print`}
+                  orientation={studioOrientation}
+                  alt={`${studioPhoto.title}, ${studioPhoto.location}, shown as an A1 ${studioOrientation} framed print`}
                 />
-                <p><strong>{studioPhoto.title}</strong><span>{studioPhoto.location} · A1 vertical</span></p>
+                <p><strong>{studioPhoto.title}</strong><span>{studioPhoto.location} · A1 {studioOrientation}</span></p>
                 {studioPhotos.length > 1 ? (
                   <div className="shop-studio-controls">
                     <button type="button" onClick={() => moveStudio(-1)} aria-label="Previous studio photograph">

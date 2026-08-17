@@ -70,7 +70,9 @@ checklist in `Shop Checkout — Setup Handoff.md`.
 - Centred the public gallery footer on desktop and mobile.
 - Tightened the How it works → Studio spacing and changed the studio to a
   continuously looping directional carousel with previous, next, direct selection
-  and pause/play controls.
+  and pause/play controls. The rotation deliberately alternates eligible portrait
+  and landscape A1 works, resizing the wall frame and labelling the orientation so
+  the preview does not imply that editions are vertical-only.
 - Replaced the irregular mixed-orientation edition mosaic with a horizontal salon
   rail. Portrait and landscape works share a controlled display height, use their
   natural widths and alternate automatically while preserving each orientation's
