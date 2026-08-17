@@ -82,8 +82,7 @@ Law rights. They are operational copy, not a substitute for professional legal a
 Every product now has a unique canonical URL, product Open Graph type and JSON-LD
 Product/Offer data. Checkout, confirmation and not-found views are no-indexed. A
 server-generated `/sitemap.xml` includes core pages, policy pages, visible gallery
-locations and all currently sale-enabled product URLs; the static file remains a
-fallback.
+locations and all currently sale-enabled product URLs.
 
 ## GA4 measurement
 
