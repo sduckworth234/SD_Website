@@ -1844,6 +1844,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
     <header className={`shop-nav${shopMenuOpen ? " menu-open" : ""}`}>
       <button className="shop-logo" onClick={goShopTop} type="button" aria-label="Framed Editions shop home">FRAMED EDITIONS</button>
       <nav className="shop-nav-primary" aria-label="Primary navigation">
+        <a className="nav-link" href="/" onClick={(event) => { event.preventDefault(); goTo("/"); }}>Home</a>
         <a className="nav-link" href="/galleries" onClick={(event) => { event.preventDefault(); goTo("/galleries"); }}>Gallery</a>
         <a className="nav-link" href="/map" onClick={(event) => { event.preventDefault(); goTo("/map"); }}>Map</a>
         <button className="nav-button" type="button" onClick={() => goTo("/?panel=about")}>About Me</button>

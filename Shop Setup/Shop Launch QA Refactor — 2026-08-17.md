@@ -221,7 +221,7 @@ After the production deployment:
 
 - `/shop` now mirrors the main-site navigation order and controls while keeping
   `FRAMED EDITIONS` as its top-left identity.
-- Gallery, Map, About Me, Shop, theme selection and the complete mobile menu are
+- Home, Gallery, Map, About Me, Shop, theme selection and the complete mobile menu are
   available without leaving the storefront context.
 - The cart uses the same icon, outlined chip and count badge as the per-print
   Studio editor; on small screens it remains visible beside the theme and menu
