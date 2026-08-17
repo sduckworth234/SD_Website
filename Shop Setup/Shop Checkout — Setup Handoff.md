@@ -64,7 +64,6 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_SECRET_KEY=sk_test_...
 VITE_SHOP_ENABLED=true
 SHOP_CHECKOUT_ENABLED=true
-SHOP_FULFILMENT_PROVIDER=manual
 STRIPE_PAID_INVOICES_ENABLED=false
 ```
 
@@ -111,9 +110,9 @@ live project; run them in order only for a fresh/restored environment. They crea
 - the immutable per-order fulfilment provider and Stripe receipt/invoice links.
 
 The Cron job sends no request until both Vault secrets in step 4 exist. In manual
-mode the endpoint returns a healthy no-op. It submits only when
-`SHOP_FULFILMENT_PROVIDER` is exactly `prodigi`, a Prodigi key exists, and the
-individual order was also created as `prodigi`.
+mode the endpoint returns a healthy no-op. It submits only when the Admin runtime
+provider is `prodigi`, a Prodigi key exists, and the individual order was also
+created as `prodigi`.
 
 ## 3. Vercel environment
 
@@ -136,15 +135,15 @@ Also set `VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...` as a public build variable.
 Prodigi variables are optional while the provider is manual. Add the three
 Prodigi values from `.env.example` only for sandbox/production automation.
 
-## 3a. Deployment feature gates
+## 3a. Deployment capability and Admin runtime switches
 
-The shop has two public gates plus a provider selector. Missing/invalid provider
-values always fall back to manual:
+The two Vercel variables are emergency capability gates. Missing values fail
+closed. Once both are deliberately true, Admin → Shop becomes the immediate
+runtime control for public access and new-order fulfilment:
 
 ```dotenv
 VITE_SHOP_ENABLED=false
 SHOP_CHECKOUT_ENABLED=false
-SHOP_FULFILMENT_PROVIDER=manual
 STRIPE_PAID_INVOICES_ENABLED=false
 ```
 
@@ -153,32 +152,36 @@ STRIPE_PAID_INVOICES_ENABLED=false
 - `SHOP_CHECKOUT_ENABLED` prevents public creation of Stripe Checkout Sessions.
   An admin shop request includes its Supabase access token; the server verifies
   both the Auth user and `admin_users` membership before allowing a test Session.
-- `SHOP_FULFILMENT_PROVIDER=manual` keeps the checkout and order inbox live while
-  making no Prodigi shipping-quote or order API calls. Manual is the fail-safe.
-- `SHOP_FULFILMENT_PROVIDER=prodigi` makes new Checkout Sessions lock new orders
-  to Prodigi. Existing manual orders stay manual and must be completed manually.
+- `site_settings.shop_public` + `print_configurator` are written together by the
+  Admin Shop switch, so storefront, configurator and checkout open/close as one.
+- `site_settings.shop_fulfilment_provider` is controlled by the Admin Shop
+  Manual/Prodigi selector. Missing/invalid values are always manual. Prodigi is
+  unavailable until its API key is configured.
+- Every Checkout Session snapshots the provider. Existing manual orders stay
+  manual when later orders switch to Prodigi, and vice versa.
 - `STRIPE_PAID_INVOICES_ENABLED=true` opts one-time purchases into Stripe paid
   invoice PDFs, which Stripe prices separately. Ordinary receipts do not need it.
 
-Keep both public gates `false` and the provider `manual` in Vercel Production
-while deploying and testing the rest of the site. Preview/Development may use
-test Stripe credentials. Launch still requires the database visibility
-flags `shop_public` and `print_configurator`; these are a second, admin-managed
-gate rather than a replacement for the environment kill switches.
+Keep both capability gates `false` while deploying and testing. For launch, set
+them true once and redeploy; leave the Admin Shop switch off until the real order
+proof passes. Preview/Development may use test Stripe credentials.
 
 | Environment | Public UI | Public checkout | Admin shop/test checkout | Prodigi fulfilment |
 |---|---:|---:|---:|---:|
-| Production during rollout | `false` | `false` | available when signed in | `manual` |
+| Production during rollout | `false` | `false` | available when signed in | Admin runtime: `manual` |
 | Preview/local test mode | optional | optional | available when signed in | `manual`, or `prodigi` with sandbox keys |
 | Initial production launch | deliberate `true` | deliberate `true` | available | `manual` |
 | Later automated launch | `true` | `true` | available | `prodigi` only after sandbox proof |
 
-Changing `VITE_SHOP_ENABLED` requires a new frontend build. Checkout/provider
-values are read by the API runtime. Do not use live Stripe or Prodigi credentials
-in a Preview environment.
+Changing `VITE_SHOP_ENABLED` requires a new frontend build. Normal opening,
+closing and provider switching after that happens immediately in Admin → Shop
+without a deploy. Do not use live Stripe or Prodigi credentials in Preview.
 
 ## Admin workflow
 
+- **Admin → Shop → Live controls:** open/close the public shop and checkout as
+  one operation, and choose Manual or Prodigi for new orders. Enabling Prodigi
+  requires confirmation and configured Production credentials.
 - **Admin → Shop → Shop catalogue:** toggle individual photos or use Photos bulk
   actions to mark them For sale/Not for sale. “Open admin shop” enters the full
   storefront even while public access is disabled.

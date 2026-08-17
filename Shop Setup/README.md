@@ -33,12 +33,12 @@ The implementation is disabled unless explicitly enabled:
 ```dotenv
 VITE_SHOP_ENABLED=false
 SHOP_CHECKOUT_ENABLED=false
-SHOP_FULFILMENT_PROVIDER=manual
 ```
 
 The first gate removes the public shopping flow from the frontend build. The
 second blocks public Stripe Checkout Sessions. A verified signed-in admin can
 still use the shop and create a Checkout Session for test purchases while those
-two public gates are false. Manual mode keeps orders in Shop Orders and makes no
-Prodigi API call; only explicit `prodigi` enables automation. Supabase settings
-`shop_public` and `print_configurator` are an additional visibility gate.
+two public gates are false. Once the deployment gates are true, Admin → Shop
+opens/closes the public shop immediately and chooses Manual or Prodigi for new
+orders. Manual remains the fail-safe. Supabase stores these runtime choices in
+`shop_public`, `print_configurator` and `shop_fulfilment_provider`.

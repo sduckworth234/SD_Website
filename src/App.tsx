@@ -3704,8 +3704,6 @@ const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
   { key: "framed_banner", label: "Home — Framed Editions banner", hint: "The print-shop banner near the bottom of the home page." },
   { key: "contact_prompt", label: "Home — Contact / Work with me", hint: "The “Let’s work together” prompt + contact popup." },
   { key: "instagram_feed", label: "Home — Instagram feed", hint: "The live strip of your latest Instagram posts, above the footer." },
-  { key: "shop_public", label: "Shop page — public", hint: "Open /shop to the public (otherwise it shows “Opening soon”)." },
-  { key: "print_configurator", label: "Shop — Print configurator", hint: "The true-to-size room preview + size/frame/mount picker + cart on each print's own page (/shop/<slug>). Off = the old inline size picker stays on the shop grid." },
 ];
 
 // Flags that default OFF with no site_settings row (vs. every other flag,
@@ -4178,10 +4176,12 @@ function SizeOverridePanel({ photo, onSaved, setMessage }: { photo: Photo; onSav
 function ShopCatalogueAdmin({
   photos,
   onChanged,
+  session,
   setMessage,
 }: {
   photos: Photo[];
   onChanged: () => Promise<void>;
+  session: Session;
   setMessage: (message: string) => void;
 }) {
   const [query, setQuery] = useState("");
@@ -4196,6 +4196,62 @@ function ShopCatalogueAdmin({
   // next full refresh (setPhotoSizeOverride already persisted it).
   const [localPatches, setLocalPatches] = useState<Record<string, Partial<Photo>>>({});
   const saleCount = photos.filter((photo) => photo.inShop).length;
+
+  type ShopRuntimeState = {
+    shopEnabled: boolean;
+    fulfilmentProvider: "manual" | "prodigi";
+    publicCapabilityEnabled: boolean;
+    prodigiConfigured: boolean;
+  };
+  const [runtime, setRuntime] = useState<ShopRuntimeState | null>(null);
+  const [runtimeBusy, setRuntimeBusy] = useState(false);
+
+  const shopSettingsRequest = useCallback(async (body?: Record<string, unknown>) => {
+    const response = await fetch("/api/admin-shop-settings", {
+      method: body ? "POST" : "GET",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": "application/json",
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(data?.error || "Shop settings could not be updated.");
+    return data as ShopRuntimeState;
+  }, [session.access_token]);
+
+  useEffect(() => {
+    shopSettingsRequest()
+      .then(setRuntime)
+      .catch((error) => setMessage(error instanceof Error ? error.message : "Shop settings could not be loaded."));
+  }, [setMessage, shopSettingsRequest]);
+
+  async function setPublicShop(enabled: boolean) {
+    if (enabled && !window.confirm("Open the shop and checkout to the public now?")) return;
+    setRuntimeBusy(true);
+    try {
+      setRuntime(await shopSettingsRequest({ action: "set_shop_enabled", enabled }));
+      setMessage(enabled ? "The shop and checkout are now open to the public." : "The public shop and checkout are disabled. Admin access remains available.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The public shop setting could not be saved.");
+    } finally {
+      setRuntimeBusy(false);
+    }
+  }
+
+  async function setProvider(provider: "manual" | "prodigi") {
+    if (provider === runtime?.fulfilmentProvider) return;
+    if (provider === "prodigi" && !window.confirm("Use Prodigi for NEW orders? Existing manual orders will remain manual.")) return;
+    setRuntimeBusy(true);
+    try {
+      setRuntime(await shopSettingsRequest({ action: "set_fulfilment_provider", provider }));
+      setMessage(provider === "manual" ? "New orders will use manual fulfilment." : "New orders will be locked to Prodigi fulfilment.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The fulfilment provider could not be saved.");
+    } finally {
+      setRuntimeBusy(false);
+    }
+  }
 
   const locationOptions = useMemo(
     () => [...new Set(photos.map((p) => p.location).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
@@ -4267,16 +4323,43 @@ function ShopCatalogueAdmin({
 
   return (
     <section className="shop-catalogue-admin" aria-label="Shop catalogue">
+      <div className="shop-runtime-controls" aria-label="Shop controls">
+        <div className="shop-runtime-heading">
+          <div><p className="eyebrow">Live controls</p><h2>Shop availability and fulfilment</h2></div>
+          <a href="/shop">Open admin shop →</a>
+        </div>
+        {!runtime ? <p className="loading-note"><LoaderCircle className="spin" size={15} /> Loading shop controls…</p> : (
+          <div className="shop-runtime-grid">
+            <div className="shop-runtime-control">
+              <span className="shop-runtime-icon"><Globe size={17} /></span>
+              <span className="vis-flag-text"><b>Public shop and checkout</b><span>{runtime.shopEnabled ? "Customers can browse, configure and pay." : "Closed to the public; signed-in admins retain full access."}</span></span>
+              <button
+                aria-label={`${runtime.shopEnabled ? "Disable" : "Enable"} public shop and checkout`}
+                aria-pressed={runtime.shopEnabled}
+                className={`vis-toggle${runtime.shopEnabled ? " on" : ""}`}
+                disabled={runtimeBusy || (!runtime.publicCapabilityEnabled && !runtime.shopEnabled)}
+                onClick={() => setPublicShop(!runtime.shopEnabled)}
+                type="button"
+              ><span className="vis-knob" /></button>
+            </div>
+            {!runtime.publicCapabilityEnabled ? <p className="shop-runtime-warning"><TriangleAlert size={14} /> Deployment capability is off. Enable the two Vercel shop gates and redeploy once before this switch can open the shop.</p> : null}
+            <div className="shop-runtime-control provider">
+              <span className="shop-runtime-icon"><PackageCheck size={17} /></span>
+              <span className="vis-flag-text"><b>New-order fulfilment</b><span>Only orders purchased after a change use the newly selected provider.</span></span>
+              <div className="provider-switch" role="group" aria-label="New-order fulfilment provider">
+                <button className={runtime.fulfilmentProvider === "manual" ? "on" : ""} disabled={runtimeBusy} onClick={() => setProvider("manual")} type="button">Manual</button>
+                <button className={runtime.fulfilmentProvider === "prodigi" ? "on" : ""} disabled={runtimeBusy || !runtime.prodigiConfigured} onClick={() => setProvider("prodigi")} title={runtime.prodigiConfigured ? "Use Prodigi for new orders" : "Add the Production Prodigi API key first"} type="button">Prodigi</button>
+              </div>
+            </div>
+            {!runtime.prodigiConfigured ? <p className="shop-runtime-note">Prodigi is locked until its Production API key is configured. Manual fulfilment remains the safe default.</p> : null}
+          </div>
+        )}
+      </div>
       <div className="admin-section-intro">
         <div>
           <p className="eyebrow">Shop catalogue</p>
           <h2>Choose what customers can buy.</h2>
           <p>“For sale” controls the shop grid, direct product links and server-side checkout validation. A photo must also be published.</p>
-        </div>
-        <div className={`admin-feature-state${SHOP_FEATURE_ENABLED ? " is-on" : ""}`}>
-          <b>{SHOP_FEATURE_ENABLED ? "Public shop enabled" : "Public shop disabled"}</b>
-          <span>{SHOP_FEATURE_ENABLED ? "This build can show public shop pages." : "Public routes and links are off; authenticated admins retain access."}</span>
-          <a href="/shop">Open admin shop →</a>
         </div>
       </div>
       <div className="shop-catalogue-summary">
@@ -4595,7 +4678,7 @@ function AdminDashboard({ session }: { session: Session }) {
       {activeTab === "locations" ? <PlacesOrderAdmin locations={locations} photos={adminPhotos} onChanged={refresh} /> : null}
       {activeTab === "settings" ? <VisibilityAdmin photos={adminPhotos} locations={locations} /> : null}
       {activeTab === "shop" ? (
-        <ShopCatalogueAdmin photos={adminPhotos} onChanged={refresh} setMessage={setMessage} />
+        <ShopCatalogueAdmin photos={adminPhotos} onChanged={refresh} session={session} setMessage={setMessage} />
       ) : null}
       {activeTab === "orders" ? (
         <Suspense fallback={<p className="loading-note">Loading shop orders…</p>}>

@@ -22,13 +22,14 @@ Copy the variable names from [`.env.example`](./.env.example) into a gitignored
 
 - Push straight to `main`; Vercel auto-deploys it.
 - Run `npm run build` and `npm audit` before pushing code changes.
-- Keep `VITE_SHOP_ENABLED` and `SHOP_CHECKOUT_ENABLED` false, with
-  `SHOP_FULFILMENT_PROVIDER=manual`, until launch is deliberately approved.
+- Keep `VITE_SHOP_ENABLED` and `SHOP_CHECKOUT_ENABLED` false until launch is
+  deliberately approved. Once true, Admin → Shop owns the runtime switches.
 - Signed-in admins retain shop/product access and may create Stripe test Checkout
   Sessions while the public UI/checkout gates are false. Manual is the safe
-  provider fallback; only explicit `prodigi` enables external submission.
-- Supabase runtime settings `shop_public` and `print_configurator` are an
-  additional public visibility gate controlled in Admin.
+  database fallback; only Admin-selected `prodigi` plus configured credentials
+  enables external submission.
+- Supabase runtime settings `shop_public`, `print_configurator` and
+  `shop_fulfilment_provider` are controlled directly in Admin → Shop.
 - Supabase row changes are live immediately; code and `VITE_` changes require a
   deployment.
 

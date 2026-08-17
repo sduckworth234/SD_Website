@@ -1,10 +1,10 @@
 import Stripe from "stripe";
 import { normaliseCart } from "../server/shop/catalogue.mjs";
-import { checkoutEnabled, fulfilmentProvider, paidInvoicesEnabled } from "../server/shop/features.mjs";
+import { checkoutEnabled, paidInvoicesEnabled } from "../server/shop/features.mjs";
 import { json, methodAllowed, publicOrigin, readJson, safeError } from "../server/shop/http.mjs";
 import { sizeIsSellable } from "../server/shop/printSizing.mjs";
 import { quoteShippingCents } from "../server/shop/prodigi.mjs";
-import { fetchShopPhotos, requireAdmin, shopRuntimeEnabled } from "../server/shop/supabase.mjs";
+import { fetchShopPhotos, requireAdmin, shopRuntimeConfig } from "../server/shop/supabase.mjs";
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 const rateBuckets = new Map();
@@ -37,7 +37,8 @@ export default async function handler(req, res) {
 
   try {
     const environmentEnabled = checkoutEnabled();
-    const runtimeEnabled = environmentEnabled ? await shopRuntimeEnabled() : false;
+    const runtime = await shopRuntimeConfig();
+    const runtimeEnabled = environmentEnabled && runtime.shopEnabled;
     // Admins can exercise the complete Stripe test flow while public checkout
     // remains closed. The bearer token is verified against Supabase Auth and
     // public.admin_users; no client-provided boolean can activate this bypass.
@@ -63,7 +64,7 @@ export default async function handler(req, res) {
         throw new Error(`${photo.title} isn't available as a ${item.mounted ? "mounted " : ""}${item.size} print.`);
       }
     }
-    const provider = fulfilmentProvider();
+    const provider = runtime.fulfilmentProvider;
     // Manual mode makes no Prodigi request even if a stale API key remains in
     // the deployment. Checkout stays live using the verified catalogue rate.
     const shipping = await quoteShippingCents(cart, { useProdigi: provider === "prodigi" });

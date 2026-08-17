@@ -1,8 +1,7 @@
 import { sendFulfilmentAlert, sendShippingNotice } from "../server/shop/email.mjs";
-import { fulfilmentProvider } from "../server/shop/features.mjs";
 import { json, methodAllowed, publicOrigin, safeError } from "../server/shop/http.mjs";
 import { createProdigiOrder, fetchProdigiOrder, prodigiConfigured } from "../server/shop/prodigi.mjs";
-import { signedMasterUrl, supabaseRest, updateOrder } from "../server/shop/supabase.mjs";
+import { shopRuntimeConfig, signedMasterUrl, supabaseRest, updateOrder } from "../server/shop/supabase.mjs";
 
 function cronAuthorised(req) {
   if (!process.env.CRON_SECRET) return process.env.NODE_ENV !== "production";
@@ -127,7 +126,8 @@ async function monitorSubmitted() {
 export default async function handler(req, res) {
   if (!methodAllowed(req, res, ["GET", "POST"])) return;
   if (!cronAuthorised(req)) return json(res, 401, { error: "unauthorized" });
-  if (fulfilmentProvider() !== "prodigi") {
+  const runtime = await shopRuntimeConfig();
+  if (runtime.fulfilmentProvider !== "prodigi") {
     // A scheduled call in manual mode is healthy and intentionally does no
     // work. Returning 200 keeps the Cron history useful instead of noisy.
     return json(res, 200, { skipped: true, provider: "manual", submitted: [], monitored: [] });

@@ -157,15 +157,17 @@ Conventions the gallery relies on:
 
 - Push to `main` → Vercel builds + deploys.
 - The shop ships safely while disabled. `VITE_SHOP_ENABLED` and
-  `SHOP_CHECKOUT_ENABLED` default false; `SHOP_FULFILMENT_PROVIDER` defaults to
-  `manual`. Keep the gates false/provider manual until launch proof is complete.
+  `SHOP_CHECKOUT_ENABLED` default false and remain deployment-level emergency
+  capability gates. Keep them false until launch proof is complete; once true,
+  Admin → Shop owns the immediate public and provider runtime switches.
 - `VITE_SHOP_ENABLED` and `SHOP_CHECKOUT_ENABLED` are **public** gates. A user
   whose Supabase session passes `is_admin()` may still open shop/product/checkout
   routes and create a Checkout Session for testing. The API verifies the bearer
   token server-side; this is not a client boolean bypass.
-- Manual mode makes no Prodigi API calls. Only the exact provider `prodigi` can
-  submit, and each order's provider snapshot prevents later toggles sweeping up
-  older manual orders.
+- Manual mode makes no Prodigi API calls. The provider is stored in
+  `site_settings.shop_fulfilment_provider`; only `prodigi` plus a configured API
+  key can submit, and each order's provider snapshot prevents later toggles
+  sweeping up older manual orders.
 - Public launch additionally requires the Supabase `shop_public` and
   `print_configurator` settings. These runtime switches complement rather than
   replace the environment kill switches.

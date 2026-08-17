@@ -1,9 +1,9 @@
 import Stripe from "stripe";
 import { sendShippingNotice } from "../server/shop/email.mjs";
-import { checkoutEnabled, fulfilmentProvider, paidInvoicesEnabled } from "../server/shop/features.mjs";
+import { checkoutEnabled, paidInvoicesEnabled } from "../server/shop/features.mjs";
 import { json, methodAllowed, readJson, safeError } from "../server/shop/http.mjs";
 import { prodigiConfigured } from "../server/shop/prodigi.mjs";
-import { requireAdmin, signedMasterUrl, supabaseRest, updateOrder } from "../server/shop/supabase.mjs";
+import { requireAdmin, shopRuntimeConfig, signedMasterUrl, supabaseRest, updateOrder } from "../server/shop/supabase.mjs";
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
@@ -60,6 +60,7 @@ export default async function handler(req, res) {
     const admin = await requireAdmin(req);
     if (!admin) return json(res, 401, { error: "unauthorized" });
     if (req.method === "GET") {
+      const runtime = await shopRuntimeConfig();
       const search = typeof req.query?.q === "string"
         ? req.query.q.trim().replace(/[^a-zA-Z0-9@._+\- ]/g, "").slice(0, 100)
         : "";
@@ -68,8 +69,8 @@ export default async function handler(req, res) {
       return json(res, 200, {
         orders: rows ?? [],
         features: {
-          checkoutEnabled: checkoutEnabled(),
-          fulfilmentProvider: fulfilmentProvider(),
+          checkoutEnabled: checkoutEnabled() && runtime.shopEnabled,
+          fulfilmentProvider: runtime.fulfilmentProvider,
           prodigiConfigured: prodigiConfigured(),
           paidInvoicesEnabled: paidInvoicesEnabled(),
         },
@@ -113,7 +114,8 @@ export default async function handler(req, res) {
       return json(res, 200, { order: updated, emailWarning });
     }
     if (body.action === "submit_now") {
-      if (fulfilmentProvider() !== "prodigi" || order.fulfilment_provider !== "prodigi") {
+      const runtime = await shopRuntimeConfig();
+      if (runtime.fulfilmentProvider !== "prodigi" || order.fulfilment_provider !== "prodigi") {
         return json(res, 409, { error: "This order is locked to manual fulfilment and cannot be auto-submitted." });
       }
       if (["submitted", "in_production", "shipped", "cancelled", "refunded"].includes(order.status)) {

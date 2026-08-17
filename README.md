@@ -31,20 +31,19 @@ Create a gitignored `.env.local` from [`.env.example`](./.env.example). Never
 commit real secret keys. Browser-safe variables use the `VITE_` prefix; Stripe,
 Prodigi, Supabase service-role, Cron and Resend secrets are server-only.
 
-The shop has two public deployment gates and a safe fulfilment selector:
+The shop has two emergency deployment capability gates:
 
 ```dotenv
 VITE_SHOP_ENABLED=false
 SHOP_CHECKOUT_ENABLED=false
-SHOP_FULFILMENT_PROVIDER=manual
 ```
 
-Keep both gates false and the provider manual until the activation checklist and
-test-mode cycle are complete. Supabase settings `shop_public` and `print_configurator` provide a
-second, admin-managed public visibility gate. A verified signed-in admin can
-still open the shop, products and Stripe test flow while the two public gates are
-false. Manual mode keeps checkout/order admin live, makes no Prodigi API calls,
-and locks each paid order to manual even if later orders switch to Prodigi.
+Keep both gates false until the activation checklist and test-mode cycle are
+complete. After they are deliberately set true once, **Admin → Shop** directly
+controls public shop/checkout availability and whether new orders use manual or
+Prodigi fulfilment. A verified signed-in admin can still test while public access
+is off. Manual is the fail-safe, and each paid order is permanently locked to the
+provider selected when that Checkout Session was created.
 
 ## Supabase
 

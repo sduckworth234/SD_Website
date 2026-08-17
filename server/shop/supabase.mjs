@@ -49,12 +49,44 @@ export async function fetchShopPhotos(photoIds) {
   return map;
 }
 
-export async function shopRuntimeEnabled() {
+export async function shopRuntimeConfig() {
   const rows = await supabaseRest(
-    "site_settings?key=in.(shop_public,print_configurator)&enabled=eq.true&select=key",
+    "site_settings?key=in.(shop_public,print_configurator,shop_fulfilment_provider)&select=key,enabled,value",
   );
-  const enabled = new Set((rows ?? []).map((row) => row.key));
-  return enabled.has("shop_public") && enabled.has("print_configurator");
+  const settings = new Map((rows ?? []).map((row) => [row.key, row]));
+  const shopPublic = settings.get("shop_public")?.enabled === true;
+  const printConfigurator = settings.get("print_configurator")?.enabled === true;
+  return {
+    shopEnabled: shopPublic && printConfigurator,
+    shopPublic,
+    printConfigurator,
+    fulfilmentProvider: settings.get("shop_fulfilment_provider")?.value === "prodigi" ? "prodigi" : "manual",
+  };
+}
+
+export async function setShopRuntimeEnabled(enabled) {
+  return supabaseRest("site_settings?on_conflict=key", {
+    method: "POST",
+    headers: { prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify([
+      { key: "shop_public", enabled, label: "Shop page — public" },
+      { key: "print_configurator", enabled, label: "Shop — Print configurator" },
+    ]),
+  });
+}
+
+export async function setShopRuntimeFulfilmentProvider(provider) {
+  if (!new Set(["manual", "prodigi"]).has(provider)) throw new Error("Invalid shop fulfilment provider.");
+  return supabaseRest("site_settings?on_conflict=key", {
+    method: "POST",
+    headers: { prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify({
+      key: "shop_fulfilment_provider",
+      enabled: true,
+      value: provider,
+      label: "Shop — fulfilment provider",
+    }),
+  });
 }
 
 export async function insertPaidOrder(order, items) {
