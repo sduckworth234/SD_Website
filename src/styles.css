@@ -4412,31 +4412,13 @@ body:has(.contact-overlay) {
 }
 .framed-hero h2 { font-family: var(--font-sans);
   font-weight: var(--head-weight); font-size: clamp(2.4rem, 5vw, 4rem); letter-spacing: var(--head-track); margin: .12em 0 0; color: var(--ink); }
-/* Column so the button and the "Coming soon" pill each sit on their own line
-   (both are inline-flex, which otherwise flows them onto the same row). */
+/* Keep the launch copy and its CTA on a clean vertical rhythm. */
 .fh-copy { display: flex; flex-direction: column; align-items: flex-start; }
 .fh-lead { font-family: var(--font-mono);
   font-weight: 300; color: var(--muted); font-size: 1.05rem; line-height: 1.5; max-width: 40ch; margin: 14px 0 22px; }
 .fh-stage { position: relative; display: flex; justify-content: center; align-items: flex-end; min-height: 320px; }
 .fh-main { width: min(300px, 62%); z-index: 2; }
 .fh-back { position: absolute; right: 0; bottom: 6%; width: min(260px, 52%); z-index: 1; opacity: .97; }
-.fh-flag {
-  display: inline-flex; align-items: center; gap: 9px; margin: clamp(16px, 2.4vh, 22px) 0 0;
-  padding: 8px 16px 8px 13px; border: 1px solid var(--line); border-radius: 999px;
-  background: rgba(var(--foam-rgb), .45);
-  font-size: .62rem; letter-spacing: .22em; text-transform: uppercase; color: var(--muted);
-}
-.fh-flag-dot {
-  width: 7px; height: 7px; border-radius: 50%; background: var(--sea); flex: none;
-  animation: fhPulse 2.6s ease-out infinite;
-}
-@keyframes fhPulse {
-  0%   { box-shadow: 0 0 0 0 rgba(var(--sea-rgb), .5); }
-  70%  { box-shadow: 0 0 0 9px rgba(var(--sea-rgb), 0); }
-  100% { box-shadow: 0 0 0 0 rgba(var(--sea-rgb), 0); }
-}
-@media (prefers-reduced-motion: reduce) { .fh-flag-dot { animation: none; } }
-
 /* ================= Galleries page ================= */
 .gallery-page { min-height: 100dvh; }
 .gallery-page-head { padding: calc(env(safe-area-inset-top) + clamp(84px, 11vh, 116px)) clamp(18px, 4vw, 56px) clamp(10px, 1.5vw, 18px); }

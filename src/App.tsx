@@ -1430,7 +1430,6 @@ function FramedHero({ portrait, landscape, onShop }: { portrait?: Photo; landsca
         <h2>Take the view home.</h2>
         <p className="fh-lead">Fine-art prints, professionally framed — ready to hang.</p>
         <button className="solid-button" type="button" onClick={onShop}>Shop the collection</button>
-        <p className="fh-flag"><span className="fh-flag-dot" aria-hidden="true" />Coming soon</p>
       </div>
       <div className="fh-stage">
         {landscape ? <OakFrame className="fh-back" src={thumbUrl(landscape, 1000)} orientation="landscape" alt={landscape.title} /> : null}
