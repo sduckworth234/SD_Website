@@ -5,6 +5,10 @@
 // Plan.md §6 for why: best resolution economics, best 3:2 ratio fit, and the
 // only range offering all colours at every AU-shippable size.
 
+// Where enquiry emails go — the contact popup (App.tsx) and the shop product
+// page's "need help?" card both compose to this inbox.
+export const CONTACT_EMAIL = "samduckworthphoto@gmail.com";
+
 export type SizeId = "A5" | "A4" | "A3" | "A2" | "A1";
 
 export type PrintSize = {
@@ -22,6 +26,13 @@ export type PrintSize = {
   cfpm: number;
 };
 
+// Prices below are the fallback only — display-purposes-only shown before
+// the live fetch resolves, or if it fails. The real, editable prices live in
+// public.print_pricing (supabase/migrations/20260817010000_print_pricing.sql,
+// admin Pricing tab); applyLivePricing patches these objects in place once
+// fetched (see getPrintPricing() in src/lib/supabase.ts, called from
+// useSiteData). Checkout never trusts this — server/shop/catalogue.mjs reads
+// the same table independently for the amount actually charged.
 export const SIZES: PrintSize[] = [
   { id: "A5", outer: [14.8, 21.0], mat: 2.5, cfp: 51.10, cfpm: 57.10 },
   { id: "A4", outer: [21.0, 29.7], mat: 3.7, cfp: 57.10, cfpm: 57.10 },
@@ -29,6 +40,19 @@ export const SIZES: PrintSize[] = [
   { id: "A2", outer: [41.9, 59.4], mat: 5.0, cfp: 95.10, cfpm: 110.10 },
   { id: "A1", outer: [59.4, 84.1], mat: 4.8, cfp: 136.55, cfpm: 161.55 },
 ];
+
+/** Patches SIZES' cfp/cfpm in place from live-fetched prices — mutates the
+ * existing objects (not the array reference) so components reading via
+ * sizeById()/priceFor() see the update without needing their own re-fetch
+ * plumbing. Missing/partial data for a size leaves that size's fallback
+ * value untouched rather than blanking it. */
+export function applyLivePricing(pricing: Partial<Record<SizeId, { cfp?: number; cfpm?: number }>>): void {
+  for (const s of SIZES) {
+    const p = pricing[s.id];
+    if (p?.cfp != null) s.cfp = p.cfp;
+    if (p?.cfpm != null) s.cfpm = p.cfpm;
+  }
+}
 
 /** Visible timber width carved out of the mounted border (portion of the mat
  * closest to the outer edge that reads as frame, not mat). */
@@ -130,3 +154,107 @@ export function estimateShipping(sizes: SizeId[]): number {
 }
 
 export const money = (n: number) => `$${n.toFixed(2)}`;
+
+// Print-size gating — mirrored in server/shop/printSizing.mjs (server-only
+// module system, can't share this file directly). Keep both in sync.
+//
+// Required print-area pixel dimensions at 300dpi per SKU, verified against
+// the live Prodigi API (Shop Setup/Prodigi API — Investigation & Setup
+// Plan.md §3). Same numbers AdminOrders.tsx validates a print-master upload
+// against — this is that table's canonical home now.
+export const REQUIRED_PX: Record<SizeId, { cfp: [number, number]; cfpm: [number, number] }> = {
+  A5: { cfp: [1748, 2480], cfpm: [1164, 1890] },
+  A4: { cfp: [2490, 3510], cfpm: [1594, 2622] },
+  A3: { cfp: [3507, 4960], cfpm: [2385, 3825] },
+  A2: { cfp: [4960, 7015], cfpm: [3780, 5835] },
+  A1: { cfp: [7020, 9930], cfpm: [5895, 8805] },
+};
+
+/** Prodigi wants 300dpi, allows ~200dpi as the floor for non-fine-detail work
+ * — but aerial/coastal work is all fine detail, so 200dpi is treated as the
+ * hard floor below which a size isn't offered at all (Shop Setup doc §4). */
+export const MIN_ACCEPTABLE_DPI = 200;
+
+/** Achievable print dpi for a photo of the given pixel size at a given SKU,
+ * per Shop Setup doc's formula: dpi = 300 * sqrt(actualMP / requiredMP@300dpi). */
+export function dpiFor(width: number, height: number, size: SizeId, mounted: boolean): number {
+  const [reqW, reqH] = mounted ? REQUIRED_PX[size].cfpm : REQUIRED_PX[size].cfp;
+  return Math.round(300 * Math.sqrt((width * height) / (reqW * reqH)));
+}
+
+/** The largest size (of A5..A1) this photo can be sold at, at or above the
+ * dpi floor, for a given mount option — or null if even A5 mounted can't
+ * clear the floor. */
+export function maxSellableSize(width: number, height: number, mounted: boolean): SizeId | null {
+  let best: SizeId | null = null;
+  for (const s of SIZES) {
+    if (dpiFor(width, height, s.id, mounted) >= MIN_ACCEPTABLE_DPI) best = s.id;
+  }
+  return best;
+}
+
+/** Per-size availability at both mount options, for rendering the size
+ * picker (disable unavailable options) and admin readiness displays. */
+export function sizeAvailability(width: number, height: number): Record<SizeId, { cfpOk: boolean; cfpmOk: boolean; cfpDpi: number; cfpmDpi: number }> {
+  const out = {} as Record<SizeId, { cfpOk: boolean; cfpmOk: boolean; cfpDpi: number; cfpmDpi: number }>;
+  for (const s of SIZES) {
+    const cfpDpi = dpiFor(width, height, s.id, false);
+    const cfpmDpi = dpiFor(width, height, s.id, true);
+    out[s.id] = { cfpOk: cfpDpi >= MIN_ACCEPTABLE_DPI, cfpmOk: cfpmDpi >= MIN_ACCEPTABLE_DPI, cfpDpi, cfpmDpi };
+  }
+  return out;
+}
+
+// --- Manual per-size overrides — supabase/migrations/20260816130000_photo_size_overrides.sql ---
+// size_overrides is the admin's raw input; sellable_sizes is the derived,
+// public-safe merge that the shop UI and checkout enforcement actually read.
+// Mirrored in server/shop/printSizing.mjs.
+export type SizeOverride = { unmounted?: boolean | null; mounted?: boolean | null };
+export type SizeOverrides = Partial<Record<SizeId, SizeOverride>>;
+export type SellableSizes = Record<SizeId, { unmounted: boolean; mounted: boolean }>;
+
+/** Merge computed resolution with admin overrides into the single map the
+ * rest of the app reads. Call this whenever dims or overrides change and
+ * persist the result to photos.sellable_sizes (and refresh
+ * max_sellable_mounted/unmounted from it too, for the simple "ideal size"
+ * display). */
+export function computeSellableSizes(width: number, height: number, overrides?: SizeOverrides | null): SellableSizes {
+  const avail = sizeAvailability(width, height);
+  const out = {} as SellableSizes;
+  for (const s of SIZES) {
+    const ov = overrides?.[s.id];
+    out[s.id] = {
+      unmounted: ov?.unmounted ?? avail[s.id].cfpOk,
+      mounted: ov?.mounted ?? avail[s.id].cfpmOk,
+    };
+  }
+  return out;
+}
+
+/** Largest sellable size for a mount option, from an already-resolved
+ * sellable_sizes map — used for the simple "ideal size" label/sort, which
+ * can't represent a non-monotonic override (e.g. A1 on but A2 off) as one
+ * number, so it just reports the highest true. */
+export function maxSellableFromSizes(sizes: SellableSizes | null | undefined, mounted: boolean): SizeId | null {
+  if (!sizes) return null;
+  let best: SizeId | null = null;
+  for (const s of SIZES) if (sizes[s.id]?.[mounted ? "mounted" : "unmounted"]) best = s.id;
+  return best;
+}
+
+/** Is this exact size/mount combo sellable? Prefers the resolved
+ * sellable_sizes map (already override-aware); falls back to the plain
+ * maxSellable label (pre-override data, or ships-ahead of the migration)
+ * when sellable_sizes hasn't been computed for this photo yet; fails open
+ * (true) when there's no gating data at all — never block on missing data. */
+export function isSizeSellable(
+  size: SizeId,
+  mounted: boolean,
+  sellableSizes: SellableSizes | null | undefined,
+  fallbackMax: string | null | undefined,
+): boolean {
+  if (sellableSizes) return Boolean(sellableSizes[size]?.[mounted ? "mounted" : "unmounted"]);
+  if (fallbackMax == null) return true;
+  if (!SIZES.some((s) => s.id === fallbackMax)) return true;
+  return SIZES.findIndex((s) => s.id === size) <= SIZES.findIndex((s) => s.id === fallbackMax);
+}

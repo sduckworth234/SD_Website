@@ -1,8 +1,7 @@
 import { sendFulfilmentAlert, sendShippingNotice } from "../server/shop/email.mjs";
-import { fulfilmentEnabled } from "../server/shop/features.mjs";
 import { json, methodAllowed, publicOrigin, safeError } from "../server/shop/http.mjs";
 import { createProdigiOrder, fetchProdigiOrder, prodigiConfigured } from "../server/shop/prodigi.mjs";
-import { signedMasterUrl, supabaseRest, updateOrder } from "../server/shop/supabase.mjs";
+import { shopRuntimeConfig, signedMasterUrl, supabaseRest, updateOrder } from "../server/shop/supabase.mjs";
 
 function cronAuthorised(req) {
   if (!process.env.CRON_SECRET) return process.env.NODE_ENV !== "production";
@@ -11,7 +10,7 @@ function cronAuthorised(req) {
 
 async function claimOrder(order) {
   const statuses = "paid,queued,failed";
-  const rows = await supabaseRest(`orders?id=eq.${encodeURIComponent(order.id)}&status=in.(${statuses})`, {
+  const rows = await supabaseRest(`orders?id=eq.${encodeURIComponent(order.id)}&fulfilment_provider=eq.prodigi&status=in.(${statuses})`, {
     method: "PATCH",
     headers: { prefer: "return=representation" },
     body: JSON.stringify({ status: "submitting", last_fulfilment_error: null }),
@@ -86,7 +85,7 @@ async function submitOne(order, req) {
 async function monitorSubmitted() {
   const threshold = new Date(Date.now() - 10 * 60_000).toISOString();
   const rows = await supabaseRest(
-    `orders?status=in.(submitted,in_production)&submitted_at=lt.${encodeURIComponent(threshold)}&select=*&limit=25`,
+    `orders?fulfilment_provider=eq.prodigi&status=in.(submitted,in_production)&submitted_at=lt.${encodeURIComponent(threshold)}&select=*&limit=25`,
   );
   const results = [];
   for (const row of rows ?? []) {
@@ -127,12 +126,17 @@ async function monitorSubmitted() {
 export default async function handler(req, res) {
   if (!methodAllowed(req, res, ["GET", "POST"])) return;
   if (!cronAuthorised(req)) return json(res, 401, { error: "unauthorized" });
-  if (!fulfilmentEnabled()) return json(res, 503, { error: "Shop fulfilment is disabled in this environment." });
+  const runtime = await shopRuntimeConfig();
+  if (runtime.fulfilmentProvider !== "prodigi") {
+    // A scheduled call in manual mode is healthy and intentionally does no
+    // work. Returning 200 keeps the Cron history useful instead of noisy.
+    return json(res, 200, { skipped: true, provider: "manual", submitted: [], monitored: [] });
+  }
   if (!prodigiConfigured()) return json(res, 503, { error: "PRODIGI_API_KEY is not configured." });
   try {
     const now = new Date().toISOString();
     const orders = await supabaseRest(
-      `orders?status=in.(paid,queued,failed,awaiting_master)&submit_after=lte.${encodeURIComponent(now)}&select=*,order_items(*)&order=created_at.asc&limit=10`,
+      `orders?fulfilment_provider=eq.prodigi&status=in.(paid,queued,failed,awaiting_master)&submit_after=lte.${encodeURIComponent(now)}&select=*,order_items(*)&order=created_at.asc&limit=10`,
     );
     const submitted = [];
     for (const order of orders ?? []) submitted.push(await submitOne(order, req));

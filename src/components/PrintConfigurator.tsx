@@ -3,17 +3,19 @@
 // Gated behind the `print_configurator` visibility flag (Admin → Visibility) so
 // it can ship disabled until it's ready; see ShopProduct in App.tsx for the
 // fallback to the old inline picker when the flag is off.
-import { ShoppingCart, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { getTransformedPublicUrl, photoBucket } from "../lib/supabase";
 import type { Photo } from "../types";
 import {
   COLOURS,
+  CONTACT_EMAIL,
   MOULDING_CM,
   ROOM,
   SIZES,
   UNMOUNTED_BAND_CM,
   colourById,
+  isSizeSellable,
   money,
   priceFor,
   sizeById,
@@ -21,12 +23,23 @@ import {
 } from "../lib/printCatalogue";
 import type { ColourId, SizeId } from "../lib/printCatalogue";
 import { makeCartItem, useCart } from "../lib/cart";
+import { CartDrawer } from "./CartDrawer";
 
 function thumb(photo: Photo, width: number): string {
   return photo.storagePath ? getTransformedPublicUrl(photoBucket, photo.storagePath, width) : photo.imageUrl;
 }
 
 const orientOf = (p: Photo) => (p.aspect === "portrait" || p.aspect === "square" ? "portrait" : "landscape");
+type PreviewMode = "studio" | "detail";
+
+/** Is `size`/`mounted` sellable for this photo? Prefers the resolved
+ * sellable_sizes map (computed resolution merged with any admin override —
+ * see supabase/migrations/20260816130000_photo_size_overrides.sql), falls
+ * back to the simple maxSellable label for photos that predate it. Fails
+ * open when there's no gating data at all — never block on missing data. */
+function isSizeAvailable(photo: Photo, size: SizeId, mounted: boolean): boolean {
+  return isSizeSellable(size, mounted, photo.sellableSizes, mounted ? photo.maxSellableMounted : photo.maxSellableUnmounted);
+}
 
 export function PrintConfigurator({
   photo,
@@ -43,20 +56,34 @@ export function PrintConfigurator({
   const [colour, setColour] = useState<ColourId>("natural");
   const [cartOpen, setCartOpen] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const [pulseCart, setPulseCart] = useState(false);
-
-  // Reset the configurator to sane defaults whenever the product itself
-  // changes (switching photo is a real route change — a fresh product).
-  useEffect(() => {
-    setSize("A3");
-    setMounted(true);
-    setColour("natural");
-  }, [photo.id]);
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("studio");
+  const pairTrackRef = useRef<HTMLDivElement | null>(null);
 
   const roomWrapRef = useRef<HTMLDivElement | null>(null);
-  const [frameStyle, setFrameStyle] = useState<{ width: number; height: number } | null>(null);
+  const [frameStyle, setFrameStyle] = useState<{
+    width: number;
+    height: number;
+    left: number;
+    top: number;
+    bandPx: number;
+    matPx: number;
+  } | null>(null);
 
+  // Snap to the largest available size whenever the photo or mount option
+  // changes and the currently-selected size is no longer offered for it —
+  // e.g. switching to a lower-resolution photo, or toggling to unmounted
+  // (which needs more pixels for the same size).
   useEffect(() => {
+    setAddError(null);
+    if (isSizeAvailable(photo, size, mounted)) return;
+    const fallback = [...SIZES].reverse().find((s) => isSizeAvailable(photo, s.id, mounted));
+    if (fallback) setSize(fallback.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photo.id, size, mounted]);
+
+  useLayoutEffect(() => {
     const el = roomWrapRef.current;
     if (!el) return;
     const recompute = () => {
@@ -65,31 +92,92 @@ export function PrintConfigurator({
       const [shortEdge, longEdge] = outerSize;
       const outerW = orient === "landscape" ? longEdge : shortEdge;
       const outerH = orient === "landscape" ? shortEdge : longEdge;
-      const pxPerCm = (el.clientWidth / ROOM.naturalW) * ROOM.pxPerCmAtNative;
-      setFrameStyle({ width: outerW * pxPerCm, height: outerH * pxPerCm });
+      const naturalPxPerCm = (el.clientWidth / ROOM.naturalW) * ROOM.pxPerCmAtNative;
+
+      // Keep the calibrated room scale whenever possible. A portrait A1 can
+      // exceed the usable wall height on short desktop windows, so first move
+      // its centre within the safe wall area and only then scale it down just
+      // enough to keep the complete outer frame visible.
+      const sideMargin = Math.max(14, el.clientWidth * 0.025);
+      const topMargin = 62; // clears the Studio / Detail control
+      const bottomMargin = 18;
+      const availableW = Math.max(1, el.clientWidth - sideMargin * 2);
+      const availableH = Math.max(1, el.clientHeight - topMargin - bottomMargin);
+      const pxPerCm = Math.min(naturalPxPerCm, availableW / outerW, availableH / outerH);
+      const width = outerW * pxPerCm;
+      const height = outerH * pxPerCm;
+      const nextBandCm = mounted ? MOULDING_CM : UNMOUNTED_BAND_CM;
+      const nextMatCm = mounted ? Math.max(0, sizeById(size).mat - MOULDING_CM) : 0;
+      const wantedLeft = el.clientWidth * ROOM.centerX;
+      const wantedTop = el.clientHeight * ROOM.centerY;
+      const left = Math.min(
+        Math.max(wantedLeft, sideMargin + width / 2),
+        el.clientWidth - sideMargin - width / 2,
+      );
+      const top = Math.min(
+        Math.max(wantedTop, topMargin + height / 2),
+        el.clientHeight - bottomMargin - height / 2,
+      );
+
+      // Commit the frame, moulding and mat as one animation target. Keeping
+      // these together avoids a one-frame retarget where A1 mat proportions
+      // were briefly calculated against the previous outer frame width.
+      setFrameStyle({
+        width,
+        height,
+        left,
+        top,
+        bandPx: nextBandCm * pxPerCm,
+        matPx: nextMatCm * pxPerCm,
+      });
     };
     recompute();
     const ro = new ResizeObserver(recompute);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [size, photo]);
+  }, [size, mounted, photo, previewMode]);
 
   const sizeDef = sizeById(size);
   const colourDef = colourById(colour);
   const price = priceFor(size, mounted);
   const sku = skuFor(size, mounted);
+  const maxForMount = mounted ? photo.maxSellableMounted : photo.maxSellableUnmounted;
+  // Only worth a note when it's an actual limitation — A1 (the top size) or
+  // unknown/no restriction don't need a message at all.
+  const maxIdeal = maxForMount && maxForMount !== "A1" && SIZES.some((s) => s.id === maxForMount) ? maxForMount : null;
 
-  const pxPerCmForBand = frameStyle ? frameStyle.width / (orientOf(photo) === "landscape" ? sizeDef.outer[1] : sizeDef.outer[0]) : 0;
   const bandCm = mounted ? MOULDING_CM : UNMOUNTED_BAND_CM;
   const matCm = mounted ? Math.max(0, sizeDef.mat - MOULDING_CM) : 0;
+  const orientation = orientOf(photo);
+  const [shortEdge, longEdge] = sizeDef.outer;
+  const detailOuterW = orientation === "landscape" ? longEdge : shortEdge;
+  const detailOuterH = orientation === "landscape" ? shortEdge : longEdge;
+  const detailBandPct = (bandCm / detailOuterW) * 100;
+  const detailInnerW = Math.max(detailOuterW - bandCm * 2, 0.1);
+  const detailMatPct = (matCm / detailInnerW) * 100;
 
   const pairPhotos = useMemo(() => {
     const others = otherShopPhotos.filter((p) => p.id !== photo.id);
-    // Deterministic-ish shuffle keyed on photo id so it doesn't reshuffle on
-    // every render, but still varies per product.
-    const seed = photo.id.charCodeAt(0) || 1;
-    return [...others].sort((a, b) => ((a.id.charCodeAt(0) * seed) % 97) - ((b.id.charCodeAt(0) * seed) % 97)).slice(0, 4);
-  }, [otherShopPhotos, photo.id]);
+    const score = (candidate: Photo) => {
+      const sameLocation = candidate.locationId && photo.locationId
+        ? candidate.locationId === photo.locationId
+        : candidate.location === photo.location;
+      const sharedCollections = candidate.collectionIds?.filter((id) => photo.collectionIds?.includes(id)).length ?? 0;
+      const sameOrientation = orientOf(candidate) === orientOf(photo);
+
+      return (sameLocation ? 12 : 0)
+        + sharedCollections * 6
+        + (candidate.kind === photo.kind ? 3 : 0)
+        + (sameOrientation ? 1 : 0)
+        + (candidate.year === photo.year ? 1 : 0);
+    };
+
+    return [...others].sort((a, b) =>
+      score(b) - score(a)
+      || (a.shopOrder ?? Number.MAX_SAFE_INTEGER) - (b.shopOrder ?? Number.MAX_SAFE_INTEGER)
+      || a.title.localeCompare(b.title),
+    );
+  }, [otherShopPhotos, photo]);
 
   const switcherPhotos = useMemo(() => otherShopPhotos.filter((p) => p.id !== photo.id).slice(0, 4), [otherShopPhotos, photo.id]);
 
@@ -99,19 +187,35 @@ export function PrintConfigurator({
     window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
   }
 
+  function goToShop() {
+    window.history.pushState({}, "", "/shop#shop-grid");
+    onNavigate("/shop");
+    requestAnimationFrame(() => document.getElementById("shop-grid")?.scrollIntoView({ block: "start" }));
+  }
+
+  function scrollPairs(direction: -1 | 1) {
+    const track = pairTrackRef.current;
+    if (!track) return;
+    track.scrollBy({ left: direction * Math.round(track.clientWidth * 0.82), behavior: "smooth" });
+  }
+
   function addToCart() {
+    // Belt-and-braces: the size buttons are already disabled for an
+    // unavailable size, but don't trust that alone (a stale tab still
+    // running pre-gating JS, a disabled attribute stripped some other way).
+    // This is the same check the checkout API enforces server-side —
+    // catching it here just gives a clearer moment to fail than a checkout
+    // error two steps later.
+    if (!isSizeAvailable(photo, size, mounted)) {
+      setAddError(`${size}${mounted ? " mounted" : ""} isn't available for this photo — refresh the page and pick another size.`);
+      return;
+    }
+    setAddError(null);
     cart.add(makeCartItem(photo, thumb(photo, 200), size, mounted, colour));
     setJustAdded(true);
     setPulseCart(false);
     requestAnimationFrame(() => setPulseCart(true));
     setTimeout(() => setJustAdded(false), 900);
-  }
-
-  function checkout() {
-    if (!cart.items.length) return;
-    setCartOpen(false);
-    window.history.pushState({}, "", "/checkout");
-    onNavigate("/checkout");
   }
 
   return (
@@ -131,41 +235,110 @@ export function PrintConfigurator({
 
       <div className="pc-shop">
         <div className="pc-stage">
-          <div className="pc-room-wrap" ref={roomWrapRef}>
-            <img className="pc-room-img" src={ROOM.src} alt="A framed print hung on a bright, minimal wall" />
-            {frameStyle ? (
+          <div
+            className="pc-preview-tabs"
+            role="tablist"
+            aria-label="Print preview"
+            onKeyDown={(event) => {
+              if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+              event.preventDefault();
+              const nextMode: PreviewMode = event.key === "ArrowLeft" || event.key === "Home" ? "studio" : "detail";
+              setPreviewMode(nextMode);
+              requestAnimationFrame(() => document.getElementById(`pc-${nextMode}-tab`)?.focus());
+            }}
+          >
+            <button
+              id="pc-studio-tab"
+              className={previewMode === "studio" ? "on" : ""}
+              type="button"
+              role="tab"
+              aria-controls="pc-studio-panel"
+              aria-selected={previewMode === "studio"}
+              tabIndex={previewMode === "studio" ? 0 : -1}
+              onClick={() => setPreviewMode("studio")}
+            >
+              Studio
+            </button>
+            <button
+              id="pc-detail-tab"
+              className={previewMode === "detail" ? "on" : ""}
+              type="button"
+              role="tab"
+              aria-controls="pc-detail-panel"
+              aria-selected={previewMode === "detail"}
+              tabIndex={previewMode === "detail" ? 0 : -1}
+              onClick={() => setPreviewMode("detail")}
+            >
+              Detail
+            </button>
+          </div>
+
+          {previewMode === "studio" ? (
+            <div className="pc-room-wrap pc-preview-panel" id="pc-studio-panel" role="tabpanel" aria-labelledby="pc-studio-tab" ref={roomWrapRef}>
+              <img className="pc-room-img" src={ROOM.src} alt="A framed print hung on a bright, minimal wall" />
+              {frameStyle ? (
+                <div
+                  className="pc-frame"
+                  style={{
+                    width: frameStyle.width,
+                    height: frameStyle.height,
+                    left: frameStyle.left,
+                    top: frameStyle.top,
+                  }}
+                >
+                  <div
+                    className="pc-frame-band"
+                    style={{
+                      background: colourDef.grain ? `${colourDef.grain}, ${colourDef.css}` : colourDef.css,
+                      padding: frameStyle.bandPx,
+                    }}
+                  >
+                    <div className="pc-frame-mat" style={{ padding: frameStyle.matPx }}>
+                      <div className="pc-frame-window">
+                        <img src={thumb(photo, 1200)} alt={`${photo.title}, ${photo.location}, framed`} />
+                        <div className="pc-frame-glass" aria-hidden="true" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              <div className="pc-stage-tag">
+                <p className="pc-k">Framed Editions</p>
+                <h1>{photo.title}</h1>
+                <p className="pc-loc">{photo.location}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="pc-detail-wrap pc-preview-panel" id="pc-detail-panel" role="tabpanel" aria-labelledby="pc-detail-tab">
               <div
-                className="pc-frame"
-                style={{
-                  width: frameStyle.width,
-                  height: frameStyle.height,
-                  left: `${ROOM.centerX * 100}%`,
-                  top: `${ROOM.centerY * 100}%`,
-                }}
+                className={`pc-detail-frame ${orientation}`}
+                style={{ aspectRatio: `${detailOuterW} / ${detailOuterH}` }}
               >
                 <div
                   className="pc-frame-band"
                   style={{
                     background: colourDef.grain ? `${colourDef.grain}, ${colourDef.css}` : colourDef.css,
-                    padding: bandCm * pxPerCmForBand,
+                    padding: `${detailBandPct}%`,
                   }}
                 >
-                  <div className="pc-frame-mat" style={{ padding: matCm * pxPerCmForBand }}>
+                  <div className="pc-frame-mat" style={{ padding: `${detailMatPct}%` }}>
                     <div className="pc-frame-window">
-                      <img src={thumb(photo, 1200)} alt={`${photo.title}, ${photo.location}, framed`} />
+                      <img key={photo.id} className="pc-detail-image" src={thumb(photo, 1600)} alt={`${photo.title}, ${photo.location}, frame detail`} />
                       <div className="pc-frame-glass" aria-hidden="true" />
                     </div>
                   </div>
                 </div>
               </div>
-            ) : null}
-            <div className="pc-stage-tag">
-              <p className="pc-k">Framed Editions</p>
-              <h1>{photo.title}</h1>
-              <p className="pc-loc">{photo.location}</p>
+              <div className="pc-detail-spec" aria-live="polite">
+                <b>{size} · {detailOuterW.toFixed(1)} × {detailOuterH.toFixed(1)} cm</b>
+                <span>
+                  {mounted ? `${matCm.toFixed(1)} cm mat · ${MOULDING_CM.toFixed(1)} cm frame` : "Full-bleed presentation"}
+                  {` · ${orientation}`}
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="pc-scroll-hint">Configure ↓</div>
+          )}
+          {previewMode === "studio" ? <div className="pc-scroll-hint">Configure ↓</div> : null}
         </div>
 
         <div className="pc-panel">
@@ -191,13 +364,25 @@ export function PrintConfigurator({
           <div className="pc-group">
             <div className="pc-group-head"><label>Size</label><span className="pc-val">{sizeDef.outer[0].toFixed(1)} × {sizeDef.outer[1].toFixed(1)} cm</span></div>
             <div className="pc-sizes">
-              {SIZES.map((s) => (
-                <button key={s.id} className={`pc-size-btn${s.id === size ? " on" : ""}`} type="button" onClick={() => setSize(s.id)}>
-                  <b>{s.id}</b>
-                  <span>{s.outer[0].toFixed(0)}×{s.outer[1].toFixed(0)}cm</span>
-                </button>
-              ))}
+              {SIZES.map((s) => {
+                const available = isSizeAvailable(photo, s.id, mounted);
+                return (
+                  <button
+                    key={s.id}
+                    className={`pc-size-btn${s.id === size ? " on" : ""}${available ? "" : " unavailable"}`}
+                    type="button"
+                    disabled={!available}
+                    title={available ? undefined : "This size isn't offered for this photo."}
+                    onClick={() => available && setSize(s.id)}
+                  >
+                    <b>{s.id}</b>
+                    <span>{s.outer[0].toFixed(0)}×{s.outer[1].toFixed(0)}cm</span>
+                    {available ? null : <em>Unavailable</em>}
+                  </button>
+                );
+              })}
             </div>
+            {maxIdeal ? <p className="pc-quality-note">Best print quality up to {maxIdeal}{mounted ? " mounted" : ""} for this image.</p> : null}
           </div>
 
           <div className="pc-group">
@@ -227,6 +412,7 @@ export function PrintConfigurator({
 
           <div className="pc-price-row"><span className="pc-price">{money(price)}</span></div>
           <button className="pc-add-cart" type="button" onClick={addToCart}>{justAdded ? "Added ✓" : "Add to cart"}</button>
+          {addError ? <p className="pc-add-error" role="alert">{addError}</p> : null}
           <p className="pc-ship-note">
             Shipping isn't flat — it's quoted live from the print size (from $15.10, AU only). Add a second A5–A2 print to the same order and shipping adds exactly <b>$5.00</b>, not another full charge. (Two A1 prints together add $10 for the second — they can't share a parcel.)
           </p>
@@ -241,10 +427,23 @@ export function PrintConfigurator({
       </section>
 
       {pairPhotos.length ? (
-        <section className="pc-pairs">
-          <h3>Pairs well with</h3>
+        <section className="pc-pairs" aria-labelledby="pc-similar-title">
+          <div className="pc-pairs-head">
+            <h3 id="pc-similar-title">Similar images</h3>
+            <div className="pc-pairs-actions">
+              <div className="pc-pairs-nav" aria-label="Scroll similar images">
+                <button type="button" onClick={() => scrollPairs(-1)} aria-label="Previous similar images">
+                  <ChevronLeft size={16} aria-hidden="true" />
+                </button>
+                <button type="button" onClick={() => scrollPairs(1)} aria-label="Next similar images">
+                  <ChevronRight size={16} aria-hidden="true" />
+                </button>
+              </div>
+              <button className="pc-pairs-see-all" type="button" onClick={goToShop}>See all prints</button>
+            </div>
+          </div>
           <p className="pc-pairs-callout">Pick one to configure — adding it to the same order usually costs about $5 in shipping, not $15.</p>
-          <div className="pc-pairs-grid">
+          <div className="pc-pairs-track" ref={pairTrackRef}>
             {pairPhotos.map((p) => (
               <button key={p.id} className="pc-pair-card" type="button" onClick={() => goToPhoto(p)}>
                 <div className="pc-pair-photo"><img src={thumb(p, 400)} alt={`${p.title}, ${p.location}`} loading="lazy" /></div>
@@ -256,39 +455,17 @@ export function PrintConfigurator({
         </section>
       ) : null}
 
-      <div className={`pc-scrim${cartOpen ? " open" : ""}`} onClick={() => setCartOpen(false)} />
-      <div className={`pc-cart-drawer${cartOpen ? " open" : ""}`} aria-label="Cart">
-        <div className="pc-cart-head"><h3>Your cart</h3><button type="button" onClick={() => setCartOpen(false)} aria-label="Close cart"><X size={18} /></button></div>
-        <div className="pc-cart-items">
-          {cart.items.length === 0 ? (
-            <p className="pc-cart-empty">Nothing in your cart yet — configure a print and add it.</p>
-          ) : (
-            cart.items.map((it, i) => (
-              <div className="pc-cart-item" key={`${it.photoId}-${i}`}>
-                <img src={it.thumb} alt={it.title} />
-                <div className="pc-ci-info">
-                  <b>{it.title}</b>
-                  <span>{it.size} · {colourById(it.colour).label} · {it.mounted ? "Mounted" : "Unmounted"}</span>
-                  <span className="pc-ci-remove" role="button" onClick={() => cart.remove(i)}>Remove</span>
-                </div>
-                <div className="pc-ci-price">{money(it.price)}</div>
-              </div>
-            ))
-          )}
+      <section className="pc-help">
+        <div>
+          <b>Not sure which size is right, or have a question about this print?</b>
+          <span>Sam answers these personally — sizing, framing, shipping, anything about {photo.title}.</span>
         </div>
-        <div className="pc-cart-foot">
-          {cart.items.length ? (
-            <div className="pc-cart-lines">
-              <div className="row"><span>Subtotal</span><span>{money(cart.subtotal)}</span></div>
-              <div className="row"><span>Shipping (AU)</span><span>{money(cart.shipping)}</span></div>
-              <div className="row total"><span>Estimated total</span><span>{money(cart.subtotal + cart.shipping)}</span></div>
-            </div>
-          ) : null}
-          <p className="pc-au-note">Shipping within Australia only. Exact cost is confirmed at checkout.</p>
-          <button className="pc-checkout-btn" disabled={!cart.items.length} type="button" onClick={checkout}>Secure checkout</button>
-          <p className="pc-checkout-note">Promotion codes are applied securely at checkout.</p>
-        </div>
-      </div>
+        <a className="pc-help-btn" href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Question about "${photo.title}"`)}`}>
+          Email a question
+        </a>
+      </section>
+
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onNavigate={onNavigate} />
     </main>
   );
 }

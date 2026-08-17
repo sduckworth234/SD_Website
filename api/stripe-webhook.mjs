@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { sendOrderConfirmation } from "../server/shop/email.mjs";
+import { sendNewOrderAlert, sendOrderConfirmation } from "../server/shop/email.mjs";
 import { safeError } from "../server/shop/http.mjs";
 import { getOrderBySession, insertPaidOrder, supabaseRest } from "../server/shop/supabase.mjs";
 
@@ -16,14 +16,25 @@ async function fulfilSession(sessionId) {
   const existing = await getOrderBySession(sessionId);
   if (existing) return existing;
 
-  const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ["payment_intent", "discounts"] });
+  const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ["payment_intent.latest_charge", "discounts", "invoice"] });
   if (!(["paid", "no_payment_required"].includes(session.payment_status))) return null;
   const count = Number(session.metadata?.cart_count ?? 0);
   if (!Number.isInteger(count) || count < 1 || count > 20) throw new Error("Checkout Session has invalid cart metadata.");
   const intent = typeof session.payment_intent === "string"
     ? await stripe.paymentIntents.retrieve(session.payment_intent)
     : session.payment_intent;
-  const shipping = intent?.shipping;
+  const charge = typeof intent?.latest_charge === "string"
+    ? await stripe.charges.retrieve(intent.latest_charge)
+    : intent?.latest_charge;
+  const invoice = typeof session.invoice === "string"
+    ? await stripe.invoices.retrieve(session.invoice)
+    : session.invoice;
+  // Current Checkout Sessions expose addresses collected by the Shipping
+  // Address Element under collected_information. Keep the PaymentIntent
+  // fallback for orders created by the previous native-address checkout.
+  const shipping = session.collected_information?.shipping_details
+    ?? session.shipping_details
+    ?? intent?.shipping;
   if (!shipping?.name || !shipping.address?.line1 || shipping.address.country !== "AU") {
     throw new Error("Paid Checkout Session has no valid Australian shipping address.");
   }
@@ -61,7 +72,7 @@ async function fulfilSession(sessionId) {
     state: shipping.address.state,
     postcode: shipping.address.postal_code,
     country: shipping.address.country,
-    phone: shipping.phone ?? "",
+    phone: session.customer_details?.phone ?? intent?.shipping?.phone ?? session.metadata?.customer_phone ?? "",
   };
   const order = await insertPaidOrder({
     stripe_checkout_session_id: session.id,
@@ -76,8 +87,21 @@ async function fulfilSession(sessionId) {
     discount_cents: session.total_details?.amount_discount ?? 0,
     discount_code: promotionCode || session.metadata?.promotion_code || null,
     total_cents: session.amount_total ?? 0,
+    fulfilment_provider: session.metadata?.fulfilment_provider === "prodigi" ? "prodigi" : "manual",
+    stripe_receipt_url: charge?.receipt_url ?? null,
+    stripe_invoice_id: invoice?.id ?? null,
+    stripe_invoice_url: invoice?.hosted_invoice_url ?? null,
+    stripe_invoice_pdf: invoice?.invoice_pdf ?? null,
   }, items);
-  sendOrderConfirmation(order, items).catch((error) => console.error("confirmation email:", safeError(error)));
+  // Await delivery attempts so serverless execution cannot be frozen before
+  // Resend receives them. Email failure never changes the paid order record.
+  const deliveries = await Promise.allSettled([
+    sendOrderConfirmation(order, items),
+    sendNewOrderAlert(order, items),
+  ]);
+  for (const delivery of deliveries) {
+    if (delivery.status === "rejected") console.error("order email:", safeError(delivery.reason));
+  }
   return order;
 }
 

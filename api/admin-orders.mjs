@@ -1,9 +1,27 @@
 import Stripe from "stripe";
-import { checkoutEnabled, fulfilmentEnabled } from "../server/shop/features.mjs";
+import { sendShippingNotice } from "../server/shop/email.mjs";
+import { checkoutEnabled, paidInvoicesEnabled } from "../server/shop/features.mjs";
 import { json, methodAllowed, readJson, safeError } from "../server/shop/http.mjs";
-import { requireAdmin, signedMasterUrl, supabaseRest, updateOrder } from "../server/shop/supabase.mjs";
+import { prodigiConfigured } from "../server/shop/prodigi.mjs";
+import { requireAdmin, shopRuntimeConfig, signedMasterUrl, supabaseRest, updateOrder } from "../server/shop/supabase.mjs";
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+
+function clean(value, max) {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
+function optionalHttpsUrl(value) {
+  const input = clean(value, 500);
+  if (!input) return null;
+  try {
+    const url = new URL(input);
+    if (url.protocol !== "https:") throw new Error();
+    return url.toString();
+  } catch {
+    throw new Error("Tracking link must be a complete https:// URL.");
+  }
+}
 
 async function attachMaster(body) {
   const photoId = typeof body.photoId === "string" ? body.photoId : "";
@@ -42,6 +60,7 @@ export default async function handler(req, res) {
     const admin = await requireAdmin(req);
     if (!admin) return json(res, 401, { error: "unauthorized" });
     if (req.method === "GET") {
+      const runtime = await shopRuntimeConfig();
       const search = typeof req.query?.q === "string"
         ? req.query.q.trim().replace(/[^a-zA-Z0-9@._+\- ]/g, "").slice(0, 100)
         : "";
@@ -49,7 +68,12 @@ export default async function handler(req, res) {
       const rows = await supabaseRest(`orders?select=*,order_items(*)&order=created_at.desc&limit=100${filter}`);
       return json(res, 200, {
         orders: rows ?? [],
-        features: { checkoutEnabled: checkoutEnabled(), fulfilmentEnabled: fulfilmentEnabled() },
+        features: {
+          checkoutEnabled: checkoutEnabled() && runtime.shopEnabled,
+          fulfilmentProvider: runtime.fulfilmentProvider,
+          prodigiConfigured: prodigiConfigured(),
+          paidInvoicesEnabled: paidInvoicesEnabled(),
+        },
       });
     }
     const body = await readJson(req);
@@ -58,9 +82,41 @@ export default async function handler(req, res) {
     const rows = await supabaseRest(`orders?id=eq.${encodeURIComponent(orderId)}&select=*&limit=1`);
     const order = rows?.[0];
     if (!order) return json(res, 404, { error: "Order not found." });
+    if (body.action === "mark_processing" || body.action === "mark_shipped") {
+      if (order.fulfilment_provider !== "manual" || order.prodigi_order_id) {
+        return json(res, 409, { error: "Only manual orders can be updated with manual fulfilment controls." });
+      }
+      if (["cancelled", "refunded"].includes(order.status)) {
+        return json(res, 409, { error: `Order cannot be fulfilled from ${order.status}.` });
+      }
+      if (body.action === "mark_processing") {
+        if (order.status === "shipped") return json(res, 409, { error: "This order is already shipped." });
+        const updated = await updateOrder(order.id, { status: "in_production", last_fulfilment_error: null });
+        return json(res, 200, { order: updated });
+      }
+      const trackingCarrier = clean(body.trackingCarrier, 80) || null;
+      const trackingNumber = clean(body.trackingNumber, 120) || null;
+      const trackingUrl = optionalHttpsUrl(body.trackingUrl);
+      const wasShipped = order.status === "shipped";
+      const updated = await updateOrder(order.id, {
+        status: "shipped",
+        tracking_carrier: trackingCarrier,
+        tracking_number: trackingNumber,
+        tracking_url: trackingUrl,
+        shipped_at: order.shipped_at ?? new Date().toISOString(),
+        last_fulfilment_error: null,
+      });
+      let emailWarning = null;
+      if (!wasShipped) {
+        try { await sendShippingNotice(updated); }
+        catch (error) { emailWarning = `Order was marked shipped, but the email failed: ${safeError(error)}`; }
+      }
+      return json(res, 200, { order: updated, emailWarning });
+    }
     if (body.action === "submit_now") {
-      if (!fulfilmentEnabled()) {
-        return json(res, 409, { error: "Prodigi fulfilment is disabled in this environment." });
+      const runtime = await shopRuntimeConfig();
+      if (runtime.fulfilmentProvider !== "prodigi" || order.fulfilment_provider !== "prodigi") {
+        return json(res, 409, { error: "This order is locked to manual fulfilment and cannot be auto-submitted." });
       }
       if (["submitted", "in_production", "shipped", "cancelled", "refunded"].includes(order.status)) {
         return json(res, 409, { error: `Order cannot be queued from ${order.status}.` });
@@ -70,7 +126,7 @@ export default async function handler(req, res) {
     }
     if (body.action === "refund") {
       if (!stripe || !order.stripe_payment_intent_id) return json(res, 503, { error: "Stripe refund is unavailable." });
-      if (order.prodigi_order_id || ["submitting", "submitted", "in_production", "shipped"].includes(order.status)) {
+      if (order.prodigi_order_id || (order.fulfilment_provider === "prodigi" && ["submitting", "submitted", "in_production", "shipped"].includes(order.status))) {
         return json(res, 409, { error: "This order reached Prodigi; cancel it there before refunding." });
       }
       await stripe.refunds.create({ payment_intent: order.stripe_payment_intent_id }, { idempotencyKey: `refund-${order.id}` });

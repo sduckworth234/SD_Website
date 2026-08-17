@@ -1,4 +1,4 @@
-import { CheckoutElementsProvider, PaymentElement, useCheckoutElements } from "@stripe/react-stripe-js/checkout";
+import { CheckoutElementsProvider, PaymentElement, ShippingAddressElement, useCheckoutElements } from "@stripe/react-stripe-js/checkout";
 import { loadStripe } from "@stripe/stripe-js";
 import { ArrowLeft, Check, LoaderCircle, Lock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -32,14 +32,12 @@ type Customer = {
   name: string;
   email: string;
   phone: string;
-  address: { line1: string; line2: string; city: string; state: string; postalCode: string };
 };
 
 const EMPTY_CUSTOMER: Customer = {
   name: "",
   email: "",
   phone: "",
-  address: { line1: "", line2: "", city: "", state: "NSW", postalCode: "" },
 };
 
 function go(path: string, onNavigate: (path: string) => void) {
@@ -53,8 +51,24 @@ function PaymentStep({ onBack }: { onBack: () => void }) {
   const [message, setMessage] = useState("");
   const [promo, setPromo] = useState("");
   const [promoWorking, setPromoWorking] = useState(false);
+  const [loadTimedOut, setLoadTimedOut] = useState(false);
 
-  if (checkoutState.type === "loading") return <div className="co-payment-loading"><LoaderCircle className="spin" /> Loading secure payment…</div>;
+  useEffect(() => {
+    if (checkoutState.type !== "loading") {
+      setLoadTimedOut(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setLoadTimedOut(true), 12_000);
+    return () => window.clearTimeout(timer);
+  }, [checkoutState.type]);
+
+  if (checkoutState.type === "loading") return loadTimedOut ? (
+    <div className="co-payment-failed" role="alert">
+      <p>Secure payment couldn’t load.</p>
+      <span>Please retry. If it happens again, return to the shop and start checkout again.</span>
+      <button type="button" onClick={onBack}>Return to contact details</button>
+    </div>
+  ) : <div className="co-payment-loading"><LoaderCircle className="spin" /> Loading secure payment…</div>;
   if (checkoutState.type === "error") return <p className="co-error">{checkoutState.error.message}</p>;
   const { checkout } = checkoutState;
 
@@ -83,11 +97,18 @@ function PaymentStep({ onBack }: { onBack: () => void }) {
   return (
     <form className="co-payment" onSubmit={pay}>
       <div className="co-section-head"><span>02</span><div><p>Secure payment</p><small>Card and wallet details go directly to Stripe.</small></div></div>
-      <div className="co-promo-row">
-        <input aria-label="Promotion code" autoComplete="off" onChange={(e) => setPromo(e.target.value)} placeholder="Promotion code" value={promo} />
-        <button disabled={promoWorking || !promo.trim()} onClick={applyPromo} type="button">{promoWorking ? "Checking…" : "Apply"}</button>
+      <div className="co-stripe-block">
+        <div className="co-stripe-block-head"><p>Delivery address</p><small>Start typing your street and select the matching Australian address.</small></div>
+        <ShippingAddressElement />
       </div>
-      <PaymentElement options={{ layout: "accordion" }} />
+      <div className="co-stripe-block">
+        <div className="co-stripe-block-head"><p>Payment details</p><small>Securely processed by Stripe.</small></div>
+        <div className="co-promo-row">
+          <input aria-label="Promotion code" autoComplete="off" onChange={(e) => setPromo(e.target.value)} placeholder="Promotion code" value={promo} />
+          <button disabled={promoWorking || !promo.trim()} onClick={applyPromo} type="button">{promoWorking ? "Checking…" : "Apply"}</button>
+        </div>
+        <PaymentElement options={{ layout: "accordion" }} />
+      </div>
       {message ? <p className={message.endsWith("applied.") ? "co-success" : "co-error"}>{message}</p> : null}
       <button className="co-pay" disabled={submitting || !checkout.canConfirm} type="submit">
         {submitting ? <><LoaderCircle className="spin" size={16} /> Processing securely…</> : <>Pay {checkout.total.total.amount}</>}
@@ -105,11 +126,10 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
 
-  const options = useMemo(() => clientSecret ? { clientSecret, elementsOptions: { appearance } } : null, [clientSecret]);
-
-  function updateAddress(key: keyof Customer["address"], value: string) {
-    setCustomer((current) => ({ ...current, address: { ...current.address, [key]: value } }));
-  }
+  const options = useMemo(() => clientSecret ? {
+    clientSecret,
+    elementsOptions: { appearance },
+  } : null, [clientSecret]);
 
   async function continueToPayment(event: React.FormEvent) {
     event.preventDefault();
@@ -128,8 +148,15 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
           customer,
         }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Checkout could not be started.");
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || "Checkout could not be started.");
+      if (!data?.clientSecret) throw new Error("Stripe did not return a secure checkout session.");
+      const sessionMode = data.clientSecret.startsWith("cs_test_") ? "test" : data.clientSecret.startsWith("cs_live_") ? "live" : null;
+      const keyMode = publishableKey?.startsWith("pk_test_") ? "test" : publishableKey?.startsWith("pk_live_") ? "live" : null;
+      if (sessionMode && keyMode && sessionMode !== keyMode) {
+        console.error(`Stripe checkout mode mismatch: ${keyMode} publishable key with ${sessionMode} Checkout Session.`);
+        throw new Error("Secure payment is temporarily unavailable because the Stripe client and server modes do not match.");
+      }
       setClientSecret(data.clientSecret);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Checkout could not be started.");
@@ -158,21 +185,14 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
             </CheckoutElementsProvider>
           ) : (
             <form className="co-details" onSubmit={continueToPayment}>
-              <div className="co-section-head"><span>01</span><div><p>Delivery details</p><small>Australia only. Tracked delivery is quoted before payment.</small></div></div>
+              <div className="co-section-head"><span>01</span><div><p>Contact details</p><small>Your Australian delivery address is matched in the secure next step.</small></div></div>
               <div className="co-fields two">
                 <label>Full name<input autoComplete="name" onChange={(e) => setCustomer({ ...customer, name: e.target.value })} required value={customer.name} /></label>
                 <label>Email<input autoComplete="email" onChange={(e) => setCustomer({ ...customer, email: e.target.value })} required type="email" value={customer.email} /></label>
               </div>
               <label>Phone <span>(optional)</span><input autoComplete="tel" onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} type="tel" value={customer.phone} /></label>
-              <label>Street address<input autoComplete="address-line1" onChange={(e) => updateAddress("line1", e.target.value)} required value={customer.address.line1} /></label>
-              <label>Apartment, suite, etc. <span>(optional)</span><input autoComplete="address-line2" onChange={(e) => updateAddress("line2", e.target.value)} value={customer.address.line2} /></label>
-              <div className="co-fields address">
-                <label>Suburb<input autoComplete="address-level2" onChange={(e) => updateAddress("city", e.target.value)} required value={customer.address.city} /></label>
-                <label>State<select autoComplete="address-level1" onChange={(e) => updateAddress("state", e.target.value)} value={customer.address.state}>{["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"].map((state) => <option key={state}>{state}</option>)}</select></label>
-                <label>Postcode<input autoComplete="postal-code" inputMode="numeric" maxLength={4} onChange={(e) => updateAddress("postalCode", e.target.value.replace(/\D/g, ""))} pattern="[0-9]{4}" required value={customer.address.postalCode} /></label>
-              </div>
               {error ? <p className="co-error">{error}</p> : null}
-              <button className="co-continue" disabled={starting || !publishableKey} type="submit">{starting ? <><LoaderCircle className="spin" size={16} /> Preparing payment…</> : "Continue to secure payment"}</button>
+              <button className="co-continue" disabled={starting || !publishableKey} type="submit">{starting ? <><LoaderCircle className="spin" size={16} /> Preparing payment…</> : "Continue to delivery & payment"}</button>
             </form>
           )}
         </section>

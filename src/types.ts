@@ -54,6 +54,32 @@ export type Photo = {
   // Ids of the Collections this photo belongs to (public.photo_series). A photo
   // can sit in several. Empty/absent = it only ever shows under "All work".
   collectionIds?: string[];
+  // Largest size sellable at a decent print quality (>=200dpi), derived from
+  // whichever source file is best (raw preferred, export fallback) — public,
+  // safe: a size label leaks nothing about the source file itself. Null means
+  // not even A5 clears the floor. See src/lib/printCatalogue.ts.
+  maxSellableMounted?: string | null;
+  maxSellableUnmounted?: string | null;
+  // Fully resolved per-size/mount availability (computed resolution merged
+  // with any admin override) — public, same safety rationale as the max
+  // labels above. This is what gates the size picker; see
+  // src/lib/printCatalogue.ts's isSizeSellable. See supabase/migrations/
+  // 20260816130000_photo_size_overrides.sql.
+  sellableSizes?: import("./lib/printCatalogue").SellableSizes | null;
+  // Admin-only fields below (never sent to the public gallery query) — the
+  // raw-source audit's findings, kept alongside sourcePath for the same
+  // "find the file to sell a print" purpose. See supabase/migrations/
+  // 20260816010000_photo_raw_source.sql and 20260816020000_photo_source_dims.sql.
+  rawSourcePath?: string | null;
+  rawWidth?: number | null;
+  rawHeight?: number | null;
+  rawMatchConfidence?: string | null;
+  rawMatchNotes?: string | null;
+  sourceWidth?: number | null;
+  sourceHeight?: number | null;
+  // Admin's raw per-size overrides (the input; sellableSizes above is the
+  // resolved output). Admin-only.
+  sizeOverrides?: import("./lib/printCatalogue").SizeOverrides | null;
 };
 
 // A gallery "Collection" — a trip or body of work, the second filter axis on
