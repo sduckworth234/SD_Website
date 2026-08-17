@@ -241,5 +241,8 @@ After the production deployment:
 - A promotion carrying trusted Stripe metadata `free_shipping=true` also sets
   the generated Checkout Session shipping rate to $0. Customer input cannot set
   this flag; untagged promotions continue to discount merchandise only.
+- Promotion codes are entered with contact details and validated while the
+  Checkout Session is created, so the secure payment summary opens with both
+  the Stripe discount and final shipping amount already applied.
 - End-to-end test codes should be unguessable, limited to one redemption and
   given a short expiry. Disable or archive them immediately after verification.

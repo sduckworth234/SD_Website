@@ -88,8 +88,6 @@ function PaymentStep({ onBack, onRetry }: { onBack: () => void; onRetry: () => v
   const checkoutState = useCheckoutElements();
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
-  const [promo, setPromo] = useState("");
-  const [promoWorking, setPromoWorking] = useState(false);
   const [loadTimedOut, setLoadTimedOut] = useState(false);
 
   useEffect(() => {
@@ -119,17 +117,6 @@ function PaymentStep({ onBack, onRetry }: { onBack: () => void; onRetry: () => v
   );
   if (checkoutState.type === "error") return <p className="co-error">{checkoutState.error.message}</p>;
   const { checkout } = checkoutState;
-
-  async function applyPromo() {
-    const code = promo.trim();
-    if (!code) return;
-    setPromoWorking(true);
-    setMessage("");
-    const result = await checkout.applyPromotionCode(code);
-    if (result.type === "error") setMessage(result.error.message || "That promotion code is not valid.");
-    else setMessage(`${code.toUpperCase()} applied.`);
-    setPromoWorking(false);
-  }
 
   async function pay(event: React.FormEvent) {
     event.preventDefault();
@@ -165,10 +152,6 @@ function PaymentStep({ onBack, onRetry }: { onBack: () => void; onRetry: () => v
       </div>
       <div className="co-stripe-block">
         <div className="co-stripe-block-head"><p>Payment details</p><small>Securely processed by Stripe.</small></div>
-        <div className="co-promo-row">
-          <input aria-label="Promotion code" autoComplete="off" onChange={(e) => setPromo(e.target.value)} placeholder="Promotion code" value={promo} />
-          <button disabled={promoWorking || !promo.trim()} onClick={applyPromo} type="button">{promoWorking ? "Checking…" : "Apply"}</button>
-        </div>
         <PaymentElement options={{ layout: "accordion" }} />
       </div>
       {message ? <p className={message.endsWith("applied.") ? "co-success" : "co-error"}>{message}</p> : null}
@@ -243,6 +226,7 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
     noindex: true,
   });
   const [customer, setCustomer] = useState<Customer>(EMPTY_CUSTOMER);
+  const [promotionCode, setPromotionCode] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState("");
@@ -268,6 +252,7 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
         body: JSON.stringify({
           cart: cart.items.map(({ photoId, size, mounted, colour }) => ({ photoId, size, mounted, colour })),
           customer,
+          promotionCode: promotionCode.trim() || undefined,
         }),
       });
       const data = await response.json().catch(() => null);
@@ -314,6 +299,7 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
                 <label>Email<input autoComplete="email" onChange={(e) => setCustomer({ ...customer, email: e.target.value })} required type="email" value={customer.email} /></label>
               </div>
               <label>Phone <span>(optional)</span><input autoComplete="tel" onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} type="tel" value={customer.phone} /></label>
+              <label>Promotion code <span>(optional)</span><input autoCapitalize="characters" autoComplete="off" onChange={(e) => setPromotionCode(e.target.value.toUpperCase())} placeholder="Enter code" value={promotionCode} /></label>
               {error ? <p className="co-error">{error}</p> : null}
               <button className="co-continue" disabled={starting || !publishableKey} type="submit">{starting ? <><LoaderCircle className="spin" size={16} /> Preparing payment…</> : "Continue to delivery & payment"}</button>
             </form>

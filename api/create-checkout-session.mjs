@@ -134,7 +134,6 @@ export default async function handler(req, res) {
           },
         },
       }],
-      allow_promotion_codes: true,
       discounts: promotion ? [{ promotion_code: promotion.id }] : undefined,
       payment_intent_data: {
         receipt_email: customer.email,
