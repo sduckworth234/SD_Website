@@ -65,7 +65,7 @@ function PaymentStep({ onBack }: { onBack: () => void }) {
   if (checkoutState.type === "loading") return loadTimedOut ? (
     <div className="co-payment-failed" role="alert">
       <p>Secure payment couldn’t load.</p>
-      <span>Please retry. If it happens again, the Stripe test keys need checking.</span>
+      <span>Please retry. If it happens again, return to the shop and start checkout again.</span>
       <button type="button" onClick={onBack}>Return to contact details</button>
     </div>
   ) : <div className="co-payment-loading"><LoaderCircle className="spin" /> Loading secure payment…</div>;
@@ -99,7 +99,7 @@ function PaymentStep({ onBack }: { onBack: () => void }) {
       <div className="co-section-head"><span>02</span><div><p>Secure payment</p><small>Card and wallet details go directly to Stripe.</small></div></div>
       <div className="co-stripe-block">
         <div className="co-stripe-block-head"><p>Delivery address</p><small>Start typing your street and select the matching Australian address.</small></div>
-        <ShippingAddressElement options={{ fields: { phone: "never" } }} />
+        <ShippingAddressElement />
       </div>
       <div className="co-stripe-block">
         <div className="co-stripe-block-head"><p>Payment details</p><small>Securely processed by Stripe.</small></div>
@@ -129,12 +129,7 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
   const options = useMemo(() => clientSecret ? {
     clientSecret,
     elementsOptions: { appearance },
-    defaultValues: {
-      email: customer.email,
-      phoneNumber: customer.phone || undefined,
-      shippingAddress: { name: customer.name, address: { country: "AU" } },
-    },
-  } : null, [clientSecret, customer.email, customer.name, customer.phone]);
+  } : null, [clientSecret]);
 
   async function continueToPayment(event: React.FormEvent) {
     event.preventDefault();
