@@ -10,6 +10,14 @@ page builder.
 
 ## Shop presentation controls delivered
 
+- **Homepage Framed Editions hero** is now the first control in Shop Presentation.
+  Its portrait foreground and landscape background are independent from Studio
+  rotation, Considered Collection and catalogue order. Automatic mode follows the
+  first eligible work of each orientation in shop order; Locked mode preserves the
+  exact chosen pair. Choosing either frame locks the pair automatically.
+- Existing `banner_portrait` and `banner_landscape` values remain a read-only legacy
+  fallback, so the live pair survives deployment. New saves use the explicit
+  `home_framed_hero_{mode,portrait,landscape}` settings.
 - All 610 currently published photographs are enabled for sale. Public gallery tiles
   no longer repeat an availability badge; print discovery happens through the
   lightbox's **Order a print** action.
@@ -66,6 +74,9 @@ data is stored there.
   width. Consistent 24-pixel side padding, full-width grid tracks and dedicated
   arrow spacing keep labels and navigation arrows comfortably separated even at
   a 320-pixel viewport.
+- Photography, shop, product, checkout-policy and legal-page footers now use an
+  explicit full-width centred layout. The photography footer stacks each item on
+  the same centreline rather than merely centring a mixed-width horizontal group.
 - The mobile journey now distinguishes the two spaces explicitly: shop menus group
   Photography and Print shop destinations, Framed Editions always means the shop,
   and gallery/policy/footer links provide a clear route back to the photography site.

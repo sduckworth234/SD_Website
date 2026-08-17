@@ -89,6 +89,10 @@ checklist in `Shop Checkout — Setup Handoff.md`.
 - Added independent Admin → Shop ordered pickers for **Studio rotation** (6) and
   **Considered Collection** (15). They are presentation-only subsets of the
   published, sellable catalogue and never alter sale eligibility.
+- Moved the homepage's overlapping Framed Editions pair out of the Homepage image
+  controls and to the top of Admin → Shop Presentation. The portrait foreground and
+  landscape background now have their own Automatic/Locked mode and cannot be
+  changed by Studio, Considered Collection or the shop landing's first two images.
 - Made the curator suitable for a 600+ photo archive with title/location search,
   location and orientation filters, 60-result progressive loading, transformed
   thumbnails and a compact ordered selection queue with move/remove controls.
