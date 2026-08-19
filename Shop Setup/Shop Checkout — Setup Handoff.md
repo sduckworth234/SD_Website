@@ -191,6 +191,11 @@ without a deploy. Do not use live Stripe or Prodigi credentials in Preview.
   Studio rotation (up to 6) and Considered Collection (up to 15). These controls
   never change sale eligibility. Empty selections use the automatic shop-order mix;
   saved selections are always intersected with the currently published, sellable set.
+- **Admin → Homepage → Available prints card:** choose and order 3–8 published,
+  sellable photographs for the light carousel directly below Recent Work. Each
+  framed mockup shows its lowest currently sellable price and links straight to
+  that photograph's Studio configurator. Its visibility switch can hide the card
+  without changing the saved selection.
 - For a large archive, search/filter the picker and load matches in batches of 60.
   Use the ordered strip at the top to move or remove the small final selection.
 - A product is eligible only when it is both published and For sale. Turning For

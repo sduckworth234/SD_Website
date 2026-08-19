@@ -110,7 +110,7 @@ import { LegalPage, ShopLegalFooter, type LegalPageId } from "./components/Legal
 import { ContactOverlay } from "./components/ContactOverlay";
 import { useCart } from "./lib/cart";
 import { trackPageView, trackProductLinkClicked, trackSelectItem } from "./lib/analytics";
-import { SIZES, money, priceFor } from "./lib/printCatalogue";
+import { SIZES, isSizeSellable, money, priceFor } from "./lib/printCatalogue";
 import type { SizeId } from "./lib/printCatalogue";
 import { SHOP_FEATURE_ENABLED } from "./lib/features";
 import { savePublicContent, usePublicContent, type PublicContent } from "./lib/publicContent";
@@ -649,6 +649,25 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
 
   function goToMap() { window.history.pushState({}, "", "/map"); onNavigate("/map"); }
   function goToShop() { window.history.pushState({}, "", "/shop"); onNavigate("/shop"); }
+  function goToShopPhoto(photo: Photo) {
+    trackSelectItem({
+      item_list_id: "homepage_print_carousel",
+      item_list_name: "Homepage framed prints",
+      items: [{
+        item_id: photo.id,
+        item_name: photo.title,
+        item_brand: "Sam Duckworth Photography",
+        item_category: "Fine-art print",
+        item_category2: photo.location,
+        item_list_id: "homepage_print_carousel",
+        item_list_name: "Homepage framed prints",
+        price: lowestPrintPrice(photo) ?? priceFor("A5", false),
+        currency: "AUD",
+        quantity: 1,
+      }],
+    });
+    trackProductLinkClicked({ item_id: photo.id, item_name: photo.title, source: "homepage_print_carousel" });
+  }
   function goToGalleries(collectionSlug?: string | null) {
     const query = collectionSlug ? `?collection=${encodeURIComponent(collectionSlug)}` : "";
     window.history.pushState({}, "", `/galleries${query}`);
@@ -733,6 +752,32 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
     });
   }, [publicPhotos, recentPhotos, settingValue.recent_work_mode, settingValue.recent_work_orientation, settingValue.recent_work_per_place, settingValue.recent_work_sort, settingValue.recent_work_year]);
 
+  // A compact, commerce-led bridge between the editorial Recent Work mosaic
+  // and the map. Admin can lock 3–8 exact photographs; until then it uses a
+  // deterministic portrait/landscape mix from the live sellable catalogue.
+  const homePrintPhotos = useMemo(() => {
+    const sellable = publicPhotos
+      .filter((photo) => photo.inShop && lowestPrintPrice(photo) != null)
+      .sort((a, b) => (a.shopOrder ?? 1e9) - (b.shopOrder ?? 1e9) || a.title.localeCompare(b.title));
+    const chosen = parseOrderedSetting(settingValue.home_print_carousel_photos)
+      .map((id) => sellable.find((photo) => photo.id === id))
+      .filter((photo): photo is Photo => Boolean(photo));
+    return chosen.length >= 3 ? chosen.slice(0, 8) : diverseBalancedShopSelection(sellable, 6);
+  }, [publicPhotos, settingValue.home_print_carousel_photos]);
+  const homePrintPromoAvailable = isAdmin || (
+    SHOP_FEATURE_ENABLED
+    && flags.shop_public === true
+    && flags.print_configurator === true
+  );
+
+  // The section is data-driven and does not exist during the initial skeleton,
+  // so a fresh /#home-print-promo load needs one post-load anchor pass.
+  useEffect(() => {
+    if (isLoading || window.location.hash !== "#home-print-promo" || homePrintPhotos.length < 3) return;
+    const timer = window.setTimeout(() => document.getElementById("home-print-promo")?.scrollIntoView({ block: "start" }), 0);
+    return () => window.clearTimeout(timer);
+  }, [homePrintPhotos.length, isLoading]);
+
   // The 2026 Europe hero: an admin-curated, ordered photo list stored as a
   // JSON id array in site_settings (same pattern as the shop's "wall" preview).
   // Empty/unset = the section doesn't render at all (see Hero2026).
@@ -810,6 +855,11 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
                 onWarm={warmPhoto}
                 photos={displayedRecentPhotos}
               />
+            </AdminHideable>
+          ) : null}
+          {homePrintPromoAvailable && homePrintPhotos.length >= 3 ? (
+            <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "home_print_carousel")} label="Homepage print carousel">
+              <HomePrintPromo photos={homePrintPhotos} onOpenPhoto={goToShopPhoto} onOpenShop={goToShop} />
             </AdminHideable>
           ) : null}
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "map_promo")} label="Map promo">
@@ -1640,6 +1690,25 @@ function randomBalancedShopSelection(photos: Photo[], maximum: number) {
   return balanceShopOrientations(shuffled).slice(0, maximum);
 }
 
+function diverseBalancedShopSelection(photos: Photo[], maximum: number) {
+  const groups = {
+    portrait: photos.filter((photo) => orientOf(photo) === "portrait"),
+    landscape: photos.filter((photo) => orientOf(photo) === "landscape"),
+  };
+  let next: keyof typeof groups = photos[0] ? orientOf(photos[0]) : "landscape";
+  const selected: Photo[] = [];
+  const usedLocations = new Set<string>();
+  while (selected.length < maximum && (groups.portrait.length || groups.landscape.length)) {
+    const preferred = groups[next].length ? groups[next] : groups[next === "portrait" ? "landscape" : "portrait"];
+    const diverseIndex = preferred.findIndex((photo) => !usedLocations.has(photo.location));
+    const [photo] = preferred.splice(diverseIndex >= 0 ? diverseIndex : 0, 1);
+    selected.push(photo);
+    usedLocations.add(photo.location);
+    next = next === "portrait" ? "landscape" : "portrait";
+  }
+  return selected;
+}
+
 function parseOrderedSetting(value?: string | null) {
   try {
     const parsed = value ? JSON.parse(value) : [];
@@ -2304,6 +2373,86 @@ function TickerBanner({ items, onOpen }: { items: string[]; onOpen: () => void }
         ))}
       </span>
     </button>
+  );
+}
+
+function lowestPrintPrice(photo: Photo): number | null {
+  const prices: number[] = [];
+  for (const size of SIZES) {
+    if (isSizeSellable(size.id, false, photo.sellableSizes, photo.maxSellableUnmounted)) {
+      prices.push(priceFor(size.id, false));
+    }
+    if (isSizeSellable(size.id, true, photo.sellableSizes, photo.maxSellableMounted)) {
+      prices.push(priceFor(size.id, true));
+    }
+  }
+  return prices.length ? Math.min(...prices) : null;
+}
+
+function HomePrintPromo({
+  photos,
+  onOpenPhoto,
+  onOpenShop,
+}: {
+  photos: Photo[];
+  onOpenPhoto: (photo: Photo) => void;
+  onOpenShop: () => void;
+}) {
+  const renderSequence = (duplicate = false) => (
+    <div className="home-print-sequence" aria-hidden={duplicate || undefined}>
+      {photos.map((photo, index) => {
+        const orientation = orientOf(photo);
+        const fromPrice = lowestPrintPrice(photo);
+        return (
+          <a
+            className={`home-print-item ${orientation}`}
+            href={`/shop/${photo.slug}`}
+            key={`${duplicate ? "duplicate" : "primary"}-${photo.id}`}
+            onClick={() => onOpenPhoto(photo)}
+            tabIndex={duplicate ? -1 : 0}
+          >
+            <span className="home-print-wall">
+              <OakFrame
+                src={thumbUrl(photo, 720)}
+                orientation={orientation}
+                alt={duplicate ? "" : `${photo.title}, ${photo.location}, framed print mockup`}
+                eager={!duplicate && index < 4}
+              />
+            </span>
+            <span className="home-print-item-copy">
+              <span><b>{photo.title}</b><small>{photo.location}</small></span>
+              {fromPrice != null ? <strong>From {money(fromPrice)}</strong> : null}
+            </span>
+          </a>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <section className="home-print-promo scroll-reveal" id="home-print-promo" aria-labelledby="home-print-title">
+      <div className="home-print-heading">
+        <div>
+          <p className="eyebrow">Available as framed editions</p>
+          <h2 id="home-print-title">Take the view home.</h2>
+          <p>Photographed by Sam, printed and framed to order in Australia.</p>
+        </div>
+        <a
+          className="home-print-shop-link"
+          href="/shop"
+          onClick={(event) => { event.preventDefault(); onOpenShop(); }}
+        >
+          View all prints <span aria-hidden="true">→</span>
+        </a>
+      </div>
+      <div className="home-print-rail" aria-label="Selected framed prints">
+        <div className="home-print-track">
+          {renderSequence()}
+          {renderSequence(true)}
+        </div>
+      </div>
+      <p className="home-print-note">Select a framed photograph to preview its sizes, finish and placement in the Studio.</p>
+    </section>
   );
 }
 
@@ -3982,7 +4131,7 @@ function HomepageDisplayAdmin({ photos, onChanged }: { photos: Photo[]; onChange
   const published = useMemo(() => photos.filter((photo) => photo.published), [photos]);
   const [settings, setSettings] = useState<SiteSetting[]>([]);
   const [recent, setRecent] = useState<Photo[]>([]);
-  const [picker, setPicker] = useState<"hero" | "recent" | null>(null);
+  const [picker, setPicker] = useState<"hero" | "recent" | "prints" | null>(null);
   const [busy, setBusy] = useState(false);
   const [rules, setRules] = useState<RecentWorkRules>({ orientation: "all", sort: "newest", year: "all", perPlace: 2 });
 
@@ -4014,6 +4163,19 @@ function HomepageDisplayAdmin({ photos, onChanged }: { photos: Photo[]; onChange
     () => recentMode === "automatic" ? automaticRecentSelection(published, rules) : recent,
     [published, recent, recentMode, rules],
   );
+  const printCandidates = useMemo(
+    () => published
+      .filter((photo) => photo.inShop && lowestPrintPrice(photo) != null)
+      .sort((a, b) => (a.shopOrder ?? 1e9) - (b.shopOrder ?? 1e9) || a.title.localeCompare(b.title)),
+    [published],
+  );
+  const savedPrintIds = useMemo(() => parseOrderedSetting(values.home_print_carousel_photos), [values.home_print_carousel_photos]);
+  const printPreview = useMemo(() => {
+    const chosen = savedPrintIds
+      .map((id) => printCandidates.find((photo) => photo.id === id))
+      .filter((photo): photo is Photo => Boolean(photo));
+    return chosen.length >= 3 ? chosen.slice(0, 8) : diverseBalancedShopSelection(printCandidates, 6);
+  }, [printCandidates, savedPrintIds]);
 
   async function saveHero(ids: string[]) {
     if (!ids[0]) return;
@@ -4054,6 +4216,21 @@ function HomepageDisplayAdmin({ photos, onChanged }: { photos: Photo[]; onChange
     try {
       await setRecentWorkPicks(ids);
       await setSiteSetting("recent_work_mode", "curated");
+      await load();
+      await onChanged();
+      setPicker(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function savePrintCarousel(ids: string[]) {
+    setBusy(true);
+    try {
+      const allowed = new Set(printCandidates.map((photo) => photo.id));
+      const safeIds = ids.filter((id, index) => allowed.has(id) && ids.indexOf(id) === index).slice(0, 8);
+      if (safeIds.length < 3) throw new Error("Choose at least three available prints for the carousel.");
+      await setSiteSetting("home_print_carousel_photos", JSON.stringify(safeIds));
       await load();
       await onChanged();
       setPicker(null);
@@ -4124,8 +4301,29 @@ function HomepageDisplayAdmin({ photos, onChanged }: { photos: Photo[]; onChange
           );
         })}
       </div>
+      <div className="homepage-recent-head homepage-print-admin-head">
+        <div><b>Available prints card</b><span>Scrolling framed editions immediately below Recent Work</span></div>
+        <a href="/#home-print-promo" target="_blank" rel="noreferrer">Preview section →</a>
+      </div>
+      <div className="homepage-print-admin-card">
+        <div className="homepage-print-admin-preview" aria-label="Selected homepage print carousel photographs">
+          {printPreview.map((photo, index) => (
+            <div className={`homepage-print-admin-frame ${orientOf(photo)}`} key={photo.id} title={`${index + 1}. ${photo.title}`}>
+              <OakFrame src={thumbUrl(photo, 420)} orientation={orientOf(photo)} alt="" />
+              <span>{index + 1}</span>
+            </div>
+          ))}
+          {!printPreview.length ? <p>Enable and publish at least three print photographs first.</p> : null}
+        </div>
+        <div>
+          <b>{savedPrintIds.length >= 3 ? `${printPreview.length} selected prints` : "Automatic balanced selection"}</b>
+          <p>Choose 3–8 sellable photographs. Their order controls the carousel; each one links directly to its own Studio configurator.</p>
+          <button className="solid-button" disabled={busy || printCandidates.length < 3} onClick={() => setPicker("prints")} type="button">Choose & order prints</button>
+        </div>
+      </div>
       {picker === "hero" ? <OrderedPhotoPicker title="Opening hero" hint="Choose the main homepage photograph. Use the phone-orientation control after saving if an aerial landscape should rotate vertically on mobile." max={1} photos={published} initialIds={hero ? [hero.id] : []} onClose={() => setPicker(null)} onSave={saveHero} /> : null}
       {picker === "recent" ? <OrderedPhotoPicker title="Recent Work · ordered selection" hint="Choose exactly 8 published photographs. Their numbered order is the order used by the homepage mosaic; use the arrows above to rearrange them." min={8} max={8} photos={published} initialIds={recent.map((photo) => photo.id)} onClose={() => setPicker(null)} onSave={saveRecent} /> : null}
+      {picker === "prints" ? <OrderedPhotoPicker title="Homepage · available prints carousel" hint="Choose 3–8 published, sellable photographs in display order. The carousel alternates their natural portrait and landscape frame shapes and links each one to its Studio page." min={3} max={8} photos={printCandidates} initialIds={printPreview.map((photo) => photo.id)} onClose={() => setPicker(null)} onSave={savePrintCarousel} /> : null}
     </section>
   );
 }
@@ -4356,6 +4554,7 @@ const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
   { key: "hero_2026", label: "Home — 2026 Europe hero", hint: "The crossfading trip banner near the top of the home page." },
   { key: "ticker_banner", label: "Home — Scrolling banner", hint: "The horizontal scrolling promo strip between the Europe hero and Recent Work." },
   { key: "recent_work", label: "Home — Recent Work mosaic", hint: "The editorial photo mosaic near the top of the home page." },
+  { key: "home_print_carousel", label: "Home — Available prints carousel", hint: "The light framed-print card directly below Recent Work." },
   { key: "map_promo", label: "Home — Map promo", hint: "The interactive-map teaser on the home page." },
   { key: "collection_cards", label: "Home — Collection cards", hint: "The scroll-highlighted list of places on the home page." },
   { key: "framed_banner", label: "Home — Framed Editions banner", hint: "The print-shop banner near the bottom of the home page." },
