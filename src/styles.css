@@ -1943,9 +1943,9 @@ body:has(.contact-overlay) {
   }
 }
 
-/* Homepage print bridge — deliberately light and tactile against both site
-   themes. It sits immediately after Recent Work, before the map teaser, so a
-   visitor sees the buying path while the photographs are still front-of-mind. */
+/* Homepage print bridge. It sits immediately after Recent Work, before the map
+   teaser, so a visitor sees the buying path while the photographs are still
+   front-of-mind. Every surface follows the active site theme. */
 .home-print-promo {
   position: relative;
   overflow: hidden;
@@ -1953,16 +1953,17 @@ body:has(.contact-overlay) {
   max-width: 1240px;
   margin: 0 auto clamp(20px, 4vw, 52px);
   padding: clamp(26px, 4.5vw, 58px) 0 clamp(22px, 3.6vw, 44px);
-  border: 1px solid rgba(45, 39, 31, 0.1);
+  border: 1px solid var(--line);
   border-radius: clamp(12px, 1.5vw, 20px);
   background:
-    radial-gradient(circle at 84% 6%, rgba(255, 255, 255, 0.9), transparent 30%),
-    linear-gradient(145deg, #f8f5ee 0%, #eee9df 100%);
-  color: #1d1b18;
-  box-shadow: 0 18px 55px rgba(24, 20, 15, 0.09);
+    radial-gradient(circle at 84% 6%, rgba(var(--ink-rgb), 0.055), transparent 30%),
+    linear-gradient(145deg, rgba(var(--foam-rgb), 0.98), rgba(var(--paper-deep-rgb), 0.82));
+  color: var(--ink);
+  box-shadow: 0 18px 55px rgba(var(--shade-rgb), 0.11);
   scroll-margin-top: 88px;
   --reveal-distance: 14px;
   --reveal-scale: 0.997;
+  transition: color 260ms ease, background-color 260ms ease, border-color 260ms ease;
 }
 
 .home-print-promo::before {
@@ -1971,7 +1972,7 @@ body:has(.contact-overlay) {
   pointer-events: none;
   content: "";
   opacity: 0.32;
-  background-image: repeating-linear-gradient(102deg, rgba(62, 52, 40, 0.025) 0 1px, transparent 1px 7px);
+  background-image: repeating-linear-gradient(102deg, rgba(var(--ink-rgb), 0.025) 0 1px, transparent 1px 7px);
 }
 
 .home-print-heading {
@@ -1986,12 +1987,12 @@ body:has(.contact-overlay) {
 
 .home-print-heading .eyebrow {
   margin: 0 0 8px;
-  color: #7f998f;
+  color: var(--sea);
 }
 
 .home-print-heading h2 {
   margin: 0;
-  color: #1d1b18;
+  color: var(--ink);
   font-family: var(--font-sans);
   font-size: clamp(2rem, 4.8vw, 4rem);
   font-weight: var(--head-weight);
@@ -2002,7 +2003,7 @@ body:has(.contact-overlay) {
 .home-print-heading p:last-child {
   max-width: 50ch;
   margin: 12px 0 0;
-  color: #6e6960;
+  color: var(--muted);
   font-size: clamp(0.78rem, 1.2vw, 0.94rem);
   line-height: 1.55;
 }
@@ -2013,8 +2014,8 @@ body:has(.contact-overlay) {
   align-items: center;
   gap: 14px;
   padding: 11px 0 9px;
-  border-bottom: 1px solid rgba(29, 27, 24, 0.45);
-  color: #1d1b18;
+  border-bottom: 1px solid rgba(var(--ink-rgb), 0.45);
+  color: var(--ink);
   font-size: 0.7rem;
   font-weight: 650;
   letter-spacing: 0.13em;
@@ -2025,7 +2026,7 @@ body:has(.contact-overlay) {
 .home-print-shop-link:hover,
 .home-print-shop-link:focus-visible {
   gap: 20px;
-  border-color: #1d1b18;
+  border-color: var(--ink);
 }
 
 .home-print-rail {
@@ -2055,11 +2056,11 @@ body:has(.contact-overlay) {
   display: grid;
   grid-template-rows: clamp(190px, 23vw, 270px) auto;
   overflow: hidden;
-  border: 1px solid rgba(48, 41, 32, 0.1);
+  border: 1px solid var(--line);
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.48);
-  color: #1d1b18;
-  box-shadow: 0 8px 22px rgba(44, 36, 27, 0.06);
+  background: rgba(var(--foam-rgb), 0.72);
+  color: var(--ink);
+  box-shadow: 0 8px 22px rgba(var(--shade-rgb), 0.08);
   transition: transform 260ms ease, box-shadow 260ms ease, border-color 260ms ease;
 }
 
@@ -2070,8 +2071,8 @@ body:has(.contact-overlay) {
   min-width: 0;
   padding: clamp(20px, 3vw, 36px);
   background:
-    linear-gradient(155deg, rgba(255, 255, 255, 0.72), rgba(225, 219, 207, 0.34)),
-    #e9e5dc;
+    linear-gradient(155deg, rgba(var(--foam-rgb), 0.92), rgba(var(--paper-deep-rgb), 0.58)),
+    rgb(var(--paper-deep-rgb));
 }
 
 .home-print-item.portrait .home-print-wall .oak { width: auto; height: 92%; }
@@ -2089,14 +2090,14 @@ body:has(.contact-overlay) {
 
 .home-print-item-copy > span { display: grid; min-width: 0; gap: 2px; }
 .home-print-item-copy b { overflow: hidden; font-size: 0.83rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.home-print-item-copy small { color: #777169; font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.home-print-item-copy small { color: var(--muted); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; }
 .home-print-item-copy strong { flex: 0 0 auto; font-size: 0.72rem; font-weight: 650; }
 
 .home-print-note {
   position: relative;
   z-index: 1;
   margin: 14px clamp(22px, 5vw, 68px) 0;
-  color: #777169;
+  color: var(--muted);
   font-size: 0.66rem;
   line-height: 1.45;
 }
@@ -2104,8 +2105,8 @@ body:has(.contact-overlay) {
 @media (hover: hover) and (pointer: fine) {
   .home-print-item:hover {
     transform: translateY(-4px);
-    border-color: rgba(48, 41, 32, 0.22);
-    box-shadow: 0 16px 34px rgba(44, 36, 27, 0.13);
+    border-color: rgba(var(--ink-rgb), 0.25);
+    box-shadow: 0 16px 34px rgba(var(--shade-rgb), 0.16);
   }
   .home-print-rail:hover .home-print-track,
   .home-print-rail:focus-within .home-print-track { animation-play-state: paused; }
@@ -2119,22 +2120,55 @@ body:has(.contact-overlay) {
 
 @media (max-width: 640px) {
   .home-print-promo {
-    width: calc(100% - 28px);
-    margin-bottom: 30px;
-    padding-top: 24px;
+    width: calc(100% - 20px);
+    margin-bottom: 24px;
+    padding: 22px 0 20px;
+    border-radius: 12px;
   }
   .home-print-heading {
     display: grid;
     align-items: start;
-    padding-inline: 21px;
+    gap: 14px;
+    padding: 0 18px 20px;
   }
-  .home-print-heading p:last-child { max-width: 34ch; }
-  .home-print-shop-link { justify-self: start; }
+  .home-print-heading h2 {
+    max-width: 9ch;
+    font-size: clamp(2.15rem, 11.5vw, 3.15rem);
+  }
+  .home-print-heading p:last-child {
+    max-width: 34ch;
+    margin-top: 10px;
+  }
+  .home-print-shop-link {
+    justify-self: stretch;
+    justify-content: space-between;
+    min-height: 44px;
+    padding-block: 12px;
+  }
+  .home-print-rail {
+    padding-bottom: 8px;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+  }
+  .home-print-sequence { gap: 12px; padding-right: 12px; }
   .home-print-item {
-    flex-basis: min(72vw, 252px);
-    grid-template-rows: min(58vw, 218px) auto;
+    flex-basis: min(76vw, 270px);
+    grid-template-rows: clamp(190px, 61vw, 224px) auto;
+    touch-action: manipulation;
   }
-  .home-print-note { margin-inline: 21px; }
+  .home-print-wall { padding: clamp(18px, 6vw, 25px); }
+  .home-print-item-copy { gap: 8px; padding: 12px 13px 13px; }
+  .home-print-item-copy b { font-size: 0.79rem; }
+  .home-print-item-copy strong { font-size: 0.68rem; }
+  .home-print-note { margin: 12px 18px 0; }
+}
+
+@media (max-width: 370px) {
+  .home-print-promo { width: calc(100% - 16px); }
+  .home-print-heading { padding-inline: 15px; }
+  .home-print-heading h2 { font-size: 2rem; }
+  .home-print-item { flex-basis: 78vw; }
+  .home-print-note { margin-inline: 15px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2144,7 +2178,10 @@ body:has(.contact-overlay) {
     mask-image: none;
   }
   .home-print-track { animation: none; }
+  .home-print-sequence:first-child { padding-inline: 16px; }
   .home-print-sequence[aria-hidden="true"] { display: none; }
+  .home-print-item { scroll-snap-align: center; }
+  .home-print-rail { scroll-snap-type: x proximity; }
 }
 
 /* Slightly rounded corners on all image surfaces */
