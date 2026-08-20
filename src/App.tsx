@@ -690,38 +690,6 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
     onNavigate("/galleries");
   }
 
-  // Homepage Framed Editions hero: its two frames are independently curated
-  // from the shop landing's Studio and Considered Collection selections. Locked
-  // mode keeps the exact chosen pair; automatic mode follows the first eligible
-  // portrait + landscape in shop order. Legacy banner_* ids remain a read-only
-  // fallback so the existing production pair is not lost during this upgrade.
-  const framedHeroCandidates = useMemo(
-    () => publicPhotos
-      .filter((photo) => photo.inShop)
-      .sort((a, b) => (a.shopOrder ?? 1e9) - (b.shopOrder ?? 1e9) || a.title.localeCompare(b.title)),
-    [publicPhotos],
-  );
-  const framedHeroMode = settingValue.home_framed_hero_mode === "automatic"
-    ? "automatic"
-    : settingValue.home_framed_hero_mode === "locked"
-      || Boolean(settingValue.home_framed_hero_portrait ?? settingValue.banner_portrait)
-      || Boolean(settingValue.home_framed_hero_landscape ?? settingValue.banner_landscape)
-      ? "locked"
-      : "automatic";
-  const heroPortrait = useMemo(() => {
-    const lockedId = settingValue.home_framed_hero_portrait ?? settingValue.banner_portrait;
-    const pick = framedHeroMode === "locked" && lockedId
-      ? framedHeroCandidates.find((p) => p.id === lockedId && (p.aspect === "portrait" || p.aspect === "square"))
-      : undefined;
-    return pick ?? framedHeroCandidates.find((p) => p.aspect === "portrait" || p.aspect === "square") ?? framedHeroCandidates[0];
-  }, [framedHeroCandidates, framedHeroMode, settingValue.banner_portrait, settingValue.home_framed_hero_portrait]);
-  const heroLandscape = useMemo(() => {
-    const lockedId = settingValue.home_framed_hero_landscape ?? settingValue.banner_landscape;
-    const pick = framedHeroMode === "locked" && lockedId
-      ? framedHeroCandidates.find((p) => p.id === lockedId && (p.aspect === "landscape" || p.aspect === "wide"))
-      : undefined;
-    return pick ?? framedHeroCandidates.find((p) => p.aspect === "landscape" || p.aspect === "wide") ?? framedHeroCandidates[1] ?? framedHeroCandidates[0];
-  }, [framedHeroCandidates, framedHeroMode, settingValue.banner_landscape, settingValue.home_framed_hero_landscape]);
 
   // The cinematic landing photo: an admin-chosen one (site_settings) wins, else
   // fall back to a featured wide/landscape so the hero is always filled.
@@ -868,11 +836,6 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "collection_cards")} label="Collections">
             <CollectionCards photos={publicPhotos} locations={locations} onOpen={openLocation} onOpenAll={() => goToGalleries()} isAdmin={isAdmin} onEdit={setEditingCollection} />
           </AdminHideable>
-          {(SHOP_FEATURE_ENABLED || isAdmin) && heroPortrait ? (
-            <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "framed_banner")} label="Framed Editions banner">
-              <FramedHero portrait={heroPortrait} landscape={heroLandscape} onShop={goToShop} />
-            </AdminHideable>
-          ) : null}
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "contact_prompt")} label="Contact">
             <ContactPrompt onOpen={() => setIsContactOpen(true)} />
           </AdminHideable>
@@ -1518,24 +1481,6 @@ function CollectionsSkeleton() {
           </div>
         </div>
       ))}
-    </section>
-  );
-}
-
-// Framed Editions shop banner — two framed prints + a call to the shop.
-function FramedHero({ portrait, landscape, onShop }: { portrait?: Photo; landscape?: Photo; onShop: () => void }) {
-  return (
-    <section className="framed-hero scroll-reveal" aria-label="Framed prints">
-      <div className="fh-copy">
-        <p className="eyebrow">Framed Editions</p>
-        <h2>Take the view home.</h2>
-        <p className="fh-lead">Photographed by Sam, printed and framed to order in Australia.</p>
-        <button className="solid-button" type="button" onClick={onShop}>Shop the collection</button>
-      </div>
-      <div className="fh-stage">
-        {landscape ? <OakFrame className="fh-back" src={thumbUrl(landscape, 1000)} orientation="landscape" alt={landscape.title} /> : null}
-        {portrait ? <OakFrame className="fh-main" src={thumbUrl(portrait, 900)} orientation="portrait" alt={portrait.title} /> : null}
-      </div>
     </section>
   );
 }
@@ -2433,9 +2378,9 @@ function HomePrintPromo({
     <section className="home-print-promo scroll-reveal" id="home-print-promo" aria-labelledby="home-print-title">
       <div className="home-print-heading">
         <div>
-          <p className="eyebrow">Available as framed editions</p>
+          <p className="eyebrow">Framed Editions</p>
           <h2 id="home-print-title">Take the view home.</h2>
-          <p>Photographed by Sam, printed and framed to order in Australia.</p>
+          <p>A few of my favourites, framed and ready to hang — the rest of the collection is in the shop.</p>
         </div>
         <a
           className="home-print-shop-link"
@@ -4557,7 +4502,6 @@ const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
   { key: "home_print_carousel", label: "Home — Available prints carousel", hint: "The light framed-print card directly below Recent Work." },
   { key: "map_promo", label: "Home — Map promo", hint: "The interactive-map teaser on the home page." },
   { key: "collection_cards", label: "Home — Collection cards", hint: "The scroll-highlighted list of places on the home page." },
-  { key: "framed_banner", label: "Home — Framed Editions banner", hint: "The print-shop banner near the bottom of the home page." },
   { key: "contact_prompt", label: "Home — Contact / Work with me", hint: "The “Let’s work together” prompt + contact popup." },
   { key: "instagram_feed", label: "Home — Instagram feed", hint: "The live strip of your latest Instagram posts, above the footer." },
 ];
@@ -5172,13 +5116,6 @@ function ShopCatalogueAdmin({
   const saleCount = photos.filter((photo) => photo.inShop).length;
   const [storefrontSettings, setStorefrontSettings] = useState({ considered: [] as string[], studio: [] as string[] });
   const [storefrontPicker, setStorefrontPicker] = useState<"considered" | "studio" | null>(null);
-  const [homeHeroSettings, setHomeHeroSettings] = useState<{
-    mode: "automatic" | "locked";
-    portrait: string | null;
-    landscape: string | null;
-  }>({ mode: "automatic", portrait: null, landscape: null });
-  const [homeHeroPicker, setHomeHeroPicker] = useState<"portrait" | "landscape" | null>(null);
-  const [homeHeroBusy, setHomeHeroBusy] = useState(false);
   const [storefrontLoading, setStorefrontLoading] = useState(true);
 
   type ShopRuntimeState = {
@@ -5215,20 +5152,9 @@ function ShopCatalogueAdmin({
     try {
       const settings = await getSiteSettings();
       const values = Object.fromEntries(settings.map((setting) => [setting.key, setting.value ?? undefined]));
-      const portrait = values.home_framed_hero_portrait ?? values.banner_portrait ?? null;
-      const landscape = values.home_framed_hero_landscape ?? values.banner_landscape ?? null;
       setStorefrontSettings({
         considered: parseOrderedSetting(values.shop_considered_photos),
         studio: parseOrderedSetting(values.shop_studio_photos),
-      });
-      setHomeHeroSettings({
-        mode: values.home_framed_hero_mode === "automatic"
-          ? "automatic"
-          : values.home_framed_hero_mode === "locked" || portrait || landscape
-            ? "locked"
-            : "automatic",
-        portrait,
-        landscape,
       });
     } finally {
       setStorefrontLoading(false);
@@ -5273,22 +5199,6 @@ function ShopCatalogueAdmin({
     [photos],
   );
   const studioCandidates = useMemo(() => sellablePhotos.filter((photo) => photo.aspect !== "square"), [sellablePhotos]);
-  const homeHeroCandidates = useMemo(() => ({
-    portrait: sellablePhotos.filter((photo) => photo.location !== "Unsorted" && (photo.aspect === "portrait" || photo.aspect === "square")),
-    landscape: sellablePhotos.filter((photo) => photo.location !== "Unsorted" && (photo.aspect === "landscape" || photo.aspect === "wide")),
-  }), [sellablePhotos]);
-  const automaticHomeHero = useMemo(() => ({
-    portrait: homeHeroCandidates.portrait[0] ?? sellablePhotos[0],
-    landscape: homeHeroCandidates.landscape[0] ?? sellablePhotos[1] ?? sellablePhotos[0],
-  }), [homeHeroCandidates, sellablePhotos]);
-  const displayedHomeHero = useMemo(() => ({
-    portrait: homeHeroSettings.mode === "locked"
-      ? homeHeroCandidates.portrait.find((photo) => photo.id === homeHeroSettings.portrait) ?? automaticHomeHero.portrait
-      : automaticHomeHero.portrait,
-    landscape: homeHeroSettings.mode === "locked"
-      ? homeHeroCandidates.landscape.find((photo) => photo.id === homeHeroSettings.landscape) ?? automaticHomeHero.landscape
-      : automaticHomeHero.landscape,
-  }), [automaticHomeHero, homeHeroCandidates, homeHeroSettings]);
   const automaticStorefront = useMemo(() => ({
     considered: randomBalancedShopSelection(sellablePhotos, 15),
     studio: randomBalancedShopSelection(studioCandidates, 6),
@@ -5311,59 +5221,6 @@ function ShopCatalogueAdmin({
     await setSiteSetting(key, null);
     setStorefrontSettings((current) => ({ ...current, [kind]: [] }));
     setMessage(`${kind === "studio" ? "Studio rotation" : "Considered Collection"} is using the automatic shop-order mix.`);
-  }
-
-  async function setHomeHeroMode(mode: "automatic" | "locked") {
-    if (mode === homeHeroSettings.mode) return;
-    setHomeHeroBusy(true);
-    try {
-      if (mode === "locked") {
-        const portrait = displayedHomeHero.portrait?.id ?? null;
-        const landscape = displayedHomeHero.landscape?.id ?? null;
-        if (!portrait || !landscape) {
-          setMessage("Add at least one eligible portrait and landscape shop photograph before locking the homepage frames.");
-          return;
-        }
-        await Promise.all([
-          setSiteSetting("home_framed_hero_portrait", portrait),
-          setSiteSetting("home_framed_hero_landscape", landscape),
-          setSiteSetting("home_framed_hero_mode", "locked"),
-        ]);
-        setHomeHeroSettings({ mode: "locked", portrait, landscape });
-        setMessage("Homepage Framed Editions frames are locked to this pair.");
-        return;
-      }
-      await setSiteSetting("home_framed_hero_mode", "automatic");
-      setHomeHeroSettings((current) => ({ ...current, mode: "automatic" }));
-      setMessage("Homepage Framed Editions frames now follow the first eligible portrait and landscape in shop order.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "The homepage frame mode could not be saved.");
-    } finally {
-      setHomeHeroBusy(false);
-    }
-  }
-
-  async function saveHomeHeroPhoto(orientation: "portrait" | "landscape", ids: string[]) {
-    const candidateIds = new Set(homeHeroCandidates[orientation].map((photo) => photo.id));
-    const id = ids.find((candidate) => candidateIds.has(candidate));
-    if (!id) {
-      setMessage(`Choose one eligible ${orientation} shop photograph.`);
-      return;
-    }
-    setHomeHeroBusy(true);
-    try {
-      await Promise.all([
-        setSiteSetting(`home_framed_hero_${orientation}`, id),
-        setSiteSetting("home_framed_hero_mode", "locked"),
-      ]);
-      setHomeHeroSettings((current) => ({ ...current, mode: "locked", [orientation]: id }));
-      setHomeHeroPicker(null);
-      setMessage(`Homepage Framed Editions ${orientation} frame updated and locked.`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : `The ${orientation} homepage frame could not be saved.`);
-    } finally {
-      setHomeHeroBusy(false);
-    }
   }
 
   const locationOptions = useMemo(
@@ -5436,53 +5293,6 @@ function ShopCatalogueAdmin({
 
   return (
     <section className="shop-catalogue-admin" aria-label="Shop catalogue">
-      <section className="shop-home-hero-admin" aria-labelledby="shop-home-hero-title">
-        <div className="shop-runtime-heading">
-          <div>
-            <p className="eyebrow">Homepage · Framed Editions</p>
-            <h2 id="shop-home-hero-title">Choose the two overlapping hero frames.</h2>
-            <p>This portrait foreground and landscape background belong only to the homepage banner. They are independent from Studio rotation and Considered Collection.</p>
-          </div>
-          <a href="/" target="_blank" rel="noreferrer">Preview homepage →</a>
-        </div>
-        {storefrontLoading ? <p className="loading-note"><LoaderCircle className="spin" size={15} /> Loading homepage frames…</p> : (
-          <>
-            <div className="shop-home-hero-mode">
-              <span className={`shop-home-hero-status ${homeHeroSettings.mode}`}>
-                <Lock size={13} aria-hidden="true" />
-                {homeHeroSettings.mode === "locked" ? "Locked to chosen frames" : "Automatic from shop order"}
-              </span>
-              <div className="provider-switch" role="group" aria-label="Homepage Framed Editions frame mode">
-                <button className={homeHeroSettings.mode === "automatic" ? "on" : ""} disabled={homeHeroBusy} onClick={() => setHomeHeroMode("automatic")} type="button">Automatic</button>
-                <button className={homeHeroSettings.mode === "locked" ? "on" : ""} disabled={homeHeroBusy} onClick={() => setHomeHeroMode("locked")} type="button">Locked</button>
-              </div>
-            </div>
-            <div className="banner-slots shop-home-hero-slots">
-              {(["portrait", "landscape"] as const).map((orientation) => {
-                const selected = displayedHomeHero[orientation];
-                return (
-                  <article className="banner-slot" key={orientation}>
-                    <div className="banner-slot-frame">
-                      {selected ? <OakFrame src={thumbUrl(selected, 520)} orientation={orientation} alt={selected.title} /> : <div className="banner-slot-empty">No eligible photo</div>}
-                    </div>
-                    <div className="shop-home-hero-slot-copy">
-                      <span>{orientation === "portrait" ? "Foreground · portrait" : "Background · landscape"}</span>
-                      <b>{selected?.title ?? "Not available"}</b>
-                      <small>{selected ? `${selected.location}${selected.year ? ` · ${selected.year}` : ""}` : `Enable a published ${orientation} photograph for sale first.`}</small>
-                    </div>
-                    <button className="ghost-button" type="button" onClick={() => setHomeHeroPicker(orientation)} disabled={homeHeroBusy || !homeHeroCandidates[orientation].length}>
-                      Choose {orientation}
-                    </button>
-                  </article>
-                );
-              })}
-            </div>
-            <p className="shop-home-hero-note">
-              Choosing either frame automatically locks the pair. Automatic mode follows the first eligible portrait and landscape in Admin shop order; locked mode stays fixed until you change it.
-            </p>
-          </>
-        )}
-      </section>
       <div className="shop-runtime-controls" aria-label="Shop controls">
         <div className="shop-runtime-heading">
           <div><p className="eyebrow">Live controls</p><h2>Shop availability and fulfilment</h2></div>
@@ -5656,18 +5466,6 @@ function ShopCatalogueAdmin({
         })}
       </div>
       {!visible.length ? <p className="admin-card">No photos match this filter.</p> : null}
-      {homeHeroPicker ? (
-        <OrderedPhotoPicker
-          title={`Homepage Framed Editions · ${homeHeroPicker}`}
-          hint={`Choose one sellable ${homeHeroPicker} photograph. This controls only the overlapping two-frame homepage banner and will lock it to the selected pair.`}
-          min={1}
-          max={1}
-          photos={homeHeroCandidates[homeHeroPicker]}
-          initialIds={displayedHomeHero[homeHeroPicker] ? [displayedHomeHero[homeHeroPicker]!.id] : []}
-          onClose={() => setHomeHeroPicker(null)}
-          onSave={(ids) => saveHomeHeroPhoto(homeHeroPicker, ids)}
-        />
-      ) : null}
       {storefrontPicker ? (
         <OrderedPhotoPicker
           title={storefrontPicker === "studio" ? "Studio rotation" : "Considered Collection"}
