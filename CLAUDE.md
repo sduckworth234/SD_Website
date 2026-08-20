@@ -156,21 +156,25 @@ Conventions the gallery relies on:
 ## Deploy / domain
 
 - Push to `main` → Vercel builds + deploys.
-- The shop ships safely while disabled. `VITE_SHOP_ENABLED` and
-  `SHOP_CHECKOUT_ENABLED` default false and remain deployment-level emergency
-  capability gates. Keep them false until launch proof is complete; once true,
-  Admin → Shop owns the immediate public and provider runtime switches.
+- **The shop is live in Production** (launched 2026-08-17 — see
+  `Shop Setup/Shop Launch QA Refactor — 2026-08-17.md`). `VITE_SHOP_ENABLED`
+  and `SHOP_CHECKOUT_ENABLED` default false in a fresh environment and exist
+  as deployment-level emergency kill switches, but are set **true** in
+  Production; flipping either back to false is the fastest way to pull the
+  shop/checkout offline in an emergency, independent of the Admin → Shop
+  runtime switches below.
 - `VITE_SHOP_ENABLED` and `SHOP_CHECKOUT_ENABLED` are **public** gates. A user
   whose Supabase session passes `is_admin()` may still open shop/product/checkout
   routes and create a Checkout Session for testing. The API verifies the bearer
   token server-side; this is not a client boolean bypass.
-- Manual mode makes no Prodigi API calls. The provider is stored in
-  `site_settings.shop_fulfilment_provider`; only `prodigi` plus a configured API
-  key can submit, and each order's provider snapshot prevents later toggles
-  sweeping up older manual orders.
-- Public launch additionally requires the Supabase `shop_public` and
-  `print_configurator` settings. These runtime switches complement rather than
-  replace the environment kill switches.
+- Fulfilment is currently **manual** (`site_settings.shop_fulfilment_provider`),
+  deliberately kept that way pending a separate Prodigi sandbox/callback/physical
+  proof pass. Manual mode makes no Prodigi API calls; only `prodigi` plus a
+  configured API key can submit, and each order's provider snapshot prevents
+  later toggles sweeping up older manual orders.
+- Public launch also depends on the Supabase `shop_public` and
+  `print_configurator` settings, both **on** in Production. These runtime
+  switches complement rather than replace the environment kill switches above.
 - Domain **samduckworth.com** on GoDaddy DNS → Vercel: apex `A @ 216.198.79.1`,
   `CNAME www → <vercel-dns>`; Google Workspace MX records are untouched.
 - The complete environment template is `.env.example`. Only browser-safe values

@@ -2145,15 +2145,33 @@ body:has(.contact-overlay) {
     min-height: 44px;
     padding-block: 12px;
   }
+  /* Below the desktop hover breakpoint there's no pointer that can hover to
+     pause the marquee, and no reliable way to tell a scroll-intent drag from
+     a tap on a moving track — the animated version fights a finger trying to
+     swipe through it. Mobile gets real horizontal scrolling instead: the
+     animation is off, the aria-hidden duplicate loop-copy is dropped (it
+     existed only to make the marquee's translateX(-50%) loop seamless, so a
+     real scroller doesn't need it — and skipping it halves the images this
+     rail loads on mobile), and each card snaps to center as you swipe. */
   .home-print-rail {
     padding-bottom: 8px;
-    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 12px), transparent);
-    mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 12px), transparent);
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -webkit-mask-image: none;
+    mask-image: none;
   }
+  .home-print-rail::-webkit-scrollbar { display: none; }
+  .home-print-track { animation: none; }
+  .home-print-sequence:first-child { padding-inline: 18px 0; }
+  .home-print-sequence[aria-hidden="true"] { display: none; }
   .home-print-sequence { gap: 12px; padding-right: 12px; }
   .home-print-item {
     flex-basis: min(76vw, 270px);
     grid-template-rows: clamp(190px, 61vw, 224px) auto;
+    scroll-snap-align: center;
     touch-action: manipulation;
   }
   .home-print-wall { padding: clamp(18px, 6vw, 25px); }
