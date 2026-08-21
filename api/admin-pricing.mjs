@@ -38,16 +38,26 @@ async function saveFrameshopComponents(body) {
   if (!updates.length) throw new Error("No components to save.");
   for (const row of updates) {
     const size = typeof row?.size === "string" ? row.size.toUpperCase() : "";
-    const frameCents = Number(row?.frameCostCents);
+    const frameUnmountedCents = Number(row?.frameCostUnmountedCents);
+    const frameMountedCents = Number(row?.frameCostMountedCents);
     const matCents = Number(row?.matCostCents);
-    const glassCents = Number(row?.glassCostCents);
+    const glassUnmountedCents = Number(row?.glassCostUnmountedCents);
+    const glassMountedCents = Number(row?.glassCostMountedCents);
     if (!SIZES.includes(size)) throw new Error("Invalid size.");
-    if (![frameCents, matCents, glassCents].every((n) => Number.isInteger(n) && n >= 0 && n <= 10_000_00)) {
+    const values = [frameUnmountedCents, frameMountedCents, matCents, glassUnmountedCents, glassMountedCents];
+    if (!values.every((n) => Number.isInteger(n) && n >= 0 && n <= 10_000_00)) {
       throw new Error(`Invalid component cost for ${size}.`);
     }
     await supabaseRest(`print_pricing_components?size=eq.${size}`, {
       method: "PATCH",
-      body: JSON.stringify({ frame_cost_cents: frameCents, mat_cost_cents: matCents, glass_cost_cents: glassCents, updated_at: new Date().toISOString() }),
+      body: JSON.stringify({
+        frame_cost_unmounted_cents: frameUnmountedCents,
+        frame_cost_mounted_cents: frameMountedCents,
+        mat_cost_cents: matCents,
+        glass_cost_unmounted_cents: glassUnmountedCents,
+        glass_cost_mounted_cents: glassMountedCents,
+        updated_at: new Date().toISOString(),
+      }),
     });
   }
   return { saved: updates.length, ...(await fetchFrameshopPricing()) };

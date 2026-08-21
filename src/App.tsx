@@ -5675,15 +5675,23 @@ function PricingAdmin({ session, setMessage }: { session: Session; setMessage: (
 // from — the frame/mat/glass costs were verified live against
 // frameshop.com.au on 2026-08-21; colour and glazing multipliers were
 // sampled once at A2 and applied flat across sizes.
-type FrameshopComponentRow = { size: string; frame_cost_cents: number; mat_cost_cents: number; glass_cost_cents: number };
+type FrameshopComponentRow = {
+  size: string;
+  frame_cost_unmounted_cents: number;
+  frame_cost_mounted_cents: number;
+  mat_cost_cents: number;
+  glass_cost_unmounted_cents: number;
+  glass_cost_mounted_cents: number;
+};
 type FrameshopMultiplierRow = { id: string; label: string; cost_multiplier: number; frame_code?: string; description?: string };
+type ComponentDraft = { frameUnmounted: string; frameMounted: string; mat: string; glassUnmounted: string; glassMounted: string };
 
 function FrameshopPricingAdmin({ session, setMessage }: { session: Session; setMessage: (message: string) => void }) {
   const [components, setComponents] = useState<FrameshopComponentRow[]>([]);
   const [colours, setColours] = useState<FrameshopMultiplierRow[]>([]);
   const [glazing, setGlazing] = useState<FrameshopMultiplierRow[]>([]);
   const [marginPercent, setMarginPercent] = useState(15);
-  const [componentDrafts, setComponentDrafts] = useState<Record<string, { frame: string; mat: string; glass: string }>>({});
+  const [componentDrafts, setComponentDrafts] = useState<Record<string, ComponentDraft>>({});
   const [colourDrafts, setColourDrafts] = useState<Record<string, string>>({});
   const [glazingDrafts, setGlazingDrafts] = useState<Record<string, string>>({});
   const [marginDraft, setMarginDraft] = useState("15");
@@ -5705,12 +5713,14 @@ function FrameshopPricingAdmin({ session, setMessage }: { session: Session; setM
     setColours(frameshop.colours);
     setGlazing(frameshop.glazing);
     setMarginPercent(frameshop.marginPercent);
-    const nextComponentDrafts: Record<string, { frame: string; mat: string; glass: string }> = {};
+    const nextComponentDrafts: Record<string, ComponentDraft> = {};
     for (const row of frameshop.components) {
       nextComponentDrafts[row.size] = {
-        frame: centsToDollarsStr(row.frame_cost_cents),
+        frameUnmounted: centsToDollarsStr(row.frame_cost_unmounted_cents),
+        frameMounted: centsToDollarsStr(row.frame_cost_mounted_cents),
         mat: centsToDollarsStr(row.mat_cost_cents),
-        glass: centsToDollarsStr(row.glass_cost_cents),
+        glassUnmounted: centsToDollarsStr(row.glass_cost_unmounted_cents),
+        glassMounted: centsToDollarsStr(row.glass_cost_mounted_cents),
       };
     }
     setComponentDrafts(nextComponentDrafts);
@@ -5738,9 +5748,11 @@ function FrameshopPricingAdmin({ session, setMessage }: { session: Session; setM
     try {
       const payload = Object.entries(componentDrafts).map(([size, draft]) => ({
         size,
-        frameCostCents: dollarsStrToCents(draft.frame),
+        frameCostUnmountedCents: dollarsStrToCents(draft.frameUnmounted),
+        frameCostMountedCents: dollarsStrToCents(draft.frameMounted),
         matCostCents: dollarsStrToCents(draft.mat),
-        glassCostCents: dollarsStrToCents(draft.glass),
+        glassCostUnmountedCents: dollarsStrToCents(draft.glassUnmounted),
+        glassCostMountedCents: dollarsStrToCents(draft.glassMounted),
       }));
       const data = await request({ method: "POST", body: JSON.stringify({ action: "save_frameshop_components", components: payload }) });
       applyFrameshop(data);
@@ -5800,7 +5812,40 @@ function FrameshopPricingAdmin({ session, setMessage }: { session: Session; setM
         </div>
       </div>
 
-      <h3 className="pricing-subhead">Base costs (224RO wood, Clear Glass, per size)</h3>
+      <h3 className="pricing-subhead">Base costs (103RO wood, Clear Glass, per size)</h3>
+      <p className="pc-mount-note">Frame and glass cost are genuinely different mounted vs unmounted — a mounted print needs a physically bigger frame and glazing to cover the mat, not the unmounted price plus a mat on top.</p>
+
+      <p className="pricing-subhead" style={{ fontSize: "0.85em" }}>Unmounted</p>
+      <div className="pricing-table pricing-table-3col">
+        <div className="pricing-row pricing-head">
+          <span>Size</span>
+          <span>Frame</span>
+          <span>Glass</span>
+        </div>
+        {SIZES.map((s) => {
+          const draft = componentDrafts[s.id] ?? { frameUnmounted: "", frameMounted: "", mat: "", glassUnmounted: "", glassMounted: "" };
+          return (
+            <div className="pricing-row" key={`${s.id}-unmounted`}>
+              <span className="pricing-size">{s.id}<small>{s.outer[0].toFixed(0)}×{s.outer[1].toFixed(0)}cm</small></span>
+              {(["frameUnmounted", "glassUnmounted"] as const).map((field) => (
+                <div className="pricing-cell" key={field}>
+                  <label>
+                    <span>$</span>
+                    <input
+                      inputMode="decimal"
+                      type="text"
+                      value={draft[field]}
+                      onChange={(event) => setComponentDrafts((prev) => ({ ...prev, [s.id]: { ...prev[s.id], [field]: event.target.value } }))}
+                    />
+                  </label>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="pricing-subhead" style={{ fontSize: "0.85em" }}>Mounted (single mat)</p>
       <div className="pricing-table pricing-table-4col">
         <div className="pricing-row pricing-head">
           <span>Size</span>
@@ -5809,11 +5854,11 @@ function FrameshopPricingAdmin({ session, setMessage }: { session: Session; setM
           <span>Glass</span>
         </div>
         {SIZES.map((s) => {
-          const draft = componentDrafts[s.id] ?? { frame: "", mat: "", glass: "" };
+          const draft = componentDrafts[s.id] ?? { frameUnmounted: "", frameMounted: "", mat: "", glassUnmounted: "", glassMounted: "" };
           return (
-            <div className="pricing-row" key={s.id}>
-              <span className="pricing-size">{s.id}<small>{s.outer[0].toFixed(0)}×{s.outer[1].toFixed(0)}cm</small></span>
-              {(["frame", "mat", "glass"] as const).map((field) => (
+            <div className="pricing-row" key={`${s.id}-mounted`}>
+              <span className="pricing-size">{s.id}<small>mat {s.mat.toFixed(1)}cm</small></span>
+              {(["frameMounted", "mat", "glassMounted"] as const).map((field) => (
                 <div className="pricing-cell" key={field}>
                   <label>
                     <span>$</span>

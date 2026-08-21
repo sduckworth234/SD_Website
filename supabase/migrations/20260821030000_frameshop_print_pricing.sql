@@ -1,77 +1,92 @@
 -- Frameshop-based print pricing: replaces the old Prodigi-derived flat
 -- per-size sell price with a component formula that prices every
 -- size × mount × frame-colour × glazing combination from real Frameshop.com.au
--- costs (live-tested 2026-08-21 against their custom-picture-frames
--- configurator, frame 224RO/224F/224H).
+-- costs. Frame 103RO (Raw Oak, "Wood") — live-tested 2026-08-21 against
+-- their custom-picture-frames configurator. An initial pick of 224RO was
+-- swapped out: it's a thinner moulding that Frameshop's own configurator
+-- flagged as unsuitable for the larger sizes (A2/A1). 103RO has no such
+-- limit — re-verified at every size, A1 included.
 --
 -- Formula (mirrored in src/lib/printCatalogue.ts and server/shop/catalogue.mjs
 -- — keep all three in sync):
---   product_cost = frame_cost_cents * colour multiplier
+--   product_cost = (mounted ? frame_cost_mounted_cents : frame_cost_unmounted_cents) * colour multiplier
 --                + (mounted ? mat_cost_cents : 0)
---                + glass_cost_cents * glazing multiplier
+--                + (mounted ? glass_cost_mounted_cents : glass_cost_unmounted_cents) * glazing multiplier
 --   sell_cents   = round(product_cost * (1 + margin_percent/100))
+--
+-- IMPORTANT: both frame cost AND glass cost are genuinely different mounted
+-- vs unmounted — not "unmounted cost, plus a mat on top" — because a
+-- mounted print needs a physically bigger frame and bigger glazing to cover
+-- the mat border, and Frameshop prices both by their actual size. An
+-- earlier version of this migration had one glass_cost_cents for both,
+-- which silently undercharged every mounted order (verified: it priced A2
+-- mounted Non-Reflective Glass at $152.60 when Frameshop's own real cost +
+-- 15% margin is $190.10).
 --
 -- Deliberately excludes shipping. Shipping stays the job of the site's
 -- existing estimateShipping()/estimateShippingCents() (unchanged, still the
 -- same verified AU courier quotes), which totals ONCE per cart with real
 -- multi-item consolidation (+$5 for most extra prints, not a full shipping
--- charge each) rather than once per item — folding a shipping estimate into
--- every row here too would double-charge shipping on a multi-item order.
+-- charge each) rather than once per item.
 --
 -- Colour and glazing multipliers were sampled once at A2 (see column
 -- comments) and applied flat across all sizes — reasonable, not exact.
--- Frame cost and mat cost were verified LIVE at every size.
+-- Frame and mat cost were verified LIVE at every size, both mount states.
 
 create table public.print_pricing_components (
-  size               text primary key check (size in ('A5', 'A4', 'A3', 'A2', 'A1')),
-  -- 224RO (Raw Oak / "Wood"), unmounted, Clear Glass, MDF backing — all
-  -- verified live against frameshop.com.au on 2026-08-21.
-  frame_cost_cents   integer not null check (frame_cost_cents > 0),
-  mat_width_cm       numeric(4,1) not null,
-  mat_cost_cents     integer not null check (mat_cost_cents >= 0),
-  glass_cost_cents   integer not null check (glass_cost_cents > 0),
-  updated_at         timestamptz not null default now()
+  size                       text primary key check (size in ('A5', 'A4', 'A3', 'A2', 'A1')),
+  -- 103RO (Raw Oak / "Wood"), Clear Glass, MDF backing — verified live
+  -- against frameshop.com.au on 2026-08-21, every size, both mount states.
+  frame_cost_unmounted_cents integer not null check (frame_cost_unmounted_cents > 0),
+  frame_cost_mounted_cents   integer not null check (frame_cost_mounted_cents > 0),
+  mat_width_cm               numeric(4,1) not null,
+  mat_cost_cents             integer not null check (mat_cost_cents >= 0),
+  glass_cost_unmounted_cents integer not null check (glass_cost_unmounted_cents > 0),
+  glass_cost_mounted_cents   integer not null check (glass_cost_mounted_cents > 0),
+  updated_at                 timestamptz not null default now()
 );
 comment on table public.print_pricing_components is
-  'Per-size base costs (224RO frame, single mat, Clear Glass, MDF backing) that print_pricing_colours/print_pricing_glazing multiply and print_margin_percent turns into a sell price. Real Frameshop.com.au data, checked 2026-08-21 — see migration file header for the formula. Shipping is deliberately not here — see estimateShipping() in src/lib/printCatalogue.ts.';
+  'Per-size base costs (103RO frame, single mat, Clear Glass, MDF backing) that print_pricing_colours/print_pricing_glazing multiply and print_margin_percent turns into a sell price. Real Frameshop.com.au data, checked 2026-08-21 — see migration file header for the formula. Frame and glass costs are genuinely different mounted vs unmounted (bigger frame/glazing to cover the mat), not the unmounted cost plus a mat on top. Shipping is deliberately not here — see estimateShipping() in src/lib/printCatalogue.ts.';
 
-insert into public.print_pricing_components (size, frame_cost_cents, mat_width_cm, mat_cost_cents, glass_cost_cents) values
-  ('A5', 2190, 2.5, 680,  500),
-  ('A4', 3170, 3.7, 1200, 700),
-  ('A3', 4590, 4.8, 1740, 900),
-  ('A2', 7050, 5.0, 2420, 1900),
-  ('A1', 10980, 4.8, 4360, 3470)
+insert into public.print_pricing_components (size, frame_cost_unmounted_cents, frame_cost_mounted_cents, mat_width_cm, mat_cost_cents, glass_cost_unmounted_cents, glass_cost_mounted_cents) values
+  ('A5', 3280, 4370, 2.5, 680,  500,  600),
+  ('A4', 5020, 6880, 3.7, 1200, 700,  800),
+  ('A3', 7210, 8520, 4.8, 1740, 900,  1400),
+  ('A2', 10050, 12010, 5.0, 2420, 1900, 2520),
+  ('A1', 14530, 16600, 4.8, 4360, 3470, 5150)
 on conflict (size) do nothing;
 
 create table public.print_pricing_colours (
   id              text primary key check (id in ('natural', 'black', 'white')),
   label           text not null,
-  frame_code      text not null,   -- real Frameshop moulding code, for reference/ordering
-  -- Multiplied against frame_cost_cents only (mat/glass/backing are shared
-  -- across colours — verified: Clear Glass cost was identical for 224RO and
-  -- 224F at A2). Sampled once at A2: 224F/224RO ratio was 0.774 unmounted,
-  -- 0.831 mounted — 0.80 splits the difference. 224H (white) shares 224F's
-  -- Price Rate (both "Price Rate 2" vs 224RO's "Price Rate 3") so it's
-  -- assumed to share the multiplier too — not independently verified.
+  frame_code      text not null,   -- real Frameshop moulding code, for reference/ordering only — never shown to customers
+  -- Multiplied against frame cost only (mat/glass/backing are shared across
+  -- colours — verified: Clear Glass cost was identical for 103RO and 103F).
+  -- 103F/103H/103RO all share Frameshop's "Price Rate 5" and were verified
+  -- to cost exactly the same ($100.50 at A2 unmounted for both 103RO and
+  -- 103F) — unlike the original 224-series pick, there's no colour
+  -- surcharge on this moulding, so all three multipliers are 1.0. 103H
+  -- (white) is assumed to match 103F (same Price Rate) — not independently
+  -- verified.
   cost_multiplier numeric(4,3) not null check (cost_multiplier > 0),
   updated_at      timestamptz not null default now()
 );
 comment on table public.print_pricing_colours is
-  'Frame colour cost multipliers vs. the 224RO (wood) base cost in print_pricing_components. Real Frameshop moulding codes kept for reference when ordering.';
+  'Frame colour cost multipliers vs. the 103RO (wood) base cost in print_pricing_components. Real Frameshop moulding codes kept for reference when ordering — never surfaced to customers.';
 
 insert into public.print_pricing_colours (id, label, frame_code, cost_multiplier) values
-  ('natural', 'Wood', '224RO', 1.000),
-  ('black',   'Black', '224F', 0.800),
-  ('white',   'White', '224H', 0.800)
+  ('natural', 'Wood', '103RO', 1.000),
+  ('black',   'Black', '103F', 1.000),
+  ('white',   'White', '103H', 1.000)
 on conflict (id) do nothing;
 
 create table public.print_pricing_glazing (
   id              text primary key check (id in ('clear', 'non_reflective', 'perspex', 'uv_clear', 'uv_non_reflective')),
   label           text not null,
   description     text not null,
-  -- Multiplied against glass_cost_cents. Sampled once at A2 mounted
-  -- (Clear Glass $25.20 baseline): Non-Reflective $50.40 (2.00x), Clear
-  -- Perspex $50.60 (2.01x, rounded to 2.00), UV Clear $71.40 (2.83x),
+  -- Multiplied against the (mount-appropriate) glass cost. Sampled once at
+  -- A2 mounted (Clear Glass $25.20 baseline): Non-Reflective $50.40 (2.00x),
+  -- Clear Perspex $50.60 (2.01x, rounded to 2.00), UV Clear $71.40 (2.83x),
   -- UV Non-Reflective $141.80 (5.63x).
   cost_multiplier numeric(4,3) not null check (cost_multiplier > 0),
   updated_at      timestamptz not null default now()

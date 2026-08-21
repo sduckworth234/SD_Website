@@ -4,11 +4,17 @@
 // Pricing is a FORMULA (mirrors src/lib/printCatalogue.ts's priceFor() —
 // keep both in sync, and see supabase/migrations/
 // 20260821030000_frameshop_print_pricing.sql for where every number came
-// from): real Frameshop.com.au costs (frame 224RO/224F/224H) for
+// from): real Frameshop.com.au costs (frame 103RO/103F/103H) for
 // frame/mat/glass, times a colour multiplier and a glazing multiplier, plus
 // a flat margin. Shipping is NOT part of this — see estimateShippingCents()
 // below, which totals once per cart with real multi-item consolidation
 // rather than once per item.
+//
+// Frame AND glass cost are genuinely different mounted vs unmounted (not
+// "unmounted cost, plus a mat on top") — a mounted print needs a physically
+// bigger frame and bigger glazing to cover the mat border, and Frameshop
+// prices both by their real size. An earlier version of this file used one
+// glassCents for both, which silently undercharged every mounted order.
 //
 // FRAMESHOP_COMPONENTS/FRAMESHOP_COLOURS/FRAMESHOP_GLAZING/DEFAULT_MARGIN_PERCENT
 // below are the fallback only — the real, admin-editable values live in
@@ -20,16 +26,16 @@
 // only so checkout still works, at the last-known-good rate, if the tables
 // are ever empty or unreachable.
 export const FRAMESHOP_COMPONENTS = Object.freeze({
-  A5: { frameCents: 2190, matCents: 680, glassCents: 500 },
-  A4: { frameCents: 3170, matCents: 1200, glassCents: 700 },
-  A3: { frameCents: 4590, matCents: 1740, glassCents: 900 },
-  A2: { frameCents: 7050, matCents: 2420, glassCents: 1900 },
-  A1: { frameCents: 10980, matCents: 4360, glassCents: 3470 },
+  A5: { frameCentsUnmounted: 3280, frameCentsMounted: 4370, matCents: 680, glassCentsUnmounted: 500, glassCentsMounted: 600 },
+  A4: { frameCentsUnmounted: 5020, frameCentsMounted: 6880, matCents: 1200, glassCentsUnmounted: 700, glassCentsMounted: 800 },
+  A3: { frameCentsUnmounted: 7210, frameCentsMounted: 8520, matCents: 1740, glassCentsUnmounted: 900, glassCentsMounted: 1400 },
+  A2: { frameCentsUnmounted: 10050, frameCentsMounted: 12010, matCents: 2420, glassCentsUnmounted: 1900, glassCentsMounted: 2520 },
+  A1: { frameCentsUnmounted: 14530, frameCentsMounted: 16600, matCents: 4360, glassCentsUnmounted: 3470, glassCentsMounted: 5150 },
 });
 export const FRAMESHOP_COLOURS = Object.freeze({
   natural: 1.0,
-  black: 0.8,
-  white: 0.8,
+  black: 1.0,
+  white: 1.0,
 });
 export const FRAMESHOP_GLAZING = Object.freeze({
   clear: 1.0,
@@ -64,7 +70,9 @@ export function priceCentsFor(size, mounted, colour, glazing, pricing = DEFAULT_
   if (colourMult == null) throw new Error(`Unsupported frame colour: ${colour}`);
   const glazingMult = pricing.glazing[glazing];
   if (glazingMult == null) throw new Error(`Unsupported glazing: ${glazing}`);
-  const productCostCents = row.frameCents * colourMult + (mounted ? row.matCents : 0) + row.glassCents * glazingMult;
+  const frameCents = mounted ? row.frameCentsMounted : row.frameCentsUnmounted;
+  const glassCents = mounted ? row.glassCentsMounted : row.glassCentsUnmounted;
+  const productCostCents = frameCents * colourMult + (mounted ? row.matCents : 0) + glassCents * glazingMult;
   return Math.round(productCostCents * (1 + pricing.marginPercent / 100));
 }
 
@@ -127,7 +135,7 @@ export async function fetchPricing(supabaseRest) {
   if (pricingCache && now - pricingCacheAt < PRICING_CACHE_MS) return pricingCache;
   try {
     const [componentRows, colourRows, glazingRows, marginRows] = await Promise.all([
-      supabaseRest("print_pricing_components?select=size,frame_cost_cents,mat_cost_cents,glass_cost_cents"),
+      supabaseRest("print_pricing_components?select=size,frame_cost_unmounted_cents,frame_cost_mounted_cents,mat_cost_cents,glass_cost_unmounted_cents,glass_cost_mounted_cents"),
       supabaseRest("print_pricing_colours?select=id,cost_multiplier"),
       supabaseRest("print_pricing_glazing?select=id,cost_multiplier"),
       supabaseRest("site_settings?select=value&key=eq.print_margin_percent"),
@@ -138,7 +146,13 @@ export async function fetchPricing(supabaseRest) {
 
     const components = {};
     for (const row of componentRows) {
-      components[row.size] = { frameCents: row.frame_cost_cents, matCents: row.mat_cost_cents, glassCents: row.glass_cost_cents };
+      components[row.size] = {
+        frameCentsUnmounted: row.frame_cost_unmounted_cents,
+        frameCentsMounted: row.frame_cost_mounted_cents,
+        matCents: row.mat_cost_cents,
+        glassCentsUnmounted: row.glass_cost_unmounted_cents,
+        glassCentsMounted: row.glass_cost_mounted_cents,
+      };
     }
     for (const size of Object.keys(FRAMESHOP_COMPONENTS)) {
       if (!components[size]) throw new Error(`print_pricing_components is missing a row for ${size}.`);

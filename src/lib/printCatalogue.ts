@@ -1,17 +1,29 @@
 // Real Frameshop.com.au print-fulfilment data, live-tested against their
-// custom-picture-frames configurator on 2026-08-21 (frame 224RO, the wood
-// moulding Sam actually uses). Replaces the previous Prodigi-derived flat
-// per-size price — see Shop Setup/prodigi-full-au-catalogue.json and
-// "Prodigi API — Investigation & Setup Plan.md" for that history; Prodigi
-// integration code (server/shop/prodigi.mjs) stays in place as a manual
-// fallback while the Frameshop relationship is set up, but is no longer
-// what customers are actually charged.
+// custom-picture-frames configurator on 2026-08-21 (frame 103RO — swapped
+// from an initial 224RO pick, which turned out to be too thin a moulding to
+// support the larger sizes: it triggered Frameshop's own "unsuitable frame"
+// warning at A1/A2. 103RO — same Raw Oak finish, deeper 4cm profile — has no
+// such limit and was re-verified at every size). Replaces the previous
+// Prodigi-derived flat per-size price — see
+// Shop Setup/prodigi-full-au-catalogue.json and "Prodigi API —
+// Investigation & Setup Plan.md" for that history; Prodigi integration code
+// (server/shop/prodigi.mjs) stays in place as a manual fallback while the
+// Frameshop relationship is set up, but is no longer what customers are
+// actually charged.
 //
 // Pricing is a FORMULA, not a lookup table — see priceFor() below and
 // supabase/migrations/20260821030000_frameshop_print_pricing.sql for the
 // exact math and where each number came from. `outer`/`mat` below are kept
 // from the Prodigi-era measurements (unchanged) — they only drive the room
 // preview and DPI gating, not price.
+//
+// IMPORTANT: both frame cost AND glass cost are genuinely different mounted
+// vs unmounted — not "unmounted cost, plus a mat on top" — because a mounted
+// print needs a physically bigger frame and bigger glazing to cover the mat
+// border, and Frameshop prices both by their actual size. An earlier version
+// of this file used one glassCost for both, which silently undercharged
+// every mounted order (verified: it priced A2 mounted Non-Reflective Glass
+// at $152.60 when Frameshop's own real cost + 15% margin is $190.10).
 
 // Where enquiry emails go — the contact popup (App.tsx) and the shop product
 // page's "need help?" card both compose to this inbox.
@@ -37,16 +49,20 @@ export const SIZES: PrintSize[] = [
 ];
 
 export type SizeComponents = {
-  /** 224RO (wood), unmounted, in dollars — the colour multiplier applies to
-   * this alone (mat/glass/backing cost the same regardless of frame colour,
-   * verified live: Clear Glass was identically priced under 224RO and 224F). */
-  frameCost: number;
-  /** Single mat at this size's `mat` width, M-series neutral core — added
-   * only when mounted. Mat colour (e.g. M47 Neutral White) doesn't change
-   * price, verified live. */
+  /** 103RO (wood), in dollars — the colour multiplier applies to this alone.
+   * Different for mounted vs unmounted: the outer frame grows to cover the
+   * mat border once mounted, so it costs more, not the same frame "plus a
+   * mat" — these are two real, independently-priced Frameshop quotes. */
+  frameCostUnmounted: number;
+  frameCostMounted: number;
+  /** Single mat at this size's `mat` width, neutral-white core — added only
+   * when mounted. Mat colour doesn't change price, verified live. */
   matCost: number;
-  /** Clear Glass baseline — the glazing multiplier applies to this. */
-  glassCost: number;
+  /** Clear Glass baseline — the glazing multiplier applies to this. Also
+   * genuinely different mounted vs unmounted (bigger glazing covers the mat
+   * too) — see the file header for why this distinction matters. */
+  glassCostUnmounted: number;
+  glassCostMounted: number;
 };
 
 // Fallback only — shown before the live fetch from public.print_pricing_*
@@ -62,11 +78,11 @@ export type SizeComponents = {
 // estimateShipping() already gives real multi-item consolidation (+$5 for
 // most extra prints rather than a full shipping charge each).
 export const PRICE_COMPONENTS: Record<SizeId, SizeComponents> = {
-  A5: { frameCost: 21.90, matCost: 6.80, glassCost: 5.00 },
-  A4: { frameCost: 31.70, matCost: 12.00, glassCost: 7.00 },
-  A3: { frameCost: 45.90, matCost: 17.40, glassCost: 9.00 },
-  A2: { frameCost: 70.50, matCost: 24.20, glassCost: 19.00 },
-  A1: { frameCost: 109.80, matCost: 43.60, glassCost: 34.70 },
+  A5: { frameCostUnmounted: 32.80, frameCostMounted: 43.70, matCost: 6.80, glassCostUnmounted: 5.00, glassCostMounted: 6.00 },
+  A4: { frameCostUnmounted: 50.20, frameCostMounted: 68.80, matCost: 12.00, glassCostUnmounted: 7.00, glassCostMounted: 8.00 },
+  A3: { frameCostUnmounted: 72.10, frameCostMounted: 85.20, matCost: 17.40, glassCostUnmounted: 9.00, glassCostMounted: 14.00 },
+  A2: { frameCostUnmounted: 100.50, frameCostMounted: 120.10, matCost: 24.20, glassCostUnmounted: 19.00, glassCostMounted: 25.20 },
+  A1: { frameCostUnmounted: 145.30, frameCostMounted: 166.00, matCost: 43.60, glassCostUnmounted: 34.70, glassCostMounted: 51.50 },
 };
 
 /** Percentage margin applied to (frame + mat + glass) cost. Mutable
@@ -87,9 +103,11 @@ export function applyLiveFrameshopPricing(data: {
     const patch = data.components?.[size.id];
     if (!patch) continue;
     const target = PRICE_COMPONENTS[size.id];
-    if (patch.frameCost != null) target.frameCost = patch.frameCost;
+    if (patch.frameCostUnmounted != null) target.frameCostUnmounted = patch.frameCostUnmounted;
+    if (patch.frameCostMounted != null) target.frameCostMounted = patch.frameCostMounted;
     if (patch.matCost != null) target.matCost = patch.matCost;
-    if (patch.glassCost != null) target.glassCost = patch.glassCost;
+    if (patch.glassCostUnmounted != null) target.glassCostUnmounted = patch.glassCostUnmounted;
+    if (patch.glassCostMounted != null) target.glassCostMounted = patch.glassCostMounted;
   }
   for (const c of COLOURS) {
     const mult = data.colours?.[c.id]?.costMultiplier;
@@ -116,16 +134,18 @@ export type FrameColour = {
   label: string;
   css: string;
   grain?: string;
-  /** Real Frameshop moulding code — kept for reference when ordering. */
+  /** Real Frameshop moulding code — kept for reference when ordering, never
+   * shown to customers (frame/glazing UI uses the plain label only). */
   frameCode: string;
-  /** Multiplies SizeComponents.frameCost. Sampled once at A2 (224F/224RO
-   * ratio was 0.774 unmounted, 0.831 mounted — 0.80 splits the difference).
-   * 224H (white) shares 224F's Frameshop "Price Rate" so it's assumed to
-   * share the multiplier too — not independently verified at every size. */
+  /** Multiplies SizeComponents.frameCostMounted/frameCostUnmounted. 103F and
+   * 103RO priced identically at A2 (both $100.50 unmounted) — they share the
+   * same Frameshop "Price Rate", unlike the original 224-series pick where
+   * colours were priced differently. 103H is assumed to match 103F (same
+   * Price Rate) — not independently verified. */
   costMultiplier: number;
 };
 
-// Colour-matched against real Frameshop 224-series photos, rendered with a
+// Colour-matched against real Frameshop 103-series photos, rendered with a
 // faint grain on wood so it reads as timber rather than paint.
 export const COLOURS: FrameColour[] = [
   {
@@ -133,11 +153,11 @@ export const COLOURS: FrameColour[] = [
     label: "Wood",
     css: "linear-gradient(135deg,#d3b78c,#c2a175 45%,#a9865f)",
     grain: "repeating-linear-gradient(100deg, rgba(70,48,24,.05) 0px, rgba(70,48,24,.05) 1px, transparent 2px, transparent 6px, rgba(255,244,222,.07) 7px, transparent 9px)",
-    frameCode: "224RO",
+    frameCode: "103RO",
     costMultiplier: 1.0,
   },
-  { id: "black", label: "Black", css: "linear-gradient(135deg,#2c2c2c,#141414)", frameCode: "224F", costMultiplier: 0.8 },
-  { id: "white", label: "White", css: "linear-gradient(135deg,#f4f0e6,#dcd6c8)", frameCode: "224H", costMultiplier: 0.8 },
+  { id: "black", label: "Black", css: "linear-gradient(135deg,#2c2c2c,#141414)", frameCode: "103F", costMultiplier: 1.0 },
+  { id: "white", label: "White", css: "linear-gradient(135deg,#f4f0e6,#dcd6c8)", frameCode: "103H", costMultiplier: 1.0 },
 ];
 
 export type GlazingId = "clear" | "non_reflective" | "perspex" | "uv_clear" | "uv_non_reflective";
@@ -197,7 +217,9 @@ export function priceFor(size: SizeId, mounted: boolean, colour: ColourId = "nat
   const c = PRICE_COMPONENTS[size];
   const colourDef = colourById(colour);
   const glazingDef = glazingById(glazing);
-  const productCost = c.frameCost * colourDef.costMultiplier + (mounted ? c.matCost : 0) + c.glassCost * glazingDef.costMultiplier;
+  const frameCost = mounted ? c.frameCostMounted : c.frameCostUnmounted;
+  const glassCost = mounted ? c.glassCostMounted : c.glassCostUnmounted;
+  const productCost = frameCost * colourDef.costMultiplier + (mounted ? c.matCost : 0) + glassCost * glazingDef.costMultiplier;
   const sell = productCost * (1 + MARGIN_PERCENT / 100);
   return Math.round(sell * 100) / 100;
 }

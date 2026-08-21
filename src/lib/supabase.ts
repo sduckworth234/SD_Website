@@ -227,17 +227,27 @@ async function fetchPricingSettings(): Promise<void> {
   if (!supabase) return;
   try {
     const [componentsRes, coloursRes, glazingRes, marginRes] = await Promise.all([
-      supabase.from("print_pricing_components").select("size, frame_cost_cents, mat_cost_cents, glass_cost_cents"),
+      supabase.from("print_pricing_components").select("size, frame_cost_unmounted_cents, frame_cost_mounted_cents, mat_cost_cents, glass_cost_unmounted_cents, glass_cost_mounted_cents"),
       supabase.from("print_pricing_colours").select("id, cost_multiplier"),
       supabase.from("print_pricing_glazing").select("id, cost_multiplier"),
       supabase.from("site_settings").select("value").eq("key", "print_margin_percent").maybeSingle(),
     ]);
-    const components: Record<string, { frameCost?: number; matCost?: number; glassCost?: number }> = {};
-    for (const row of (componentsRes.data ?? []) as { size: string; frame_cost_cents: number; mat_cost_cents: number; glass_cost_cents: number }[]) {
+    type ComponentPatch = { frameCostUnmounted?: number; frameCostMounted?: number; matCost?: number; glassCostUnmounted?: number; glassCostMounted?: number };
+    const components: Record<string, ComponentPatch> = {};
+    for (const row of (componentsRes.data ?? []) as {
+      size: string;
+      frame_cost_unmounted_cents: number;
+      frame_cost_mounted_cents: number;
+      mat_cost_cents: number;
+      glass_cost_unmounted_cents: number;
+      glass_cost_mounted_cents: number;
+    }[]) {
       components[row.size] = {
-        frameCost: row.frame_cost_cents / 100,
+        frameCostUnmounted: row.frame_cost_unmounted_cents / 100,
+        frameCostMounted: row.frame_cost_mounted_cents / 100,
         matCost: row.mat_cost_cents / 100,
-        glassCost: row.glass_cost_cents / 100,
+        glassCostUnmounted: row.glass_cost_unmounted_cents / 100,
+        glassCostMounted: row.glass_cost_mounted_cents / 100,
       };
     }
     const colours: Record<string, { costMultiplier?: number }> = {};
@@ -250,7 +260,7 @@ async function fetchPricingSettings(): Promise<void> {
     }
     const marginValue = (marginRes.data as { value?: string } | null)?.value;
     applyLiveFrameshopPricing({
-      components: components as Partial<Record<SizeId, { frameCost?: number; matCost?: number; glassCost?: number }>>,
+      components: components as Partial<Record<SizeId, ComponentPatch>>,
       colours,
       glazing,
       marginPercent: marginValue != null ? Number(marginValue) : undefined,
