@@ -317,15 +317,31 @@ function slugify(value) {
 // ---- pre-load existing locations + storage paths (idempotency) --------------
 const locByName = new Map();
 const existingPaths = new Set();
+const usedSlugs = new Set();
 if (supabase) {
   const [{ data: locs, error: le }, { data: paths, error: pe }] = await Promise.all([
     supabase.from("locations").select("id, name, sort_order"),
-    supabase.from("photos").select("storage_path"),
+    supabase.from("photos").select("storage_path, slug"),
   ]);
   if (le) throw le;
   if (pe) throw pe;
   locs.forEach((l) => locByName.set(l.name, l));
-  paths.forEach((r) => r.storage_path && existingPaths.add(r.storage_path));
+  paths.forEach((r) => {
+    if (r.storage_path) existingPaths.add(r.storage_path);
+    if (r.slug) usedSlugs.add(r.slug);
+  });
+}
+
+// Readable slug from the photo's title (falling back to location), unique
+// against every slug already in the DB plus every slug claimed so far this
+// run — so `/shop/<slug>` reads as the photo's name, not its source filename.
+function uniqueTitleSlug(title, location) {
+  const base = slugify(title || location) || "photo";
+  let candidate = base;
+  let n = 2;
+  while (usedSlugs.has(candidate)) candidate = `${base}-${n++}`;
+  usedSlugs.add(candidate);
+  return candidate;
 }
 let nextLocSort = [...locByName.values()].reduce((m, l) => Math.max(m, l.sort_order ?? 0), 0);
 const newLocations = new Set(); // names created (or that would be created) this run
@@ -427,7 +443,7 @@ for (const src of files) {
 
   rows.push({
     title: title || location || "Untitled",
-    slug: `${locSlug}-${hash}`,
+    slug: uniqueTitleSlug(title || location || "Untitled", location),
     location_id: locationId,
     kind,
     year_taken: meta.year ?? null,

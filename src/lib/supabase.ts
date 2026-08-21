@@ -413,6 +413,26 @@ export function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+// A clean, human-readable slug ("the-pines") rather than a filename or a
+// timestamp-suffixed one — collisions (two photos with the same title) get a
+// numeric suffix only when they actually happen.
+async function uniqueSlugFor(title: string, excludePhotoId: string) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const base = slugify(title) || "untitled";
+  let candidate = base;
+  let n = 2;
+  for (;;) {
+    const { data } = await supabase
+      .from("photos")
+      .select("id")
+      .eq("slug", candidate)
+      .neq("id", excludePhotoId)
+      .maybeSingle();
+    if (!data) return candidate;
+    candidate = `${base}-${n++}`;
+  }
+}
+
 export async function uploadPhotoAsset(file: Blob, originalName: string) {
   if (!supabase) throw new Error("Supabase is not configured.");
 
@@ -593,7 +613,7 @@ export async function updatePhotoDetails(
     aspect: input.aspect,
   };
   if (input.previousTitle === undefined || title !== input.previousTitle) {
-    updates.slug = `${slugify(title) || "untitled"}-${Date.now()}`;
+    updates.slug = await uniqueSlugFor(title, photoId);
   }
   if (input.kind) updates.kind = input.kind;
   if (input.capturedAt !== undefined) updates.captured_at = input.capturedAt || null;

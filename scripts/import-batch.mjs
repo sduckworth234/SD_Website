@@ -68,10 +68,25 @@ if (!dryRun) {
 
 // --- 2. Existing storage paths (for idempotent inserts) ----------------------
 const existingPaths = new Set();
+const usedSlugs = new Set();
 if (!dryRun) {
-  const { data, error } = await supabase.from("photos").select("storage_path");
+  const { data, error } = await supabase.from("photos").select("storage_path, slug");
   if (error) throw error;
-  data.forEach((r) => r.storage_path && existingPaths.add(r.storage_path));
+  data.forEach((r) => {
+    if (r.storage_path) existingPaths.add(r.storage_path);
+    if (r.slug) usedSlugs.add(r.slug);
+  });
+}
+
+// Readable slug from the photo's title, unique against the DB plus every
+// slug claimed so far this run.
+function uniqueTitleSlug(title) {
+  const base = slugify(title) || "photo";
+  let candidate = base;
+  let n = 2;
+  while (usedSlugs.has(candidate)) candidate = `${base}-${n++}`;
+  usedSlugs.add(candidate);
+  return candidate;
 }
 
 // --- 3. Compress + upload, collect rows --------------------------------------
@@ -120,7 +135,7 @@ for (const [index, photo] of photos.entries()) {
   if (!existingPaths.has(storagePath)) {
     rows.push({
       title: photo.location,
-      slug: `${locationSlug}-${hash}`,
+      slug: uniqueTitleSlug(photo.location),
       location_id: locByName.get(photo.location)?.id ?? null,
       kind: "Drone",
       year_taken: year ?? null,
