@@ -110,7 +110,7 @@ import { LegalPage, ShopLegalFooter, type LegalPageId } from "./components/Legal
 import { ContactOverlay } from "./components/ContactOverlay";
 import { useCart } from "./lib/cart";
 import { trackPageView, trackProductLinkClicked, trackSelectItem } from "./lib/analytics";
-import { SIZES, isSizeSellable, money, priceFor } from "./lib/printCatalogue";
+import { SIZES, cheapestPriceFor, isSizeSellable, money, priceFor } from "./lib/printCatalogue";
 import type { SizeId } from "./lib/printCatalogue";
 import { SHOP_FEATURE_ENABLED } from "./lib/features";
 import { savePublicContent, usePublicContent, type PublicContent } from "./lib/publicContent";
@@ -1512,7 +1512,7 @@ function ShopProduct({ photo, onAdd, productHref, onOpen }: { photo: Photo; onAd
             item_category2: photo.location,
             item_list_id: "shop_showcase",
             item_list_name: "Selected editions",
-            price: priceFor("A5", false),
+            price: cheapestPriceFor("A5"),
             currency: "AUD" as const,
             quantity: 1,
           };
@@ -1527,7 +1527,7 @@ function ShopProduct({ photo, onAdd, productHref, onOpen }: { photo: Photo; onAd
         <div className="shop-card-info">
           <div className="sc-ttl">{photo.title}</div>
           <div className="sc-loc">{photo.location}</div>
-          <div className="sc-buy"><span className="sc-price">From {money(priceFor("A5", false))}</span></div>
+          <div className="sc-buy"><span className="sc-price">From {money(cheapestPriceFor("A5"))}</span></div>
         </div>
       </a>
     );
@@ -2325,10 +2325,10 @@ function lowestPrintPrice(photo: Photo): number | null {
   const prices: number[] = [];
   for (const size of SIZES) {
     if (isSizeSellable(size.id, false, photo.sellableSizes, photo.maxSellableUnmounted)) {
-      prices.push(priceFor(size.id, false));
+      prices.push(cheapestPriceFor(size.id, false));
     }
     if (isSizeSellable(size.id, true, photo.sellableSizes, photo.maxSellableMounted)) {
-      prices.push(priceFor(size.id, true));
+      prices.push(cheapestPriceFor(size.id, true));
     }
   }
   return prices.length ? Math.min(...prices) : null;
@@ -5625,8 +5625,8 @@ function PricingAdmin({ session, setMessage }: { session: Session; setMessage: (
       <div className="admin-section-intro">
         <div>
           <p className="eyebrow">Pricing</p>
-          <h2>Set what customers pay.</h2>
-          <p>One flat price per size, mounted or unmounted — every photo costs the same for now. Live Prodigi cost and shipping shown alongside for margin, refreshed on demand (never automatically).</p>
+          <h2>Prodigi cost reference (not live).</h2>
+          <p>Kept for comparison only — customers are now charged from the Frameshop-based pricing below, not this table. Live Prodigi cost and shipping still refreshable on demand if useful for comparison.</p>
         </div>
         <div className={`admin-feature-state${prodigiConfigured ? " is-on" : ""}`}>
           <b>{prodigiConfigured ? "Prodigi API connected" : "Prodigi API not configured"}</b>
@@ -5663,6 +5663,205 @@ function PricingAdmin({ session, setMessage }: { session: Session; setMessage: (
           })}
         </div>
       )}
+    </section>
+  );
+}
+
+// Authoritative print pricing — the Frameshop-based component formula
+// (frame + mat + glass, times colour/glazing multipliers, times a margin)
+// that server/shop/catalogue.mjs and src/lib/printCatalogue.ts's priceFor()
+// actually charge from. See supabase/migrations/
+// 20260821030000_frameshop_print_pricing.sql for where every number came
+// from — the frame/mat/glass costs were verified live against
+// frameshop.com.au on 2026-08-21; colour and glazing multipliers were
+// sampled once at A2 and applied flat across sizes.
+type FrameshopComponentRow = { size: string; frame_cost_cents: number; mat_cost_cents: number; glass_cost_cents: number };
+type FrameshopMultiplierRow = { id: string; label: string; cost_multiplier: number; frame_code?: string; description?: string };
+
+function FrameshopPricingAdmin({ session, setMessage }: { session: Session; setMessage: (message: string) => void }) {
+  const [components, setComponents] = useState<FrameshopComponentRow[]>([]);
+  const [colours, setColours] = useState<FrameshopMultiplierRow[]>([]);
+  const [glazing, setGlazing] = useState<FrameshopMultiplierRow[]>([]);
+  const [marginPercent, setMarginPercent] = useState(15);
+  const [componentDrafts, setComponentDrafts] = useState<Record<string, { frame: string; mat: string; glass: string }>>({});
+  const [colourDrafts, setColourDrafts] = useState<Record<string, string>>({});
+  const [glazingDrafts, setGlazingDrafts] = useState<Record<string, string>>({});
+  const [marginDraft, setMarginDraft] = useState("15");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const request = useCallback(async (init?: RequestInit) => {
+    const response = await fetch("/api/admin-pricing", {
+      ...init,
+      headers: { authorization: `Bearer ${session.access_token}`, "content-type": "application/json", ...(init?.headers ?? {}) },
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Pricing request failed.");
+    return data;
+  }, [session.access_token]);
+
+  const applyFrameshop = useCallback((frameshop: { components: FrameshopComponentRow[]; colours: FrameshopMultiplierRow[]; glazing: FrameshopMultiplierRow[]; marginPercent: number }) => {
+    setComponents(frameshop.components);
+    setColours(frameshop.colours);
+    setGlazing(frameshop.glazing);
+    setMarginPercent(frameshop.marginPercent);
+    const nextComponentDrafts: Record<string, { frame: string; mat: string; glass: string }> = {};
+    for (const row of frameshop.components) {
+      nextComponentDrafts[row.size] = {
+        frame: centsToDollarsStr(row.frame_cost_cents),
+        mat: centsToDollarsStr(row.mat_cost_cents),
+        glass: centsToDollarsStr(row.glass_cost_cents),
+      };
+    }
+    setComponentDrafts(nextComponentDrafts);
+    setColourDrafts(Object.fromEntries(frameshop.colours.map((c) => [c.id, String(c.cost_multiplier)])));
+    setGlazingDrafts(Object.fromEntries(frameshop.glazing.map((g) => [g.id, String(g.cost_multiplier)])));
+    setMarginDraft(String(frameshop.marginPercent));
+  }, []);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await request();
+      if (data.frameshop) applyFrameshop(data.frameshop);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Frameshop pricing could not be loaded.");
+    } finally {
+      setLoading(false);
+    }
+  }, [applyFrameshop, request, setMessage]);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function saveComponents() {
+    setSaving(true);
+    try {
+      const payload = Object.entries(componentDrafts).map(([size, draft]) => ({
+        size,
+        frameCostCents: dollarsStrToCents(draft.frame),
+        matCostCents: dollarsStrToCents(draft.mat),
+        glassCostCents: dollarsStrToCents(draft.glass),
+      }));
+      const data = await request({ method: "POST", body: JSON.stringify({ action: "save_frameshop_components", components: payload }) });
+      applyFrameshop(data);
+      setMessage("Frameshop base costs saved — live on the shop now.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Base costs could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveMultipliers() {
+    setSaving(true);
+    try {
+      const data = await request({
+        method: "POST",
+        body: JSON.stringify({
+          action: "save_frameshop_multipliers",
+          colours: Object.entries(colourDrafts).map(([id, v]) => ({ id, costMultiplier: Number(v) })),
+          glazing: Object.entries(glazingDrafts).map(([id, v]) => ({ id, costMultiplier: Number(v) })),
+        }),
+      });
+      applyFrameshop(data);
+      setMessage("Colour and glazing multipliers saved — live on the shop now.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Multipliers could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveMargin() {
+    setSaving(true);
+    try {
+      const data = await request({ method: "POST", body: JSON.stringify({ action: "save_frameshop_margin", marginPercent: Number(marginDraft) }) });
+      applyFrameshop(data);
+      setMessage("Margin saved — live on the shop now.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Margin could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <section className="pricing-admin" aria-label="Frameshop pricing"><p className="loading-note"><LoaderCircle className="spin" /> Loading Frameshop pricing…</p></section>;
+
+  return (
+    <section className="pricing-admin" aria-label="Frameshop pricing">
+      <div className="admin-section-intro">
+        <div>
+          <p className="eyebrow">Pricing — live</p>
+          <h2>What customers actually pay.</h2>
+          <p>
+            sell = (frame cost × colour multiplier + mat cost if mounted + glass cost × glazing multiplier) × (1 + margin/100).
+            Shipping is separate — added once per cart at checkout, not per item.
+          </p>
+        </div>
+      </div>
+
+      <h3 className="pricing-subhead">Base costs (224RO wood, Clear Glass, per size)</h3>
+      <div className="pricing-table pricing-table-4col">
+        <div className="pricing-row pricing-head">
+          <span>Size</span>
+          <span>Frame</span>
+          <span>Mat</span>
+          <span>Glass</span>
+        </div>
+        {SIZES.map((s) => {
+          const draft = componentDrafts[s.id] ?? { frame: "", mat: "", glass: "" };
+          return (
+            <div className="pricing-row" key={s.id}>
+              <span className="pricing-size">{s.id}<small>{s.outer[0].toFixed(0)}×{s.outer[1].toFixed(0)}cm</small></span>
+              {(["frame", "mat", "glass"] as const).map((field) => (
+                <div className="pricing-cell" key={field}>
+                  <label>
+                    <span>$</span>
+                    <input
+                      inputMode="decimal"
+                      type="text"
+                      value={draft[field]}
+                      onChange={(event) => setComponentDrafts((prev) => ({ ...prev, [s.id]: { ...prev[s.id], [field]: event.target.value } }))}
+                    />
+                  </label>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+      <button className="solid-button" type="button" onClick={saveComponents} disabled={saving}>{saving ? "Saving…" : "Save base costs"}</button>
+
+      <h3 className="pricing-subhead">Colour multipliers (applied to frame cost only)</h3>
+      <div className="pricing-multiplier-grid">
+        {colours.map((c) => (
+          <label key={c.id} className="pricing-multiplier-field">
+            <span>{c.label}{c.frame_code ? ` (${c.frame_code})` : ""}</span>
+            <input inputMode="decimal" type="text" value={colourDrafts[c.id] ?? ""} onChange={(event) => setColourDrafts((prev) => ({ ...prev, [c.id]: event.target.value }))} />
+          </label>
+        ))}
+      </div>
+
+      <h3 className="pricing-subhead">Glazing multipliers (applied to glass cost only)</h3>
+      <div className="pricing-multiplier-grid">
+        {glazing.map((g) => (
+          <label key={g.id} className="pricing-multiplier-field" title={g.description}>
+            <span>{g.label}</span>
+            <input inputMode="decimal" type="text" value={glazingDrafts[g.id] ?? ""} onChange={(event) => setGlazingDrafts((prev) => ({ ...prev, [g.id]: event.target.value }))} />
+          </label>
+        ))}
+      </div>
+      <button className="solid-button" type="button" onClick={saveMultipliers} disabled={saving}>{saving ? "Saving…" : "Save multipliers"}</button>
+
+      <h3 className="pricing-subhead">Margin</h3>
+      <div className="pricing-multiplier-grid">
+        <label className="pricing-multiplier-field">
+          <span>Margin %</span>
+          <input inputMode="decimal" type="text" value={marginDraft} onChange={(event) => setMarginDraft(event.target.value)} />
+        </label>
+      </div>
+      <button className="solid-button" type="button" onClick={saveMargin} disabled={saving}>{saving ? "Saving…" : "Save margin"}</button>
+      <p className="pricing-checked-at">Current margin: {marginPercent}%</p>
     </section>
   );
 }
@@ -6016,7 +6215,12 @@ function AdminDashboard({ session }: { session: Session }) {
       {activeTab === "shop" ? (
         <ShopCatalogueAdmin photos={adminPhotos} onChanged={refresh} session={session} setMessage={setMessage} />
       ) : null}
-      {activeTab === "pricing" ? <PricingAdmin session={session} setMessage={setMessage} /> : null}
+      {activeTab === "pricing" ? (
+        <>
+          <FrameshopPricingAdmin session={session} setMessage={setMessage} />
+          <PricingAdmin session={session} setMessage={setMessage} />
+        </>
+      ) : null}
       {activeTab === "orders" ? (
         <Suspense fallback={<p className="loading-note">Loading shop orders…</p>}>
           <AdminOrders session={session} />

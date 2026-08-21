@@ -2,7 +2,7 @@ import { X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useCart } from "../lib/cart";
 import { trackBeginCheckout, trackViewCart } from "../lib/analytics";
-import { colourById, money } from "../lib/printCatalogue";
+import { colourById, glazingById, money } from "../lib/printCatalogue";
 import { LegalNav } from "./LegalPages";
 
 export function CartDrawer({
@@ -28,7 +28,7 @@ export function CartDrawer({
           item_name: item.title,
           item_brand: "Sam Duckworth Photography",
           item_category: "Fine-art print",
-          item_variant: `${item.size} · ${colourById(item.colour).label} · ${item.mounted ? "Mounted" : "Unmounted"}`,
+          item_variant: `${item.size} · ${colourById(item.colour).label} · ${item.mounted ? "Mounted" : "Unmounted"} · ${glazingById(item.glazing).label}`,
           price: item.price,
           quantity: 1,
         })),
@@ -59,7 +59,7 @@ export function CartDrawer({
         item_name: item.title,
         item_brand: "Sam Duckworth Photography",
         item_category: "Fine-art print",
-        item_variant: `${item.size} · ${colourById(item.colour).label} · ${item.mounted ? "Mounted" : "Unmounted"}`,
+        item_variant: `${item.size} · ${colourById(item.colour).label} · ${item.mounted ? "Mounted" : "Unmounted"} · ${glazingById(item.glazing).label}`,
         price: item.price,
         quantity: 1,
       })),
@@ -94,7 +94,7 @@ export function CartDrawer({
                 <img src={item.thumb} alt={item.title} />
                 <div className="pc-ci-info">
                   <b>{item.title}</b>
-                  <span>{item.size} · {colourById(item.colour).label} · {item.mounted ? "Mounted" : "Unmounted"}</span>
+                  <span>{item.size} · {colourById(item.colour).label} · {item.mounted ? "Mounted" : "Unmounted"} · {glazingById(item.glazing).label}</span>
                   <button className="pc-ci-remove" type="button" onClick={() => cart.remove(index)}>Remove</button>
                 </div>
                 <div className="pc-ci-price">{money(item.price)}</div>

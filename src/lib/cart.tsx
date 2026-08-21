@@ -4,7 +4,7 @@
 // refresh. Stripe checkout revalidates every item and price on the server.
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import type { ColourId, SizeId } from "./printCatalogue";
+import type { ColourId, GlazingId, SizeId } from "./printCatalogue";
 import { estimateShipping, priceFor } from "./printCatalogue";
 
 export type CartItem = {
@@ -15,6 +15,7 @@ export type CartItem = {
   size: SizeId;
   mounted: boolean;
   colour: ColourId;
+  glazing: GlazingId;
   price: number;
 };
 
@@ -82,6 +83,7 @@ export function makeCartItem(
   size: SizeId,
   mounted: boolean,
   colour: ColourId,
+  glazing: GlazingId,
 ): CartItem {
   return {
     photoId: photo.id,
@@ -91,6 +93,7 @@ export function makeCartItem(
     size,
     mounted,
     colour,
-    price: priceFor(size, mounted),
+    glazing,
+    price: priceFor(size, mounted, colour, glazing),
   };
 }

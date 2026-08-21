@@ -5336,6 +5336,11 @@ body:has(.contact-overlay) {
 .pc-mount-toggle button.on { background: var(--ink); color: var(--paper); }
 .pc-mount-note { font-size: 11px; color: var(--muted); line-height: 1.5; margin: 0; }
 
+.pc-glazing-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.pc-glazing-btn { padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--ink); font: 500 10.5px/1 var(--font-sans); cursor: pointer; transition: background 160ms, color 160ms, border-color 160ms; }
+.pc-glazing-btn.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.pc-glazing-btn:hover:not(.on) { border-color: rgba(var(--ink-rgb), .4); }
+
 .pc-alt-finishes { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 15px 16px; border: 1px solid rgba(var(--ink-rgb), .18); border-left: 3px solid var(--timber); background: linear-gradient(110deg, rgba(var(--ink-rgb), .045), transparent 70%); }
 .pc-alt-finishes > div { min-width: 0; }
 .pc-alt-finishes span { display: block; margin-bottom: 4px; color: var(--timber); font: 600 8px/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
@@ -5644,8 +5649,19 @@ body:has(.contact-overlay) {
 .pricing-cell small { color: var(--muted); font-size: 9px; }
 .pricing-cell small.pricing-margin-ok { color: var(--success); }
 .pricing-cell small.pricing-margin-bad { color: var(--danger); }
+
+.pricing-table-4col .pricing-row { grid-template-columns: 100px repeat(3, 1fr); }
+
+.pricing-subhead { margin: 4px 0 -8px; font: 600 clamp(1.1rem, 2vw, 1.4rem)/1.1 var(--font-sans); letter-spacing: var(--head-track); }
+
+.pricing-multiplier-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+.pricing-multiplier-field { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); background: var(--foam); min-width: 140px; }
+.pricing-multiplier-field span { color: var(--muted); font: 600 9px var(--font-mono); text-transform: uppercase; letter-spacing: .05em; }
+.pricing-multiplier-field input { width: 100%; padding: 6px 8px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); font: 600 13px var(--font-sans); }
+
 @media (max-width: 640px) {
   .pricing-row { grid-template-columns: 1fr; }
+  .pricing-table-4col .pricing-row { grid-template-columns: 1fr; }
 }
 
 .print-readiness { display: block; font: 400 9px/1.4 var(--font-mono); letter-spacing: .01em; margin-top: 2px; }

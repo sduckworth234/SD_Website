@@ -92,7 +92,7 @@ export default async function handler(req, res) {
           unit_amount: item.unitPriceCents,
           product_data: {
             name: photo.title,
-            description: `${item.size} · ${item.colour} frame · ${item.mounted ? "mounted" : "unmounted"}`,
+            description: `${item.size} · ${item.colour} frame · ${item.mounted ? "mounted" : "unmounted"} · ${item.glazing.replace(/_/g, " ")} glass`,
             images: photo.thumbUrl?.startsWith("https://") ? [photo.thumbUrl] : undefined,
           },
         },

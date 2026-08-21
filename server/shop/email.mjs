@@ -36,7 +36,7 @@ async function send(message) {
 }
 
 export async function sendOrderConfirmation(order, items) {
-  const rows = items.map((item) => `<li style="margin:8px 0">${escapeHtml(item.title)} — ${escapeHtml(item.size)}, ${item.mounted ? "mounted" : "unmounted"}, ${escapeHtml(item.colour)}</li>`).join("");
+  const rows = items.map((item) => `<li style="margin:8px 0">${escapeHtml(item.title)} — ${escapeHtml(item.size)}, ${item.mounted ? "mounted" : "unmounted"}, ${escapeHtml(item.colour)}, ${escapeHtml(String(item.glazing ?? "clear").replace(/_/g, " "))} glass</li>`).join("");
   const cutoff = new Date(order.submit_after).toLocaleString("en-AU", { timeZone: "Australia/Sydney", dateStyle: "medium", timeStyle: "short" });
   const receipt = safeUrl(order.stripe_receipt_url);
   const invoice = safeUrl(order.stripe_invoice_url) ?? safeUrl(order.stripe_invoice_pdf);
@@ -58,7 +58,7 @@ export async function sendNewOrderAlert(order, items) {
     return { skipped: true };
   }
   const address = order.shipping_address ?? {};
-  const rows = items.map((item) => `<li style="margin:8px 0">${escapeHtml(item.title)} — ${escapeHtml(item.size)}, ${item.mounted ? "mounted" : "unmounted"}, ${escapeHtml(item.colour)}</li>`).join("");
+  const rows = items.map((item) => `<li style="margin:8px 0">${escapeHtml(item.title)} — ${escapeHtml(item.size)}, ${item.mounted ? "mounted" : "unmounted"}, ${escapeHtml(item.colour)}, ${escapeHtml(String(item.glazing ?? "clear").replace(/_/g, " "))} glass</li>`).join("");
   const adminUrl = safeUrl(`${SITE_URL}/admin`);
   const addressLines = [address.line1, address.line2, `${address.suburb ?? ""} ${address.state ?? ""} ${address.postcode ?? ""}`.trim()].filter(Boolean).map(escapeHtml).join("<br>");
   const reference = order.id.slice(0, 8).toUpperCase();

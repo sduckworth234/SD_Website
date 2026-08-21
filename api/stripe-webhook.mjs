@@ -53,6 +53,7 @@ async function fulfilSession(sessionId) {
       size: item.size,
       mounted: item.mounted,
       colour: item.colour,
+      glazing: item.glazing ?? "clear",
       sku: item.sku,
       unit_price_cents: item.unitPriceCents,
       print_master_path: master?.print_master_path ?? null,

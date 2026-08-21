@@ -1,9 +1,17 @@
-// Real Prodigi print-fulfilment data, pulled live from api.sandbox.prodigi.com
-// on 2026-08-14 (see Shop Setup/prodigi-full-au-catalogue.json for the full
-// 141-SKU pull). Scoped to the Classic frame range (GLOBAL-CFP / GLOBAL-CFPM),
-// AU-fulfilled A5–A1 — see Shop Setup/Prodigi API — Investigation & Setup
-// Plan.md §6 for why: best resolution economics, best 3:2 ratio fit, and the
-// only range offering all colours at every AU-shippable size.
+// Real Frameshop.com.au print-fulfilment data, live-tested against their
+// custom-picture-frames configurator on 2026-08-21 (frame 224RO, the wood
+// moulding Sam actually uses). Replaces the previous Prodigi-derived flat
+// per-size price — see Shop Setup/prodigi-full-au-catalogue.json and
+// "Prodigi API — Investigation & Setup Plan.md" for that history; Prodigi
+// integration code (server/shop/prodigi.mjs) stays in place as a manual
+// fallback while the Frameshop relationship is set up, but is no longer
+// what customers are actually charged.
+//
+// Pricing is a FORMULA, not a lookup table — see priceFor() below and
+// supabase/migrations/20260821030000_frameshop_print_pricing.sql for the
+// exact math and where each number came from. `outer`/`mat` below are kept
+// from the Prodigi-era measurements (unchanged) — they only drive the room
+// preview and DPI gating, not price.
 
 // Where enquiry emails go — the contact popup (App.tsx) and the shop product
 // page's "need help?" card both compose to this inbox.
@@ -12,45 +20,86 @@ export type SizeId = "A5" | "A4" | "A3" | "A2" | "A1";
 
 export type PrintSize = {
   id: SizeId;
-  /** Outer finished-frame footprint in cm, [short edge, long edge]. This is
-   * the true wall footprint — Prodigi's own productDimensions, confirmed
-   * against the API to already include the frame moulding (an unmounted
-   * print fills almost the entire outer size, so there's nothing left to add). */
+  /** Outer finished-frame footprint in cm, [short edge, long edge]. Room
+   * preview scaling only — not touched by the Frameshop pricing switch. */
   outer: [number, number];
-  /** Mat border width in cm when mounted — DERIVED from the API, not
-   * guessed: outer size minus (print-area px / 300dpi), per size. */
+  /** Mat border width in cm when mounted (single mat, uniform width) —
+   * matches the width used to price Frameshop's "Mat (Top)" line below. */
   mat: number;
-  /** Landed price to Sydney, Standard shipping, item cost only (AUD). */
-  cfp: number;
-  cfpm: number;
 };
 
-// Prices below are the fallback only — display-purposes-only shown before
-// the live fetch resolves, or if it fails. The real, editable prices live in
-// public.print_pricing (supabase/migrations/20260817010000_print_pricing.sql,
-// admin Pricing tab); applyLivePricing patches these objects in place once
-// fetched (see getPrintPricing() in src/lib/supabase.ts, called from
-// useSiteData). Checkout never trusts this — server/shop/catalogue.mjs reads
-// the same table independently for the amount actually charged.
 export const SIZES: PrintSize[] = [
-  { id: "A5", outer: [14.8, 21.0], mat: 2.5, cfp: 51.10, cfpm: 57.10 },
-  { id: "A4", outer: [21.0, 29.7], mat: 3.7, cfp: 57.10, cfpm: 57.10 },
-  { id: "A3", outer: [29.7, 42.0], mat: 4.8, cfp: 75.10, cfpm: 77.10 },
-  { id: "A2", outer: [41.9, 59.4], mat: 5.0, cfp: 95.10, cfpm: 110.10 },
-  { id: "A1", outer: [59.4, 84.1], mat: 4.8, cfp: 136.55, cfpm: 161.55 },
+  { id: "A5", outer: [14.8, 21.0], mat: 2.5 },
+  { id: "A4", outer: [21.0, 29.7], mat: 3.7 },
+  { id: "A3", outer: [29.7, 42.0], mat: 4.8 },
+  { id: "A2", outer: [41.9, 59.4], mat: 5.0 },
+  { id: "A1", outer: [59.4, 84.1], mat: 4.8 },
 ];
 
-/** Patches SIZES' cfp/cfpm in place from live-fetched prices — mutates the
- * existing objects (not the array reference) so components reading via
- * sizeById()/priceFor() see the update without needing their own re-fetch
- * plumbing. Missing/partial data for a size leaves that size's fallback
- * value untouched rather than blanking it. */
-export function applyLivePricing(pricing: Partial<Record<SizeId, { cfp?: number; cfpm?: number }>>): void {
-  for (const s of SIZES) {
-    const p = pricing[s.id];
-    if (p?.cfp != null) s.cfp = p.cfp;
-    if (p?.cfpm != null) s.cfpm = p.cfpm;
+export type SizeComponents = {
+  /** 224RO (wood), unmounted, in dollars — the colour multiplier applies to
+   * this alone (mat/glass/backing cost the same regardless of frame colour,
+   * verified live: Clear Glass was identically priced under 224RO and 224F). */
+  frameCost: number;
+  /** Single mat at this size's `mat` width, M-series neutral core — added
+   * only when mounted. Mat colour (e.g. M47 Neutral White) doesn't change
+   * price, verified live. */
+  matCost: number;
+  /** Clear Glass baseline — the glazing multiplier applies to this. */
+  glassCost: number;
+};
+
+// Fallback only — shown before the live fetch from public.print_pricing_*
+// resolves, or if it fails. applyLiveFrameshopPricing() patches this object
+// in place once fetched (see fetchPricingSettings() in src/lib/supabase.ts).
+// Checkout never trusts this — server/shop/catalogue.mjs reads the same
+// tables independently for the amount actually charged.
+//
+// Deliberately excludes shipping — that stays estimateShipping()'s job
+// further down this file (unchanged, still Prodigi-derived AU courier
+// quotes). Folding a shipping estimate into every item's unit price here
+// too would double-charge shipping on any multi-item order, since
+// estimateShipping() already gives real multi-item consolidation (+$5 for
+// most extra prints rather than a full shipping charge each).
+export const PRICE_COMPONENTS: Record<SizeId, SizeComponents> = {
+  A5: { frameCost: 21.90, matCost: 6.80, glassCost: 5.00 },
+  A4: { frameCost: 31.70, matCost: 12.00, glassCost: 7.00 },
+  A3: { frameCost: 45.90, matCost: 17.40, glassCost: 9.00 },
+  A2: { frameCost: 70.50, matCost: 24.20, glassCost: 19.00 },
+  A1: { frameCost: 109.80, matCost: 43.60, glassCost: 34.70 },
+};
+
+/** Percentage margin applied to (frame + mat + glass) cost. Mutable
+ * fallback, patched live from site_settings.print_margin_percent. */
+export let MARGIN_PERCENT = 15;
+
+/** Patches PRICE_COMPONENTS/COLOURS/GLAZING/MARGIN_PERCENT in place from
+ * live-fetched pricing data — mutates existing objects so every caller sees
+ * the update without its own re-fetch plumbing. Missing/partial data for a
+ * size/colour/glazing id leaves that entry's fallback value untouched. */
+export function applyLiveFrameshopPricing(data: {
+  components?: Partial<Record<SizeId, Partial<SizeComponents>>>;
+  colours?: Partial<Record<ColourId, { costMultiplier?: number }>>;
+  glazing?: Partial<Record<GlazingId, { costMultiplier?: number }>>;
+  marginPercent?: number;
+}): void {
+  for (const size of SIZES) {
+    const patch = data.components?.[size.id];
+    if (!patch) continue;
+    const target = PRICE_COMPONENTS[size.id];
+    if (patch.frameCost != null) target.frameCost = patch.frameCost;
+    if (patch.matCost != null) target.matCost = patch.matCost;
+    if (patch.glassCost != null) target.glassCost = patch.glassCost;
   }
+  for (const c of COLOURS) {
+    const mult = data.colours?.[c.id]?.costMultiplier;
+    if (mult != null) c.costMultiplier = mult;
+  }
+  for (const g of GLAZING) {
+    const mult = data.glazing?.[g.id]?.costMultiplier;
+    if (mult != null) g.costMultiplier = mult;
+  }
+  if (data.marginPercent != null) MARGIN_PERCENT = data.marginPercent;
 }
 
 /** Visible timber width carved out of the mounted border (portion of the mat
@@ -63,26 +112,56 @@ export type ColourId = "natural" | "black" | "white";
 
 export type FrameColour = {
   id: ColourId;
-  /** Shopper-facing label — "natural" is Prodigi's real attribute value, but
-   * customers think "wood", not the SKU vocabulary. */
+  /** Shopper-facing label. */
   label: string;
   css: string;
   grain?: string;
+  /** Real Frameshop moulding code — kept for reference when ordering. */
+  frameCode: string;
+  /** Multiplies SizeComponents.frameCost. Sampled once at A2 (224F/224RO
+   * ratio was 0.774 unmounted, 0.831 mounted — 0.80 splits the difference).
+   * 224H (white) shares 224F's Frameshop "Price Rate" so it's assumed to
+   * share the multiplier too — not independently verified at every size. */
+  costMultiplier: number;
 };
 
-// Curated down to 3 of the real 8 classic-frame colours: white, black and
-// "natural" (Prodigi's pale-oak finish — not the darker "brown" option),
-// colour-matched against a real Prodigi sample photo, rendered with a faint
-// grain so it reads as timber rather than paint.
+// Colour-matched against real Frameshop 224-series photos, rendered with a
+// faint grain on wood so it reads as timber rather than paint.
 export const COLOURS: FrameColour[] = [
   {
     id: "natural",
     label: "Wood",
     css: "linear-gradient(135deg,#d3b78c,#c2a175 45%,#a9865f)",
     grain: "repeating-linear-gradient(100deg, rgba(70,48,24,.05) 0px, rgba(70,48,24,.05) 1px, transparent 2px, transparent 6px, rgba(255,244,222,.07) 7px, transparent 9px)",
+    frameCode: "224RO",
+    costMultiplier: 1.0,
   },
-  { id: "black", label: "Black", css: "linear-gradient(135deg,#2c2c2c,#141414)" },
-  { id: "white", label: "White", css: "linear-gradient(135deg,#f4f0e6,#dcd6c8)" },
+  { id: "black", label: "Black", css: "linear-gradient(135deg,#2c2c2c,#141414)", frameCode: "224F", costMultiplier: 0.8 },
+  { id: "white", label: "White", css: "linear-gradient(135deg,#f4f0e6,#dcd6c8)", frameCode: "224H", costMultiplier: 0.8 },
+];
+
+export type GlazingId = "clear" | "non_reflective" | "perspex" | "uv_clear" | "uv_non_reflective";
+
+export type FrameGlazing = {
+  id: GlazingId;
+  label: string;
+  description: string;
+  /** Multiplies SizeComponents.glassCost. Sampled once at A2 mounted
+   * (Clear Glass $25.20 baseline): Non-Reflective $50.40 (2.00x), Clear
+   * Perspex $50.60 (2.01x, rounded to 2.00), UV Clear $71.40 (2.83x),
+   * UV Non-Reflective $141.80 (5.63x). */
+  costMultiplier: number;
+};
+
+// Distinct from the site's existing "Canvas & glass" enquiry-only finishes
+// (a different product — frameless glass prints) — this is the glazing that
+// sits in front of any framed print.
+export const GLAZING: FrameGlazing[] = [
+  { id: "clear", label: "Clear Glass", description: "Standard 2mm clear framing glass — the most cost-effective option.", costMultiplier: 1.0 },
+  { id: "non_reflective", label: "Non-Reflective Glass", description: "2mm matte-coated glass that reduces glare — good for bright rooms.", costMultiplier: 2.0 },
+  { id: "perspex", label: "Clear Perspex (Acrylic)", description: "Lightweight, shatter-resistant 2–3mm acrylic with 94% UV resistance.", costMultiplier: 2.0 },
+  { id: "uv_clear", label: "UV Clear Glass", description: "2.5mm premium glass, 99% UV protection, same clear look as standard glass.", costMultiplier: 2.83 },
+  { id: "uv_non_reflective", label: "UV Non-Reflective Glass", description: "2.5mm glass combining anti-glare and 99% UV protection.", costMultiplier: 5.63 },
 ];
 
 export function sizeById(id: SizeId): PrintSize {
@@ -97,13 +176,37 @@ export function colourById(id: ColourId): FrameColour {
   return c;
 }
 
+export function glazingById(id: GlazingId): FrameGlazing {
+  const g = GLAZING.find((x) => x.id === id);
+  if (!g) throw new Error(`Unknown glazing ${id}`);
+  return g;
+}
+
 export function skuFor(size: SizeId, mounted: boolean): string {
   return `GLOBAL-${mounted ? "CFPM" : "CFP"}-${size}`;
 }
 
-export function priceFor(size: SizeId, mounted: boolean): number {
-  const s = sizeById(size);
-  return mounted ? s.cfpm : s.cfp;
+/** sell_price = (frameCost*colourMult + (mounted?matCost:0) + glassCost*glazingMult)
+ *             * (1 + MARGIN_PERCENT/100)
+ * Rounded to the nearest cent. Shipping is NOT included — see
+ * estimateShipping() below, added once per cart rather than once per item.
+ * Defaults (natural/clear) match the configurator's initial selection, so
+ * existing "from $X"-style callers that don't pass colour/glazing keep
+ * working unchanged. */
+export function priceFor(size: SizeId, mounted: boolean, colour: ColourId = "natural", glazing: GlazingId = "clear"): number {
+  const c = PRICE_COMPONENTS[size];
+  const colourDef = colourById(colour);
+  const glazingDef = glazingById(glazing);
+  const productCost = c.frameCost * colourDef.costMultiplier + (mounted ? c.matCost : 0) + c.glassCost * glazingDef.costMultiplier;
+  const sell = productCost * (1 + MARGIN_PERCENT / 100);
+  return Math.round(sell * 100) / 100;
+}
+
+/** The true cheapest price for a size/mount combo (any colour/glazing), for
+ * "From $X" badges — always black/white frame (lower cost_multiplier than
+ * wood) with Clear Glass (lowest glazing multiplier). */
+export function cheapestPriceFor(size: SizeId, mounted = false): number {
+  return Math.min(...COLOURS.map((c) => priceFor(size, mounted, c.id, "clear")));
 }
 
 // Room photo calibration: shot square-on (camera perpendicular to the wall,

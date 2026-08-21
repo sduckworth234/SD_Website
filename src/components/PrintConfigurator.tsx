@@ -11,17 +11,19 @@ import { productStructuredData, useSeo } from "../lib/seo";
 import type { Photo, RealPrintPhoto } from "../types";
 import {
   COLOURS,
+  GLAZING,
   MOULDING_CM,
   ROOM,
   SIZES,
   UNMOUNTED_BAND_CM,
   colourById,
+  glazingById,
   isSizeSellable,
   money,
   priceFor,
   sizeById,
 } from "../lib/printCatalogue";
-import type { ColourId, SizeId } from "../lib/printCatalogue";
+import type { ColourId, GlazingId, SizeId } from "../lib/printCatalogue";
 import { makeCartItem, useCart } from "../lib/cart";
 import { CartDrawer } from "./CartDrawer";
 import { ShopLegalFooter } from "./LegalPages";
@@ -56,6 +58,7 @@ export function PrintConfigurator({
   const [size, setSize] = useState<SizeId>("A3");
   const [mounted, setMounted] = useState(true);
   const [colour, setColour] = useState<ColourId>("natural");
+  const [glazing, setGlazing] = useState<GlazingId>("clear");
   const [cartOpen, setCartOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
@@ -191,7 +194,8 @@ export function PrintConfigurator({
 
   const sizeDef = sizeById(size);
   const colourDef = colourById(colour);
-  const price = priceFor(size, mounted);
+  const glazingDef = glazingById(glazing);
+  const price = priceFor(size, mounted, colour, glazing);
   const maxForMount = mounted ? photo.maxSellableMounted : photo.maxSellableUnmounted;
   // Only worth a note when it's an actual limitation — A1 (the top size) or
   // unknown/no restriction don't need a message at all.
@@ -298,7 +302,7 @@ export function PrintConfigurator({
       return;
     }
     setAddError(null);
-    cart.add(makeCartItem(photo, thumb(photo, 200), size, mounted, colour));
+    cart.add(makeCartItem(photo, thumb(photo, 200), size, mounted, colour, glazing));
     trackAddToCart({
       currency: "AUD",
       value: price,
@@ -308,7 +312,7 @@ export function PrintConfigurator({
         item_brand: "Sam Duckworth Photography",
         item_category: "Fine-art print",
         item_category2: photo.location,
-        item_variant: `${size} · ${colourDef.label} · ${mounted ? "Mounted" : "Unmounted"}`,
+        item_variant: `${size} · ${colourDef.label} · ${mounted ? "Mounted" : "Unmounted"} · ${glazingDef.label}`,
         price,
         quantity: 1,
       }],
@@ -538,6 +542,18 @@ export function PrintConfigurator({
                 ? "Snow-white mat, fixed width per size — the frame's outer size doesn't change, mount or not."
                 : "Print runs to the frame's edge. Same outer size as mounted, just no mat."}
             </p>
+          </div>
+
+          <div className="pc-group">
+            <div className="pc-group-head"><label>Glazing</label><span className="pc-val">{glazingDef.label}</span></div>
+            <div className="pc-glazing-options">
+              {GLAZING.map((g) => (
+                <button key={g.id} className={`pc-glazing-btn${g.id === glazing ? " on" : ""}`} type="button" onClick={() => setGlazing(g.id)} title={g.description}>
+                  {g.label}
+                </button>
+              ))}
+            </div>
+            <p className="pc-mount-note">{glazingDef.description}</p>
           </div>
 
           <aside className="pc-alt-finishes" aria-label="Canvas and glass finishes">

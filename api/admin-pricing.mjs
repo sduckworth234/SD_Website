@@ -18,6 +18,77 @@ async function fetchAllRows() {
   return rows ?? [];
 }
 
+async function fetchFrameshopPricing() {
+  const [components, colours, glazing, marginRows] = await Promise.all([
+    supabaseRest("print_pricing_components?select=*&order=size.asc"),
+    supabaseRest("print_pricing_colours?select=*&order=id.asc"),
+    supabaseRest("print_pricing_glazing?select=*&order=id.asc"),
+    supabaseRest("site_settings?select=value&key=eq.print_margin_percent"),
+  ]);
+  return {
+    components: components ?? [],
+    colours: colours ?? [],
+    glazing: glazing ?? [],
+    marginPercent: marginRows?.[0]?.value != null ? Number(marginRows[0].value) : 15,
+  };
+}
+
+async function saveFrameshopComponents(body) {
+  const updates = Array.isArray(body.components) ? body.components : [];
+  if (!updates.length) throw new Error("No components to save.");
+  for (const row of updates) {
+    const size = typeof row?.size === "string" ? row.size.toUpperCase() : "";
+    const frameCents = Number(row?.frameCostCents);
+    const matCents = Number(row?.matCostCents);
+    const glassCents = Number(row?.glassCostCents);
+    if (!SIZES.includes(size)) throw new Error("Invalid size.");
+    if (![frameCents, matCents, glassCents].every((n) => Number.isInteger(n) && n >= 0 && n <= 10_000_00)) {
+      throw new Error(`Invalid component cost for ${size}.`);
+    }
+    await supabaseRest(`print_pricing_components?size=eq.${size}`, {
+      method: "PATCH",
+      body: JSON.stringify({ frame_cost_cents: frameCents, mat_cost_cents: matCents, glass_cost_cents: glassCents, updated_at: new Date().toISOString() }),
+    });
+  }
+  return { saved: updates.length, ...(await fetchFrameshopPricing()) };
+}
+
+async function saveFrameshopMultipliers(body) {
+  const colourUpdates = Array.isArray(body.colours) ? body.colours : [];
+  const glazingUpdates = Array.isArray(body.glazing) ? body.glazing : [];
+  for (const row of colourUpdates) {
+    const id = typeof row?.id === "string" ? row.id : "";
+    const mult = Number(row?.costMultiplier);
+    if (!id || !Number.isFinite(mult) || mult <= 0 || mult > 20) throw new Error(`Invalid colour multiplier for ${id || "(unknown)"}.`);
+    await supabaseRest(`print_pricing_colours?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ cost_multiplier: mult, updated_at: new Date().toISOString() }),
+    });
+  }
+  for (const row of glazingUpdates) {
+    const id = typeof row?.id === "string" ? row.id : "";
+    const mult = Number(row?.costMultiplier);
+    if (!id || !Number.isFinite(mult) || mult <= 0 || mult > 20) throw new Error(`Invalid glazing multiplier for ${id || "(unknown)"}.`);
+    await supabaseRest(`print_pricing_glazing?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ cost_multiplier: mult, updated_at: new Date().toISOString() }),
+    });
+  }
+  if (!colourUpdates.length && !glazingUpdates.length) throw new Error("No multipliers to save.");
+  return { saved: colourUpdates.length + glazingUpdates.length, ...(await fetchFrameshopPricing()) };
+}
+
+async function saveFrameshopMargin(body) {
+  const marginPercent = Number(body.marginPercent);
+  if (!Number.isFinite(marginPercent) || marginPercent < 0 || marginPercent > 500) throw new Error("Invalid margin percent.");
+  await supabaseRest("site_settings?on_conflict=key", {
+    method: "POST",
+    headers: { prefer: "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify({ key: "print_margin_percent", enabled: true, value: String(marginPercent), label: "Shop — print margin %" }),
+  });
+  return { saved: 1, ...(await fetchFrameshopPricing()) };
+}
+
 async function savePrices(body) {
   const updates = Array.isArray(body.prices) ? body.prices : [];
   if (!updates.length) throw new Error("No prices to save.");
@@ -68,12 +139,15 @@ export default async function handler(req, res) {
     if (!admin) return json(res, 401, { error: "unauthorized" });
 
     if (req.method === "GET") {
-      return json(res, 200, { rows: await fetchAllRows(), prodigiConfigured: prodigiConfigured() });
+      return json(res, 200, { rows: await fetchAllRows(), prodigiConfigured: prodigiConfigured(), frameshop: await fetchFrameshopPricing() });
     }
 
     const body = await readJson(req);
     if (body.action === "save_prices") return json(res, 200, await savePrices(body));
     if (body.action === "refresh_costs") return json(res, 200, await refreshCosts());
+    if (body.action === "save_frameshop_components") return json(res, 200, await saveFrameshopComponents(body));
+    if (body.action === "save_frameshop_multipliers") return json(res, 200, await saveFrameshopMultipliers(body));
+    if (body.action === "save_frameshop_margin") return json(res, 200, await saveFrameshopMargin(body));
     json(res, 400, { error: "Unknown pricing action." });
   } catch (error) {
     const message = safeError(error);

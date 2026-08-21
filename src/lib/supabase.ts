@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { fallbackLocations, photos as fallbackPhotos } from "../data/photos";
 import type { Collection, GalleryLocation, InstagramPost, Photo, RealPrintPhoto, SiteSetting } from "../types";
-import { applyLivePricing, computeSellableSizes, maxSellableFromSizes } from "./printCatalogue";
+import { applyLiveFrameshopPricing, computeSellableSizes, maxSellableFromSizes } from "./printCatalogue";
 import type { SellableSizes, SizeId, SizeOverrides } from "./printCatalogue";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -215,27 +215,48 @@ async function fetchCollections(): Promise<typeof NO_COLLECTIONS> {
   }
 }
 
-// Live sell prices from public.print_pricing (20260817010000_photo migration
-// name aside — see 20260817010000_print_pricing.sql), admin-editable from
-// the Pricing tab. Patches src/lib/printCatalogue.ts's SIZES in place on
-// success; any failure (table not migrated yet, network blip) just leaves
-// the fallback prices in SIZES untouched — same "ships ahead" posture as
-// collections above, never blocks or breaks the gallery fetch.
+// Live Frameshop-based pricing components from public.print_pricing_components/
+// _colours/_glazing and site_settings.print_margin_percent — see
+// supabase/migrations/20260821030000_frameshop_print_pricing.sql,
+// admin-editable from the Pricing tab. Patches src/lib/printCatalogue.ts's
+// PRICE_COMPONENTS/COLOURS/GLAZING/MARGIN_PERCENT in place on success; any
+// failure (table not migrated yet, network blip) just leaves the fallback
+// values untouched — same "ships ahead" posture as collections above, never
+// blocks or breaks the gallery fetch.
 async function fetchPricingSettings(): Promise<void> {
   if (!supabase) return;
   try {
-    const { data, error } = await supabase.from("print_pricing").select("size, mounted, sell_cents");
-    if (error || !data?.length) return;
-    const pricing: Partial<Record<SizeId, { cfp?: number; cfpm?: number }>> = {};
-    for (const row of data as { size: string; mounted: boolean; sell_cents: number }[]) {
-      const id = row.size as SizeId;
-      pricing[id] ??= {};
-      if (row.mounted) pricing[id]!.cfpm = row.sell_cents / 100;
-      else pricing[id]!.cfp = row.sell_cents / 100;
+    const [componentsRes, coloursRes, glazingRes, marginRes] = await Promise.all([
+      supabase.from("print_pricing_components").select("size, frame_cost_cents, mat_cost_cents, glass_cost_cents"),
+      supabase.from("print_pricing_colours").select("id, cost_multiplier"),
+      supabase.from("print_pricing_glazing").select("id, cost_multiplier"),
+      supabase.from("site_settings").select("value").eq("key", "print_margin_percent").maybeSingle(),
+    ]);
+    const components: Record<string, { frameCost?: number; matCost?: number; glassCost?: number }> = {};
+    for (const row of (componentsRes.data ?? []) as { size: string; frame_cost_cents: number; mat_cost_cents: number; glass_cost_cents: number }[]) {
+      components[row.size] = {
+        frameCost: row.frame_cost_cents / 100,
+        matCost: row.mat_cost_cents / 100,
+        glassCost: row.glass_cost_cents / 100,
+      };
     }
-    applyLivePricing(pricing);
+    const colours: Record<string, { costMultiplier?: number }> = {};
+    for (const row of (coloursRes.data ?? []) as { id: string; cost_multiplier: number }[]) {
+      colours[row.id] = { costMultiplier: Number(row.cost_multiplier) };
+    }
+    const glazing: Record<string, { costMultiplier?: number }> = {};
+    for (const row of (glazingRes.data ?? []) as { id: string; cost_multiplier: number }[]) {
+      glazing[row.id] = { costMultiplier: Number(row.cost_multiplier) };
+    }
+    const marginValue = (marginRes.data as { value?: string } | null)?.value;
+    applyLiveFrameshopPricing({
+      components: components as Partial<Record<SizeId, { frameCost?: number; matCost?: number; glassCost?: number }>>,
+      colours,
+      glazing,
+      marginPercent: marginValue != null ? Number(marginValue) : undefined,
+    });
   } catch {
-    // fallback prices in SIZES stand.
+    // fallback pricing stands.
   }
 }
 
