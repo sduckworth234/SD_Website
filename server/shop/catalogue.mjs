@@ -43,6 +43,7 @@ export const FRAMESHOP_GLAZING = Object.freeze({
   perspex: 2.0,
   uv_clear: 2.83,
   uv_non_reflective: 5.63,
+  none: 0,
 });
 export const DEFAULT_MARGIN_PERCENT = 15;
 

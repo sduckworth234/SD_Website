@@ -160,7 +160,7 @@ export const COLOURS: FrameColour[] = [
   { id: "white", label: "White", css: "linear-gradient(135deg,#f4f0e6,#dcd6c8)", frameCode: "103H", costMultiplier: 1.0 },
 ];
 
-export type GlazingId = "clear" | "non_reflective" | "perspex" | "uv_clear" | "uv_non_reflective";
+export type GlazingId = "clear" | "non_reflective" | "perspex" | "uv_clear" | "uv_non_reflective" | "none";
 
 export type FrameGlazing = {
   id: GlazingId;
@@ -169,7 +169,9 @@ export type FrameGlazing = {
   /** Multiplies SizeComponents.glassCost. Sampled once at A2 mounted
    * (Clear Glass $25.20 baseline): Non-Reflective $50.40 (2.00x), Clear
    * Perspex $50.60 (2.01x, rounded to 2.00), UV Clear $71.40 (2.83x),
-   * UV Non-Reflective $141.80 (5.63x). */
+   * UV Non-Reflective $141.80 (5.63x). "No Glass" is 0 — verified live: an
+   * empty 103RO A2 frame drops the glass line entirely, leaving just frame
+   * (+ mat if mounted) cost. */
   costMultiplier: number;
 };
 
@@ -182,6 +184,7 @@ export const GLAZING: FrameGlazing[] = [
   { id: "perspex", label: "Clear Perspex (Acrylic)", description: "Lightweight, shatter-resistant 2–3mm acrylic with 94% UV resistance.", costMultiplier: 2.0 },
   { id: "uv_clear", label: "UV Clear Glass", description: "2.5mm premium glass, 99% UV protection, same clear look as standard glass.", costMultiplier: 2.83 },
   { id: "uv_non_reflective", label: "UV Non-Reflective Glass", description: "2.5mm glass combining anti-glare and 99% UV protection.", costMultiplier: 5.63 },
+  { id: "none", label: "No Glass", description: "An empty frame with no glazing — for canvas or already-protected artwork.", costMultiplier: 0 },
 ];
 
 export function sizeById(id: SizeId): PrintSize {

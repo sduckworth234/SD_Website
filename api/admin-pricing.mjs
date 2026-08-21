@@ -78,7 +78,8 @@ async function saveFrameshopMultipliers(body) {
   for (const row of glazingUpdates) {
     const id = typeof row?.id === "string" ? row.id : "";
     const mult = Number(row?.costMultiplier);
-    if (!id || !Number.isFinite(mult) || mult <= 0 || mult > 20) throw new Error(`Invalid glazing multiplier for ${id || "(unknown)"}.`);
+    // Glazing allows 0 — "No Glass" is a real, zero-cost option.
+    if (!id || !Number.isFinite(mult) || mult < 0 || mult > 20) throw new Error(`Invalid glazing multiplier for ${id || "(unknown)"}.`);
     await supabaseRest(`print_pricing_glazing?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify({ cost_multiplier: mult, updated_at: new Date().toISOString() }),
