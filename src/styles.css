@@ -4844,6 +4844,14 @@ body:has(.contact-overlay) {
   font-weight: var(--head-weight); font-size: clamp(3rem, 8vw, 6rem); letter-spacing: var(--head-track); margin: .12em 0 0; }
 .sh-lead { font-family: var(--font-mono);
   font-weight: 300; color: var(--muted); font-size: 1.05rem; line-height: 1.5; max-width: 42ch; margin: 16px 0 24px; }
+/* The overlapping two-frame mockup stage in .shop-hero's right column — same
+   treatment the homepage's Framed Editions banner used to share this class
+   name with, before that banner was removed. Without these three rules the
+   frames have no size/position constraint and render at their raw image
+   size, full-bleed. */
+.fh-stage { position: relative; display: flex; justify-content: center; align-items: flex-end; min-height: 320px; }
+.fh-main { width: min(300px, 62%); z-index: 2; }
+.fh-back { position: absolute; right: 0; bottom: 6%; width: min(260px, 52%); z-index: 1; opacity: .97; }
 .shop-strip { display: flex; flex-wrap: wrap; gap: 8px 28px; justify-content: center; padding: 16px clamp(18px,4vw,56px); border-block: 1px solid var(--line); background: var(--paper-deep); font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .shop-strip b { color: var(--ink); font-weight: 600; }
 .shop-section { max-width: 1180px; margin: 0 auto; padding: clamp(40px, 6vw, 80px) clamp(18px, 4vw, 56px); }
@@ -4886,6 +4894,7 @@ body:has(.contact-overlay) {
   .shop-curation-grid { grid-template-columns: 1fr; }
   .real-print-admin-grid { grid-template-columns: 1fr; }
   .shop-hero { grid-template-columns: 1fr; }
+  .fh-stage { margin-top: 8px; }
 }
 
 /* ================= Phase 3: curation, pickers, visibility ================= */
@@ -5093,6 +5102,7 @@ body:has(.contact-overlay) {
   .shop-nav { flex-wrap: wrap; gap: 8px 14px; padding: 12px clamp(14px, 4vw, 20px); }
   .shop-logo { font-size: 1.2rem; letter-spacing: 0.12em; }
   .shop-section, .shop-hero { padding-left: clamp(16px, 4vw, 24px); padding-right: clamp(16px, 4vw, 24px); }
+  .fh-stage { min-height: 248px; }
   .shop-grid { columns: 2; column-gap: 18px; }
   .shop-card { margin-bottom: 18px; }
   .sc-ttl { font-size: 0.92rem; }
