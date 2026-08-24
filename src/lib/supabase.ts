@@ -300,13 +300,18 @@ async function getGalleryDataInner() {
   if (!supabase) return fallbackGallery();
 
   const PUBLIC_PHOTO_COLUMNS =
-    "id, title, slug, description, location_id, kind, year_taken, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, collection_order, in_shop, shop_order, locations(id, slug, name, region, description, sort_order)";
+    "id, title, slug, description, location_id, kind, year_taken, captured_at, aspect, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, collection_order, in_shop, shop_order, locations(id, slug, name, region, description, sort_order)";
   const photoQuery = (columns: string) =>
     supabase!
       .from("photos")
       .select(columns)
       .eq("is_published", true)
+      // sort_order stays the curation override (send-to-top relies on it to
+      // lead a category); everything else falls back to capture date, then
+      // import date, newest first — so ties (no explicit sort_order) read
+      // newest-shoot-first instead of newest-import-first.
       .order("sort_order", { ascending: true })
+      .order("captured_at", { ascending: false })
       .order("created_at", { ascending: false });
 
   // eslint-disable-next-line prefer-const
