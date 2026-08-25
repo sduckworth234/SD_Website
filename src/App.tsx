@@ -1,5 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import {
+  ArrowRight,
   ArrowUpDown,
   ArrowUpFromLine,
   ArrowUpToLine,
@@ -19,9 +20,11 @@ import {
   Lock,
   LogOut,
   Heart,
+  Mail,
   MapPin,
   Menu,
   MessageCircle,
+  Phone,
   PackageCheck,
   ChevronLeft,
   ChevronRight,
@@ -68,6 +71,7 @@ import {
   setLocationFeedOrder,
   setMapFeature,
   setPhotoShop,
+  setPhotoProfessional,
   setPhotoSizeOverride,
   setRecentWorkPicks,
   removeUploadedAsset,
@@ -117,6 +121,7 @@ import { savePublicContent, usePublicContent, type PublicContent } from "./lib/p
 
 // Lazy-loaded so MapLibre + the basemap stay out of the main gallery bundle.
 const MapPage = lazy(() => import("./MapPage"));
+const WorkPage = lazy(() => import("./WorkPage"));
 // Stripe and the order admin are similarly route-scoped. Gallery visitors
 // should not download payment/admin code unless they actually open that flow.
 const CheckoutPage = lazy(() => import("./components/CheckoutPage").then((module) => ({ default: module.CheckoutPage })));
@@ -412,6 +417,14 @@ function App() {
     return <GalleriesPage key={route} onNavigate={navigate} />;
   }
 
+  if (matches("/work")) {
+    return (
+      <Suspense fallback={<main className="route-loading"><SDLoader label="Loading professional work" /></main>}>
+        <WorkPage onNavigate={navigate} />
+      </Suspense>
+    );
+  }
+
   if (path === "/" || path === "") {
     return <Home onNavigate={navigate} />;
   }
@@ -649,6 +662,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
 
   function goToMap() { window.history.pushState({}, "", "/map"); onNavigate("/map"); }
   function goToShop() { window.history.pushState({}, "", "/shop"); onNavigate("/shop"); }
+  function goToWork() { window.history.pushState({}, "", "/work"); onNavigate("/work"); }
   function goToShopPhoto(photo: Photo) {
     trackSelectItem({
       item_list_id: "homepage_print_carousel",
@@ -719,6 +733,16 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
       perPlace: Number.parseInt(settingValue.recent_work_per_place ?? "2", 10) || 2,
     });
   }, [publicPhotos, recentPhotos, settingValue.recent_work_mode, settingValue.recent_work_orientation, settingValue.recent_work_per_place, settingValue.recent_work_sort, settingValue.recent_work_year]);
+
+  // The professional-work promo banner's photo: the admin's chosen hero
+  // (first in professionalOrder), falling back to the Flare shoot until any
+  // photo has been marked is_professional_work in the Shop admin tab.
+  const professionalHeroPhoto = useMemo(() => {
+    const curated = publicPhotos
+      .filter((photo) => photo.isProfessionalWork)
+      .sort((a, b) => (a.professionalOrder ?? 1e9) - (b.professionalOrder ?? 1e9));
+    return curated[0] ?? null;
+  }, [publicPhotos]);
 
   // A compact, commerce-led bridge between the editorial Recent Work mosaic
   // and the map. Admin can lock 3–8 exact photographs; until then it uses a
@@ -836,8 +860,8 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "collection_cards")} label="Collections">
             <CollectionCards photos={publicPhotos} locations={locations} onOpen={openLocation} onOpenAll={() => goToGalleries()} isAdmin={isAdmin} onEdit={setEditingCollection} />
           </AdminHideable>
-          <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "contact_prompt")} label="Contact">
-            <ContactPrompt onOpen={() => setIsContactOpen(true)} />
+          <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "contact_prompt")} label="Professional work banner">
+            <ProfessionalWorkPromo photo={professionalHeroPhoto} onOpen={goToWork} />
           </AdminHideable>
           {instagramPosts.length ? (
             <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "instagram_feed")} label="Instagram feed">
@@ -871,6 +895,11 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
             setIsAboutOpen(false);
             setIsContactOpen(true);
           }}
+          onViewWork={() => {
+            setIsAboutOpen(false);
+            goToWork();
+          }}
+          workPhoto={professionalHeroPhoto}
         />
       ) : null}
       {isContactOpen ? <ContactOverlay onClose={() => closeHomePanel(setIsContactOpen)} /> : null}
@@ -4502,7 +4531,7 @@ const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
   { key: "home_print_carousel", label: "Home — Available prints carousel", hint: "The light framed-print card directly below Recent Work." },
   { key: "map_promo", label: "Home — Map promo", hint: "The interactive-map teaser on the home page." },
   { key: "collection_cards", label: "Home — Collection cards", hint: "The scroll-highlighted list of places on the home page." },
-  { key: "contact_prompt", label: "Home — Contact / Work with me", hint: "The “Let’s work together” prompt + contact popup." },
+  { key: "contact_prompt", label: "Home — Professional work banner", hint: "The real estate/events/brand promo card linking to /work." },
   { key: "instagram_feed", label: "Home — Instagram feed", hint: "The live strip of your latest Instagram posts, above the footer." },
 ];
 
@@ -5106,6 +5135,7 @@ function ShopCatalogueAdmin({
   const [filter, setFilter] = useState<"all" | "sale" | "not_sale">("all");
   const [locationFilter, setLocationFilter] = useState("all");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [proBusyId, setProBusyId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -5252,6 +5282,26 @@ function ShopCatalogueAdmin({
       setMessage(error instanceof Error ? error.message : "The sale setting could not be saved.");
     } finally {
       setBusyId(null);
+    }
+  }
+
+  // "Professional work" is independent of the sale toggle above: a photo can
+  // be an example on /work without being sold, and vice versa. Order 1 is
+  // also the /work page hero, so promoting a new photo bumps it to the front.
+  async function togglePro(photo: Photo) {
+    const next = !photo.isProfessionalWork;
+    const nextOrder = next
+      ? Math.max(0, ...photos.map((candidate) => candidate.professionalOrder ?? 0)) + 1
+      : null;
+    setProBusyId(photo.id);
+    try {
+      await setPhotoProfessional(photo.id, { isProfessionalWork: next, professionalOrder: nextOrder });
+      setMessage(next ? `“${photo.title}” added to professional work examples.` : `“${photo.title}” removed from professional work examples.`);
+      await onChanged();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The professional-work setting could not be saved.");
+    } finally {
+      setProBusyId(null);
     }
   }
 
@@ -5444,6 +5494,17 @@ function ShopCatalogueAdmin({
                 >
                   <span className="vis-knob" />
                   {busyId === photo.id ? "Saving…" : photo.inShop ? "For sale" : "Not for sale"}
+                </button>
+                <button
+                  aria-label={`${photo.isProfessionalWork ? "Remove" : "Add"} ${photo.title} ${photo.isProfessionalWork ? "from" : "to"} professional work examples`}
+                  aria-pressed={photo.isProfessionalWork}
+                  className={`sale-toggle${photo.isProfessionalWork ? " on" : ""}`}
+                  disabled={proBusyId !== null}
+                  onClick={() => togglePro(photo)}
+                  type="button"
+                >
+                  <span className="vis-knob" />
+                  {proBusyId === photo.id ? "Saving…" : photo.isProfessionalWork ? "Professional work" : "Not on /work"}
                 </button>
                 <button
                   className="text-button size-override-toggle"
@@ -5952,6 +6013,8 @@ function SiteContentAdmin({ setMessage }: { setMessage: (message: string) => voi
           <legend>Identity & social</legend>
           <label>Business name<input required maxLength={100} value={draft.siteName} onChange={(event) => field("siteName", event.target.value)} /></label>
           <label>Public email<input required type="email" maxLength={254} value={draft.publicEmail} onChange={(event) => field("publicEmail", event.target.value)} /></label>
+          <label>Public phone<input required type="tel" maxLength={40} value={draft.publicPhone} onChange={(event) => field("publicPhone", event.target.value)} /></label>
+          <label>Location<input required maxLength={100} value={draft.publicLocation} onChange={(event) => field("publicLocation", event.target.value)} /></label>
           <label>Instagram handle<input required maxLength={80} value={draft.instagramHandle} onChange={(event) => field("instagramHandle", event.target.value)} /></label>
           <label>Instagram URL<input required type="url" maxLength={500} value={draft.instagramUrl} onChange={(event) => field("instagramUrl", event.target.value)} /></label>
           <label>Footer label<input required maxLength={100} value={draft.footerLabel} onChange={(event) => field("footerLabel", event.target.value)} /></label>
@@ -7287,7 +7350,17 @@ function BatchRow({
   );
 }
 
-function AboutOverlay({ onClose, onContact }: { onClose: () => void; onContact: () => void }) {
+function AboutOverlay({
+  onClose,
+  onContact,
+  onViewWork,
+  workPhoto,
+}: {
+  onClose: () => void;
+  onContact: () => void;
+  onViewWork: () => void;
+  workPhoto: Photo | null;
+}) {
   const content = usePublicContent();
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -7317,21 +7390,45 @@ function AboutOverlay({ onClose, onContact }: { onClose: () => void; onContact: 
             <button className="solid-button" type="button" onClick={onContact}>Contact me</button>
           </div>
         </div>
+        <button className="about-work-card" type="button" onClick={onViewWork} aria-label="See professional work">
+          {workPhoto ? (
+            <img src={workPhoto.imageUrl} alt="" loading="lazy" decoding="async" />
+          ) : null}
+          <span className="about-work-card-copy">
+            <span className="eyebrow">Available for hire</span>
+            <strong>Real estate, events &amp; brand work</strong>
+            <span className="about-work-card-cta">See professional work <ArrowRight size={14} aria-hidden="true" /></span>
+          </span>
+        </button>
+        <div className="about-details">
+          <a href={`mailto:${content.publicEmail}`}><Mail size={14} aria-hidden="true" /> {content.publicEmail}</a>
+          <a href={`tel:${content.publicPhone.replace(/[^+\d]/g, "")}`}><Phone size={14} aria-hidden="true" /> {content.publicPhone}</a>
+          <span><MapPin size={14} aria-hidden="true" /> {content.publicLocation}</span>
+          <a href={content.instagramUrl} target="_blank" rel="noopener noreferrer"><Instagram size={14} aria-hidden="true" /> @{content.instagramHandle}</a>
+        </div>
       </section>
     </div>
   );
 }
 
-// Small "let's work together" prompt beneath the home print-shop banner.
-function ContactPrompt({ onOpen }: { onOpen: () => void }) {
-  const content = usePublicContent();
+// The home page's professional-work promo: a full-bleed banner (same weight
+// as Recent Work / the 2026 Europe hero) that sits where the old "Let's work
+// together" prompt used to, and clicks through to /work.
+function ProfessionalWorkPromo({ photo, onOpen }: { photo: Photo | null; onOpen: () => void }) {
   return (
-    <section className="contact-prompt scroll-reveal" aria-label="Contact">
-      <p className="eyebrow">{content.contactEyebrow}</p>
-      <h2>{content.contactPromptHeading}</h2>
-      <p className="contact-lead">{content.contactPromptBody}</p>
-      <button className="solid-button" type="button" onClick={onOpen}>Contact me</button>
-    </section>
+    <button className="pro-work-promo scroll-reveal" type="button" onClick={onOpen} aria-label="See professional work — real estate, events and brand photography">
+      {photo ? (
+        <img className="pro-work-promo-img" src={photo.imageUrl} alt="" loading="lazy" decoding="async" />
+      ) : null}
+      <span className="pro-work-promo-copy">
+        <span>
+          <span className="eyebrow">Available for hire</span>
+          <h2>Real estate, events &amp; brand work</h2>
+          <p>Aerial and ground coverage for agents, venues and companies across Sydney and beyond.</p>
+        </span>
+        <span className="pro-work-promo-cta">Enquire <ArrowRight size={14} aria-hidden="true" /></span>
+      </span>
+    </button>
   );
 }
 

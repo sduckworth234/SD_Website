@@ -4,6 +4,8 @@ import { supabase } from "./supabase";
 export type PublicContent = {
   siteName: string;
   publicEmail: string;
+  publicPhone: string;
+  publicLocation: string;
   instagramHandle: string;
   instagramUrl: string;
   footerLabel: string;
@@ -23,6 +25,8 @@ export type PublicContent = {
 export const DEFAULT_PUBLIC_CONTENT: PublicContent = {
   siteName: "Sam Duckworth Photography",
   publicEmail: "samduckworthphoto@gmail.com",
+  publicPhone: "0423 638 403",
+  publicLocation: "Sydney, Australia",
   instagramHandle: "sam.duckworth",
   instagramUrl: "https://www.instagram.com/sam.duckworth/",
   footerLabel: "SD Gallery",
@@ -42,6 +46,8 @@ export const DEFAULT_PUBLIC_CONTENT: PublicContent = {
 type ContentRow = {
   site_name: string;
   public_email: string;
+  public_phone?: string;
+  public_location?: string;
   instagram_handle: string;
   instagram_url: string;
   footer_label: string;
@@ -62,6 +68,8 @@ function mapRow(row: ContentRow): PublicContent {
   return {
     siteName: row.site_name,
     publicEmail: row.public_email,
+    publicPhone: row.public_phone ?? DEFAULT_PUBLIC_CONTENT.publicPhone,
+    publicLocation: row.public_location ?? DEFAULT_PUBLIC_CONTENT.publicLocation,
     instagramHandle: row.instagram_handle,
     instagramUrl: row.instagram_url,
     footerLabel: row.footer_label,
@@ -84,6 +92,8 @@ function toRow(content: PublicContent): ContentRow & { id: number } {
     id: 1,
     site_name: content.siteName.trim(),
     public_email: content.publicEmail.trim(),
+    public_phone: content.publicPhone.trim(),
+    public_location: content.publicLocation.trim(),
     instagram_handle: content.instagramHandle.trim().replace(/^@/, ""),
     instagram_url: content.instagramUrl.trim(),
     footer_label: content.footerLabel.trim(),
@@ -107,11 +117,23 @@ export async function getPublicContent() {
   if (!supabase) return DEFAULT_PUBLIC_CONTENT;
   if (!contentRequest) {
     contentRequest = (async () => {
-      const { data, error } = await supabase
+      const BASE_COLUMNS = "site_name,public_email,instagram_handle,instagram_url,footer_label,hero_eyebrow,about_eyebrow,about_heading,about_intro,about_body,about_portrait_path,contact_eyebrow,contact_heading,contact_intro,contact_prompt_heading,contact_prompt_body";
+      // public_phone/public_location ship ahead of their migration — retry
+      // without them (falling back to the hardcoded defaults for just those
+      // two fields) until the columns exist, rather than losing every other
+      // already-working field to a single failed query.
+      let { data, error } = await supabase
         .from("site_content")
-        .select("site_name,public_email,instagram_handle,instagram_url,footer_label,hero_eyebrow,about_eyebrow,about_heading,about_intro,about_body,about_portrait_path,contact_eyebrow,contact_heading,contact_intro,contact_prompt_heading,contact_prompt_body")
+        .select(`public_phone,public_location,${BASE_COLUMNS}`)
         .eq("id", 1)
         .maybeSingle();
+      if (error) {
+        ({ data, error } = await supabase
+          .from("site_content")
+          .select(BASE_COLUMNS)
+          .eq("id", 1)
+          .maybeSingle());
+      }
       if (error || !data) return DEFAULT_PUBLIC_CONTENT;
       return mapRow(data as ContentRow);
     })();

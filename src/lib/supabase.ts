@@ -70,6 +70,8 @@ type PhotoRow = {
   collection_order: number | null;
   in_shop: boolean;
   shop_order: number | null;
+  is_professional_work?: boolean;
+  professional_order?: number | null;
   max_sellable_mounted?: string | null;
   max_sellable_unmounted?: string | null;
   sellable_sizes?: SellableSizes | null;
@@ -149,6 +151,8 @@ function mapPhoto(row: PhotoRow): Photo {
     collectionOrder: row.collection_order ?? null,
     inShop: row.in_shop ?? false,
     shopOrder: row.shop_order ?? null,
+    isProfessionalWork: row.is_professional_work ?? false,
+    professionalOrder: row.professional_order ?? null,
     maxSellableMounted: row.max_sellable_mounted ?? null,
     maxSellableUnmounted: row.max_sellable_unmounted ?? null,
     sellableSizes: row.sellable_sizes ?? null,
@@ -322,11 +326,11 @@ async function getGalleryDataInner() {
         .select("id, slug, name, region, description, sort_order, map_feed_order")
         .eq("is_visible", true)
         .order("sort_order", { ascending: true }),
-      // `ratio` and the max_sellable_*/sellable_sizes columns ship ahead of
-      // their migration — retry without them until the columns exist
-      // (otherwise the whole site would fall back to bundled data over
-      // columns that don't exist yet).
-      photoQuery(`ratio, max_sellable_mounted, max_sellable_unmounted, sellable_sizes, ${PUBLIC_PHOTO_COLUMNS}`),
+      // `ratio`, the max_sellable_*/sellable_sizes columns and the
+      // professional-work columns ship ahead of their migration — retry
+      // without them until the columns exist (otherwise the whole site would
+      // fall back to bundled data over columns that don't exist yet).
+      photoQuery(`ratio, max_sellable_mounted, max_sellable_unmounted, sellable_sizes, is_professional_work, professional_order, ${PUBLIC_PHOTO_COLUMNS}`),
       fetchCollections(),
       fetchPricingSettings(),
     ]);
@@ -359,6 +363,10 @@ const ADMIN_SELECT =
 // degrades to "no readiness data" instead of breaking the whole admin panel.
 const ADMIN_PRINT_READINESS_SELECT =
   "max_sellable_mounted, max_sellable_unmounted, sellable_sizes, size_overrides, raw_source_path, raw_width, raw_height, raw_match_confidence, raw_match_notes, source_width, source_height";
+// Professional-work columns (20260826010000) ship ahead of their migration
+// too — requested as their own tier so a stale DB degrades to "no
+// professional-work data" rather than losing print-readiness data as well.
+const ADMIN_PROFESSIONAL_SELECT = "is_professional_work, professional_order";
 
 export async function getAdminPhotos() {
   if (!supabase) return [];
@@ -379,9 +387,16 @@ export async function getAdminPhotos() {
   let error: { message: string } | null;
   ({ data, error } = (await supabase
     .rpc("get_admin_photos")
-    .select(`${ADMIN_SELECT}, ${ADMIN_PRINT_READINESS_SELECT}`)) as unknown as { data: PhotoRow[] | null; error: { message: string } | null });
+    .select(`${ADMIN_SELECT}, ${ADMIN_PRINT_READINESS_SELECT}, ${ADMIN_PROFESSIONAL_SELECT}`)) as unknown as { data: PhotoRow[] | null; error: { message: string } | null });
 
-  // Print-readiness columns ship ahead of their migration — retry without
+  // Professional-work columns ship ahead of their migration — retry without
+  // them until the columns exist.
+  if (error) {
+    ({ data, error } = (await supabase
+      .rpc("get_admin_photos")
+      .select(`${ADMIN_SELECT}, ${ADMIN_PRINT_READINESS_SELECT}`)) as unknown as { data: PhotoRow[] | null; error: { message: string } | null });
+  }
+  // Print-readiness columns ship ahead of their migration too — retry without
   // them until the columns exist.
   if (error) {
     ({ data, error } = (await supabase
@@ -968,6 +983,54 @@ export async function setPhotoShop(
     .select("id");
   if (error) throw error;
   if (!data?.length) throw new Error("The photo sale setting was not updated.");
+}
+
+// Toggle whether a photo is shown as a professional-work example on /work,
+// and/or set its manual order there (item 1 also becomes the page hero).
+export async function setPhotoProfessional(
+  photoId: string,
+  input: { isProfessionalWork?: boolean; professionalOrder?: number | null },
+) {
+  if (!supabase) throw new Error("Supabase is not configured.");
+
+  const updates: Record<string, boolean | number | null> = {};
+  if (typeof input.isProfessionalWork === "boolean") updates.is_professional_work = input.isProfessionalWork;
+  if (input.professionalOrder !== undefined) updates.professional_order = input.professionalOrder;
+  if (!Object.keys(updates).length) return;
+
+  const { data, error } = await supabase
+    .from("photos")
+    .update(updates)
+    .eq("id", photoId)
+    .select("id");
+  if (error) throw error;
+  if (!data?.length) throw new Error("The professional-work setting was not updated.");
+}
+
+const PROFESSIONAL_WORK_COLUMNS =
+  "id, title, slug, description, location_id, kind, year_taken, captured_at, aspect, ratio, storage_bucket, storage_path, image_url, relative_altitude_m, latitude, longitude, is_map_feature, is_featured, is_published, sort_order, collection_order, in_shop, shop_order, is_professional_work, professional_order, locations(id, slug, name, region, description, sort_order)";
+
+// Published photos curated as professional-work examples (/work page), in
+// admin order (item 1 is the page hero). Ships ahead of its migration like
+// collections/ratio — degrades to [] until the columns exist, so the page
+// renders its services/contact content with an empty portfolio rather than
+// breaking.
+export async function getProfessionalWorkPhotos(): Promise<Photo[]> {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from("photos")
+      .select(PROFESSIONAL_WORK_COLUMNS)
+      .eq("is_published", true)
+      .eq("is_professional_work", true)
+      .order("professional_order", { ascending: true, nullsFirst: false })
+      .order("captured_at", { ascending: false });
+    if (error) throw error;
+    return ((data ?? []) as unknown as PhotoRow[]).map(mapPhoto);
+  } catch (error) {
+    console.warn("Professional-work photos unavailable — has the migration run?", error);
+    return [];
+  }
 }
 
 // Set (or clear) one size/mount override on a photo, recompute the resolved

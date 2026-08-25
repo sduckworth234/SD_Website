@@ -51,6 +51,11 @@ export type Photo = {
   // Sold as a Framed Edition print on /shop, and its manual order there (asc).
   inShop?: boolean;
   shopOrder?: number | null;
+  // Shown as an example of paid professional client work on /work, and its
+  // manual order there (asc; item 1 also becomes the page hero). Independent
+  // of inShop/collectionOrder — a photo can be either, both, or neither.
+  isProfessionalWork?: boolean;
+  professionalOrder?: number | null;
   // Ids of the Collections this photo belongs to (public.photo_series). A photo
   // can sit in several. Empty/absent = it only ever shows under "All work".
   collectionIds?: string[];
