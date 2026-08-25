@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Aperture, Building2, Instagram, Mail, MapPin, PartyPopper, Phone, Sparkles } from "lucide-react";
+import { ArrowRight, Building2, Instagram, Mail, MapPin, PartyPopper, Phone, Sparkles } from "lucide-react";
 import { getProfessionalWorkPhotos } from "./lib/supabase";
 import { usePublicContent } from "./lib/publicContent";
 import { useSeo } from "./lib/seo";
@@ -19,22 +19,17 @@ const SERVICES = [
   {
     icon: Building2,
     title: "Real estate & aerial",
-    body: "Listing photography and drone flyovers that show a property at its best — interiors, exteriors and the surrounding land.",
+    body: "Drone shots and listing photos that show a place off properly, inside and out.",
   },
   {
     icon: PartyPopper,
-    title: "Events & launches",
-    body: "Discreet, comprehensive coverage of live events, from golden-hour crowds to the details organisers want remembered.",
+    title: "Events",
+    body: "I'll get around and get the shots without getting in the way.",
   },
   {
     icon: Sparkles,
-    title: "Brand & campaign",
-    body: "Location and product imagery for campaigns, social content and marketing — shot to match your brand's look.",
-  },
-  {
-    icon: Aperture,
-    title: "Elopements & occasions",
-    body: "Intimate, unposed coverage for elopements and private occasions, with the same eye for light seen across the gallery.",
+    title: "Brand & content",
+    body: "Photos for your website, socials or a campaign — shot to suit what you're going for.",
   },
 ];
 
@@ -89,11 +84,11 @@ export default function WorkPage({ onNavigate }: { onNavigate: (route: string) =
           decoding="async"
         />
         <div className="work-hero-copy">
-          <p className="eyebrow">Available for hire</p>
-          <h1>Professional photography for real estate, events &amp; brands.</h1>
-          <p>Ten years behind a drone and a camera — now open for listings, live events and brand campaigns across Sydney and beyond.</p>
+          <p className="eyebrow">Also available for hire</p>
+          <h1>I also shoot real estate, events &amp; brand work.</h1>
+          <p>I've been doing this for ten years, mostly for myself — but I take on real estate, event and brand jobs too. Based in Sydney, happy to travel.</p>
           <button className="solid-button" type="button" onClick={() => setContactOpen(true)}>
-            Get a quote <ArrowRight size={15} aria-hidden="true" />
+            Get in touch <ArrowRight size={15} aria-hidden="true" />
           </button>
         </div>
       </section>
@@ -111,7 +106,7 @@ export default function WorkPage({ onNavigate }: { onNavigate: (route: string) =
       <section className="work-gallery" aria-label="Recent professional work">
         <div className="work-section-head">
           <p className="eyebrow">Recent work</p>
-          <h2>{photos.length ? "A few examples." : "Portfolio coming soon."}</h2>
+          <h2>{photos.length ? "A few examples." : "Examples coming soon."}</h2>
         </div>
         {photos.length ? (
           <div className="gallery view-box work-gallery-grid">
@@ -133,7 +128,7 @@ export default function WorkPage({ onNavigate }: { onNavigate: (route: string) =
             ))}
           </div>
         ) : (
-          !loading && <p className="work-gallery-empty">Examples of real estate, event and brand work will appear here soon.</p>
+          !loading && <p className="work-gallery-empty">I'll add some real estate, event and brand shots here soon.</p>
         )}
       </section>
 
@@ -141,7 +136,7 @@ export default function WorkPage({ onNavigate }: { onNavigate: (route: string) =
         <div className="work-section-head">
           <p className="eyebrow">Get in touch</p>
           <h2>Tell me about the shoot.</h2>
-          <p>Send a few details about your listing, event or brand shoot and I&rsquo;ll get back to you with availability and a quote.</p>
+          <p>Flick me a few details about what you need and I&rsquo;ll get back to you with availability and a quote.</p>
         </div>
         <button className="solid-button" type="button" onClick={() => setContactOpen(true)}>
           Send an enquiry <ArrowRight size={15} aria-hidden="true" />
@@ -166,7 +161,7 @@ export default function WorkPage({ onNavigate }: { onNavigate: (route: string) =
       {contactOpen ? (
         <ContactOverlay
           context="Professional work enquiry"
-          intro="Tell me about your real estate listing, event or brand shoot and I'll get back to you with availability and a quote."
+          intro="Tell me a bit about your listing, event or brand shoot and I'll get back to you with availability and a quote."
           onClose={() => setContactOpen(false)}
         />
       ) : null}

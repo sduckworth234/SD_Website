@@ -5620,8 +5620,9 @@ body:has(.contact-overlay) {
 .shop-catalogue-card small.is-eligible { color: var(--success); }
 .shop-catalogue-select { position: absolute; top: 8px; left: 8px; z-index: 1; display: flex; padding: 3px; background: rgba(var(--paper-rgb), .82); border-radius: 3px; }
 .shop-catalogue-select input { margin: 0; }
-.shop-catalogue-card-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.shop-catalogue-card-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .shop-catalogue-card-actions .sale-toggle { grid-column: auto; }
+.shop-catalogue-card-actions .size-override-toggle { grid-column: 1 / -1; }
 .size-override-toggle { min-height: 34px; padding: 0 10px; border: 1px solid var(--line); font-size: 9px; }
 .size-override-panel { grid-column: 1 / -1; display: grid; gap: 8px; margin-top: 4px; padding: 10px; border-top: 1px dashed var(--line); }
 .size-override-warn { margin: 0; padding: 6px 8px; background: rgba(var(--danger-rgb, 179, 64, 47), .1); color: var(--danger); font-size: 9.5px; line-height: 1.4; }
@@ -6064,107 +6065,108 @@ body:has(.contact-overlay) {
 }
 
 /* ================= Professional work: home banner + About card ================= */
-/* Full-bleed promo card, same weight/gutter/rounding as .hero-2026 above it —
-   replaces the old plain-text "Let's work together" prompt. */
+/* Same card formula as .home-print-promo immediately above it on the home
+   page (identical width/max-width/margin/border/radius/shadow), so the two
+   line up exactly instead of one being a full-bleed photo banner and the
+   other a centered paper card. */
 .pro-work-promo {
   position: relative;
-  display: block;
-  overflow: hidden;
-  width: auto;
-  min-height: 340px;
-  margin: clamp(36px, 7vw, 84px) clamp(18px, 4vw, 56px) clamp(48px, 7vw, 92px);
-  padding: 0;
-  border: 0;
-  border-radius: 8px;
-  background: var(--shade);
-  cursor: var(--circle-cursor), pointer;
-  --reveal-distance: 16px;
-  --reveal-scale: 0.995;
-}
-
-.pro-work-promo:focus-visible {
-  outline: 2px solid var(--on-photo);
-  outline-offset: 3px;
-}
-
-.pro-work-promo-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 30%;
-  transition: transform 1100ms cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-.pro-work-promo:hover .pro-work-promo-img,
-.pro-work-promo:focus-visible .pro-work-promo-img {
-  transform: scale(1.045);
-}
-
-.pro-work-promo::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(var(--shade-rgb), 0) 30%, rgba(var(--shade-rgb), 0.82) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(24px, 4vw, 56px);
+  width: calc(100% - clamp(28px, 7vw, 112px));
+  max-width: 1240px;
+  margin: 0 auto clamp(20px, 4vw, 52px);
+  padding: clamp(26px, 4.5vw, 48px) clamp(24px, 5vw, 56px);
+  border: 1px solid var(--line);
+  border-radius: clamp(12px, 1.5vw, 20px);
+  background: linear-gradient(145deg, rgba(var(--foam-rgb), 0.98), rgba(var(--paper-deep-rgb), 0.82));
+  box-shadow: 0 18px 55px rgba(var(--shade-rgb), 0.11);
+  --reveal-distance: 14px;
+  --reveal-scale: 0.997;
 }
 
 .pro-work-promo-copy {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  height: 100%;
-  min-height: 340px;
-  padding: clamp(22px, 3.6vw, 44px);
-  text-align: left;
-  color: var(--on-photo);
+  max-width: 46ch;
 }
 
 .pro-work-promo-copy .eyebrow {
   margin: 0 0 8px;
-  color: rgba(var(--on-photo-rgb), 0.82);
+  color: var(--sea);
 }
 
 .pro-work-promo-copy h2 {
   margin: 0 0 10px;
+  color: var(--ink);
   font-family: var(--font-sans);
   font-weight: var(--head-weight);
-  font-size: clamp(1.6rem, 3.2vw, 2.6rem);
+  font-size: clamp(1.5rem, 2.6vw, 2.1rem);
   letter-spacing: var(--head-track);
-  line-height: 1;
+  line-height: 1.08;
   text-wrap: balance;
 }
 
-.pro-work-promo-copy p {
-  margin: 0;
-  max-width: 36ch;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  color: rgba(var(--on-photo-rgb), 0.88);
+.pro-work-promo-copy > p {
+  margin: 0 0 18px;
+  max-width: 46ch;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
 }
 
-.pro-work-promo-cta {
-  flex: 0 0 auto;
+.pro-work-promo-link {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding-bottom: 3px;
-  border-bottom: 1px solid rgba(var(--on-photo-rgb), 0.55);
+  gap: 10px;
+  padding: 11px 0 9px;
+  border: 0;
+  border-bottom: 1px solid rgba(var(--ink-rgb), 0.45);
+  background: none;
+  color: var(--ink);
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
-  white-space: nowrap;
+  cursor: var(--circle-cursor), pointer;
+  transition: gap 180ms ease, border-color 180ms ease;
 }
 
-@media (max-width: 640px) {
-  .pro-work-promo { margin-left: 14px; margin-right: 14px; min-height: 300px; }
-  .pro-work-promo-copy { flex-direction: column; align-items: flex-start; gap: 16px; min-height: 300px; }
+.pro-work-promo-link:hover,
+.pro-work-promo-link:focus-visible {
+  gap: 16px;
+  border-color: var(--ink);
+}
+
+.pro-work-promo-thumb {
+  flex: 0 0 auto;
+  position: relative;
+  overflow: hidden;
+  width: clamp(160px, 22vw, 260px);
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: var(--paper-deep);
+  cursor: var(--circle-cursor), pointer;
+}
+
+.pro-work-promo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 900ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.pro-work-promo-thumb:hover img,
+.pro-work-promo-thumb:focus-visible img {
+  transform: scale(1.06);
+}
+
+@media (max-width: 760px) {
+  .pro-work-promo { flex-direction: column; align-items: flex-start; text-align: left; }
+  .pro-work-promo-thumb { width: 100%; aspect-ratio: 16 / 9; }
 }
 
 /* About overlay: the compact professional-work card + contact details row

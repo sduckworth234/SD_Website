@@ -7390,14 +7390,14 @@ function AboutOverlay({
             <button className="solid-button" type="button" onClick={onContact}>Contact me</button>
           </div>
         </div>
-        <button className="about-work-card" type="button" onClick={onViewWork} aria-label="See professional work">
+        <button className="about-work-card" type="button" onClick={onViewWork} aria-label="See my professional work">
           {workPhoto ? (
             <img src={workPhoto.imageUrl} alt="" loading="lazy" decoding="async" />
           ) : null}
           <span className="about-work-card-copy">
-            <span className="eyebrow">Available for hire</span>
-            <strong>Real estate, events &amp; brand work</strong>
-            <span className="about-work-card-cta">See professional work <ArrowRight size={14} aria-hidden="true" /></span>
+            <span className="eyebrow">Also available for hire</span>
+            <strong>I also shoot real estate, events &amp; brand work</strong>
+            <span className="about-work-card-cta">See my work <ArrowRight size={14} aria-hidden="true" /></span>
           </span>
         </button>
         <div className="about-details">
@@ -7411,24 +7411,26 @@ function AboutOverlay({
   );
 }
 
-// The home page's professional-work promo: a full-bleed banner (same weight
-// as Recent Work / the 2026 Europe hero) that sits where the old "Let's work
-// together" prompt used to, and clicks through to /work.
+// The home page's professional-work promo: a paper card matching
+// .home-print-promo's box (same width/margin/border/radius) that sits where
+// the old "Let's work together" prompt used to, and clicks through to /work.
 function ProfessionalWorkPromo({ photo, onOpen }: { photo: Photo | null; onOpen: () => void }) {
   return (
-    <button className="pro-work-promo scroll-reveal" type="button" onClick={onOpen} aria-label="See professional work — real estate, events and brand photography">
+    <section className="pro-work-promo scroll-reveal" aria-label="Professional work">
+      <div className="pro-work-promo-copy">
+        <p className="eyebrow">Also available for hire</p>
+        <h2>I also shoot real estate, events &amp; brand work.</h2>
+        <p>If you need a drone or a camera for a listing, an event or your brand, I&rsquo;m around and keen to help.</p>
+        <button className="pro-work-promo-link" type="button" onClick={onOpen}>
+          See my work <ArrowRight size={14} aria-hidden="true" />
+        </button>
+      </div>
       {photo ? (
-        <img className="pro-work-promo-img" src={photo.imageUrl} alt="" loading="lazy" decoding="async" />
+        <button className="pro-work-promo-thumb" type="button" onClick={onOpen} aria-label="See professional work examples">
+          <img src={photo.imageUrl} alt="" loading="lazy" decoding="async" />
+        </button>
       ) : null}
-      <span className="pro-work-promo-copy">
-        <span>
-          <span className="eyebrow">Available for hire</span>
-          <h2>Real estate, events &amp; brand work</h2>
-          <p>Aerial and ground coverage for agents, venues and companies across Sydney and beyond.</p>
-        </span>
-        <span className="pro-work-promo-cta">Enquire <ArrowRight size={14} aria-hidden="true" /></span>
-      </span>
-    </button>
+    </section>
   );
 }
 
