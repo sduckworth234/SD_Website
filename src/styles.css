@@ -1532,141 +1532,211 @@ body:has(.contact-overlay) {
   scroll-margin-top: 92px;
 }
 
-/* 2026 Europe hero: cinematic crossfade banner, a themed sibling to .hero
-   above it. Inset like a card (same rounding + gutter as the Recent Work
-   tiles) with the same breathing room above it that every other home section
-   gets, rather than bleeding flush into the landing hero. Clickable through
-   to the full gallery — a card, not just a picture. */
-.hero-2026 {
+/* 2026 Europe hijack: a bounded, pinned horizontal scroll-through (not a
+   crossfade) — the wrapper carries the scroll budget (3 photos × ~85vh), the
+   sticky inner card is the same inset-card language as the rest of the home
+   page (Recent Work rounding/gutter), and once the wrapper's extra height is
+   consumed the section un-stickies and normal scrolling continues straight
+   into the ticker/Recent Work. Desktop-only mechanic: below 761px (and under
+   prefers-reduced-motion) the wrapper height collapses to auto and the panels
+   become a plain flex row — no pinning fights native touch-scroll physics. */
+.europe-hijack-wrap {
   position: relative;
-  overflow: hidden;
-  display: block;
-  width: auto;
-  height: 46vh;
-  min-height: 320px;
-  margin: clamp(36px, 7vw, 84px) clamp(18px, 4vw, 56px) 0;
-  border: 0;
-  border-radius: 8px;
-  background: var(--shade);
-  cursor: var(--circle-cursor), pointer;
+  height: 255vh;
+  margin: clamp(36px, 7vw, 84px) 0 0;
   --reveal-distance: 16px;
   --reveal-scale: 0.995;
 }
 
-.hero-2026:focus-visible {
-  outline: 2px solid var(--on-photo);
-  outline-offset: 3px;
+.europe-hijack-sticky {
+  position: sticky;
+  top: 0;
+  height: 86vh;
+  min-height: 420px;
+  margin: 0 clamp(18px, 4vw, 56px);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--shade);
 }
 
-.hero-2026-photos {
-  position: absolute;
-  inset: 0;
+.europe-hijack-track {
+  display: flex;
+  height: 100%;
+  will-change: transform;
 }
 
-.hero-2026-photos::after {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  content: "";
-  transition: opacity 400ms ease;
-  background:
-    linear-gradient(180deg, rgba(var(--shade-rgb), 0.5), rgba(var(--shade-rgb), 0.05) 30%, rgba(var(--shade-rgb), 0.1) 55%, rgba(var(--shade-rgb), 0.62)),
-    radial-gradient(circle at 50% 42%, rgba(var(--shade-rgb), 0), rgba(var(--shade-rgb), 0.2) 98%);
+.europe-hijack-panel {
+  position: relative;
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--circle-cursor), pointer;
 }
 
-.hero-2026:hover .hero-2026-photos::after,
-.hero-2026:focus-visible .hero-2026-photos::after {
-  opacity: 0.82;
-}
-
-.hero-2026-frame {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 1400ms ease;
-}
-
-.hero-2026-frame .smart-img {
+.europe-hijack-panel .smart-img,
+.europe-hijack-panel img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.hero-2026-frame.is-active {
-  opacity: 1;
-  animation: h26-kenburns 9000ms ease both;
+.europe-hijack-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(var(--shade-rgb), 0.5), rgba(var(--shade-rgb), 0.05) 30%, rgba(var(--shade-rgb), 0.1) 55%, rgba(var(--shade-rgb), 0.62)),
+    radial-gradient(circle at 50% 42%, rgba(var(--shade-rgb), 0), rgba(var(--shade-rgb), 0.2) 98%);
 }
 
-@keyframes h26-kenburns {
-  from { transform: scale(1); }
-  to { transform: scale(1.07); }
+.europe-hijack-cap {
+  position: absolute;
+  right: clamp(16px, 3vw, 28px);
+  bottom: clamp(16px, 3vw, 28px);
+  z-index: 1;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(var(--on-photo-rgb), 0.85);
 }
 
-.hero-2026-copy {
-  position: relative;
+.europe-hijack-head {
+  position: absolute;
   z-index: 2;
-  height: 100%;
+  left: clamp(18px, 4vw, 40px);
+  bottom: clamp(18px, 4vw, 40px);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  text-align: center;
+  gap: 12px;
   color: var(--on-photo);
-  padding: 0 clamp(18px, 4vw, 56px);
+  pointer-events: none;
 }
 
-/* Sized for a short phrase ("Europe 2026"), not just a year — hence the smaller
-   vw factor plus nowrap, so it holds one line down to narrow phones. */
-.hero-2026-year {
+.europe-hijack-year {
   margin: 0;
-  max-width: 94vw;
+  max-width: 80vw;
   font-family: var(--font-sans);
   font-weight: 600;
-  font-size: clamp(2.5rem, 8.4vw, 6rem);
-  line-height: 0.92;
-  letter-spacing: -0.045em;
+  font-size: clamp(2.2rem, 6.4vw, 4.4rem);
+  line-height: 0.94;
+  letter-spacing: -0.04em;
   white-space: nowrap;
   text-shadow: 0 2px 44px rgba(0, 0, 0, 0.36);
-  font-variant-numeric: tabular-nums;
 }
 
-.hero-2026-route {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: rgb(var(--mint-rgb));
-}
+.europe-hijack-route { display: flex; align-items: center; gap: 10px; color: rgb(var(--mint-rgb)); }
+.europe-hijack-route .dot { width: 4px; height: 4px; border-radius: 50%; background: rgb(var(--mint-rgb)); }
+.europe-hijack-route .seg { width: 30px; height: 1px; background: linear-gradient(90deg, rgba(var(--mint-rgb), 0.15), rgba(var(--mint-rgb), 0.7), rgba(var(--mint-rgb), 0.15)); }
 
-.hero-2026-route .dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: rgb(var(--mint-rgb));
-}
-
-.hero-2026-route .seg {
-  width: 30px;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(var(--mint-rgb), 0.15), rgba(var(--mint-rgb), 0.7), rgba(var(--mint-rgb), 0.15));
-}
-
-.hero-2026-locs {
+.europe-hijack-locs {
   margin: 0;
-  font-size: 0.72rem;
-  letter-spacing: 0.28em;
+  font-size: 0.68rem;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
   color: rgba(var(--on-photo-rgb), 0.9);
   text-shadow: 0 1px 18px rgba(0, 0, 0, 0.4);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hero-2026-frame.is-active { animation: none; }
+.europe-hijack-meta {
+  position: absolute;
+  z-index: 2;
+  top: clamp(18px, 3vw, 32px);
+  right: clamp(18px, 4vw, 40px);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: rgba(var(--on-photo-rgb), 0.75);
+  pointer-events: none;
 }
 
-@media (max-width: 640px) {
-  .hero-2026 { height: 54vh; min-height: 360px; margin-left: 14px; margin-right: 14px; }
+.europe-hijack-bar {
+  position: absolute;
+  z-index: 2;
+  left: clamp(18px, 4vw, 40px);
+  right: clamp(18px, 4vw, 40px);
+  top: clamp(42px, 5.4vw, 56px);
+  height: 2px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 2px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.europe-hijack-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: rgb(var(--mint-rgb));
+}
+
+.europe-hijack-cta {
+  position: absolute;
+  z-index: 2;
+  right: clamp(18px, 4vw, 40px);
+  bottom: clamp(18px, 4vw, 40px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border: 0;
+  border-radius: 100px;
+  background: rgb(var(--on-photo-rgb));
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: var(--circle-cursor), pointer;
+  transition: transform 200ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+
+.europe-hijack-cta:hover,
+.europe-hijack-cta:focus-visible {
+  transform: translateY(-2px);
+}
+
+@media (max-width: 760px) {
+  .europe-hijack-wrap { height: auto; }
+  .europe-hijack-sticky { position: static; height: auto; margin: 0 14px; }
+  .europe-hijack-track { overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+  .europe-hijack-panel { flex: 0 0 88%; aspect-ratio: 4 / 5; scroll-snap-align: center; }
+  .europe-hijack-meta, .europe-hijack-bar { display: none; }
+  .europe-hijack-year { font-size: clamp(1.9rem, 9vw, 2.6rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .europe-hijack-wrap { height: auto; }
+  .europe-hijack-sticky { position: static; height: auto; }
+  .europe-hijack-panel { aspect-ratio: 4 / 5; }
+  .europe-hijack-track { flex-wrap: wrap; }
+}
+
+/* Location Divider: quiet connective strip between Collections and the
+   professional-work band — reads the currently-visible location set. */
+.location-divider {
+  max-width: 900px;
+  margin: clamp(36px, 6vw, 64px) auto;
+  padding: clamp(20px, 3vw, 30px) clamp(18px, 4vw, 40px);
+  text-align: center;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.location-divider .eyebrow { color: var(--muted); }
+
+.location-divider p {
+  margin: 8px 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 /* --- Instagram feed: the strip that closes the home page -------------------
@@ -6071,108 +6141,100 @@ body:has(.contact-overlay) {
 }
 
 /* ================= Professional work: home banner + About card ================= */
-/* Same card formula as .home-print-promo immediately above it on the home
-   page (identical width/max-width/margin/border/radius/shadow), so the two
-   line up exactly instead of one being a full-bleed photo banner and the
-   other a centered paper card. */
-.pro-work-promo {
+/* Full-bleed cinematic band — same inset-card language as the Europe hijack
+   above it (rounded, gutter-inset, photo-forward) rather than a boxed paper
+   card set apart from the rest of the page. The photo gets a slow scroll
+   parallax (JS-driven translateY, see ProfessionalWorkPromo). */
+.pro-work-band {
   position: relative;
+  overflow: hidden;
+  min-height: 62vh;
+  margin: 0 clamp(18px, 4vw, 56px) clamp(36px, 6vw, 72px);
+  border-radius: 8px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: clamp(24px, 4vw, 56px);
-  width: calc(100% - clamp(28px, 7vw, 112px));
-  max-width: 1240px;
-  margin: 0 auto clamp(20px, 4vw, 52px);
-  padding: clamp(26px, 4.5vw, 48px) clamp(24px, 5vw, 56px);
-  border: 1px solid var(--line);
-  border-radius: clamp(12px, 1.5vw, 20px);
-  background: linear-gradient(145deg, rgba(var(--foam-rgb), 0.98), rgba(var(--paper-deep-rgb), 0.82));
-  box-shadow: 0 18px 55px rgba(var(--shade-rgb), 0.11);
+  align-items: flex-end;
   --reveal-distance: 14px;
   --reveal-scale: 0.997;
 }
 
-.pro-work-promo-copy {
-  max-width: 46ch;
+.pro-work-band-photo {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--shade);
 }
 
-.pro-work-promo-copy .eyebrow {
-  margin: 0 0 8px;
-  color: var(--sea);
+.pro-work-band-photo img {
+  position: absolute;
+  inset: -6% 0;
+  width: 100%;
+  height: 112%;
+  object-fit: cover;
+  will-change: transform;
 }
 
-.pro-work-promo-copy h2 {
-  margin: 0 0 10px;
-  color: var(--ink);
+.pro-work-band::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, rgba(var(--shade-rgb), 0.82) 0%, rgba(var(--shade-rgb), 0.55) 34%, rgba(var(--shade-rgb), 0.12) 66%, rgba(var(--shade-rgb), 0.02) 100%);
+}
+
+.pro-work-band-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 44ch;
+  padding: clamp(28px, 5vw, 56px);
+  color: var(--on-photo);
+}
+
+.pro-work-band-copy .eyebrow { color: rgba(var(--on-photo-rgb), 0.82); }
+
+.pro-work-band-copy h2 {
+  margin: 0.16em 0 10px;
   font-family: var(--font-sans);
   font-weight: var(--head-weight);
-  font-size: clamp(1.5rem, 2.6vw, 2.1rem);
+  font-size: clamp(1.7rem, 3.2vw, 2.5rem);
   letter-spacing: var(--head-track);
-  line-height: 1.08;
+  line-height: 1.05;
   text-wrap: balance;
+  text-shadow: 0 2px 30px rgba(0, 0, 0, 0.3);
 }
 
-.pro-work-promo-copy > p {
-  margin: 0 0 18px;
-  max-width: 46ch;
-  color: var(--muted);
-  font-size: 0.92rem;
+.pro-work-band-copy > p {
+  margin: 0 0 20px;
+  max-width: 42ch;
+  color: rgba(var(--on-photo-rgb), 0.88);
+  font-size: 0.94rem;
   line-height: 1.55;
 }
 
-.pro-work-promo-link {
+.pro-work-band-link {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 11px 0 9px;
+  padding: 11px 20px;
   border: 0;
-  border-bottom: 1px solid rgba(var(--ink-rgb), 0.45);
-  background: none;
+  border-radius: 100px;
+  background: rgb(var(--on-photo-rgb));
   color: var(--ink);
   font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 650;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: var(--circle-cursor), pointer;
-  transition: gap 180ms ease, border-color 180ms ease;
+  transition: transform 200ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
 }
 
-.pro-work-promo-link:hover,
-.pro-work-promo-link:focus-visible {
-  gap: 16px;
-  border-color: var(--ink);
-}
-
-.pro-work-promo-thumb {
-  flex: 0 0 auto;
-  position: relative;
-  overflow: hidden;
-  width: clamp(160px, 22vw, 260px);
-  aspect-ratio: 4 / 3;
-  padding: 0;
-  border: 0;
-  border-radius: 8px;
-  background: var(--paper-deep);
-  cursor: var(--circle-cursor), pointer;
-}
-
-.pro-work-promo-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 900ms cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-.pro-work-promo-thumb:hover img,
-.pro-work-promo-thumb:focus-visible img {
-  transform: scale(1.06);
+.pro-work-band-link:hover,
+.pro-work-band-link:focus-visible {
+  transform: translateY(-2px);
 }
 
 @media (max-width: 760px) {
-  .pro-work-promo { flex-direction: column; align-items: flex-start; text-align: left; }
-  .pro-work-promo-thumb { width: 100%; aspect-ratio: 16 / 9; }
+  .pro-work-band { margin-left: 14px; margin-right: 14px; min-height: 52vh; }
 }
 
 /* About overlay: the compact professional-work card + contact details row

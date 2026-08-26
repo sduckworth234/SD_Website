@@ -827,7 +827,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
         <>
           {hero2026Photos.length ? (
             <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "hero_2026")} label="2026 Europe hero">
-              <Hero2026
+              <Hero2026Hijack
                 heading={settingValue.hero_2026_title || "Europe 2026"}
                 onOpen={() => goToGalleries(hero2026Target)}
                 photos={hero2026Photos}
@@ -860,6 +860,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "collection_cards")} label="Collections">
             <CollectionCards photos={publicPhotos} locations={locations} onOpen={openLocation} onOpenAll={() => goToGalleries()} isAdmin={isAdmin} onEdit={setEditingCollection} />
           </AdminHideable>
+          <LocationDivider locations={locationNames} />
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "contact_prompt")} label="Professional work banner">
             <ProfessionalWorkPromo photo={professionalHeroPhoto} onOpen={goToWork} />
           </AdminHideable>
@@ -2956,70 +2957,100 @@ function RotatingLocations({ locations }: { locations: string[] }) {
 // for the wordmark and the location ticker is read straight off the curated
 // photos' own `location` field, so nothing about which countries is hardcoded.
 // Renders nothing until at least one photo is curated.
-function Hero2026({ heading, photos, onOpen }: { heading: string; photos: Photo[]; onOpen: () => void }) {
-  const [index, setIndex] = useState(0);
+// Horizontal scroll-hijack: the section pins for a bounded scroll run (not
+// the whole page) while up to 3 admin-picked photos pan across underneath —
+// then releases back into normal scroll straight into the ticker/Recent Work.
+// Reuses the same hero_2026_photos/hero_2026_title settings as the old
+// crossfade banner; only the first 3 picks are used. Falls back to a static
+// first frame under prefers-reduced-motion or on narrow (touch) viewports,
+// where a pinned horizontal pan fights native scroll physics.
+function Hero2026Hijack({ heading, photos, onOpen }: { heading: string; photos: Photo[]; onOpen: () => void }) {
+  const shown = useMemo(() => photos.slice(0, 3), [photos]);
+  const wrapRef = useRef<HTMLElement | null>(null);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const fillRef = useRef<HTMLSpanElement | null>(null);
+  const countRef = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
-    setIndex(0);
-  }, [photos.length]);
+    const wrap = wrapRef.current;
+    const track = trackRef.current;
+    if (!wrap || !track) return undefined;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+    if (!window.matchMedia("(min-width: 761px)").matches) return undefined;
 
-  useEffect(() => {
-    if (photos.length <= 1) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const id = window.setInterval(() => setIndex((i) => (i + 1) % photos.length), 4500);
-    return () => window.clearInterval(id);
-  }, [photos.length]);
+    let ticking = false;
+    function update() {
+      if (!wrap || !track) return;
+      const vh = window.innerHeight;
+      const total = wrap.offsetHeight - vh;
+      const scrolled = -wrap.getBoundingClientRect().top;
+      const progress = total > 0 ? Math.max(0, Math.min(1, scrolled / total)) : 0;
+      const maxTranslate = Math.max(0, track.scrollWidth - track.clientWidth);
+      track.style.transform = `translateX(${(-progress * maxTranslate).toFixed(1)}px)`;
+      if (fillRef.current) fillRef.current.style.width = `${(progress * 100).toFixed(1)}%`;
+      if (countRef.current) {
+        countRef.current.textContent = String(Math.min(shown.length, Math.floor(progress * shown.length) + 1)).padStart(2, "0");
+      }
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => { update(); ticking = false; });
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    update();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [shown.length]);
 
-  const locationTicker = useMemo(() => {
+  const locationRoute = useMemo(() => {
     const seen = new Set<string>();
     const list: string[] = [];
-    for (const photo of photos) {
+    for (const photo of shown) {
       if (photo.location && !seen.has(photo.location)) {
         seen.add(photo.location);
         list.push(photo.location);
       }
     }
     return list;
-  }, [photos]);
+  }, [shown]);
 
-  if (!photos.length) return null;
+  if (!shown.length) return null;
 
   return (
-    <section
-      aria-label={`${heading} — view the gallery`}
-      className="hero-2026 scroll-reveal"
-      onClick={onOpen}
-      onKeyDown={(event) => {
-        if (event.key !== "Enter" && event.key !== " ") return;
-        event.preventDefault();
-        onOpen();
-      }}
-      role="link"
-      tabIndex={0}
-    >
-      <div className="hero-2026-photos" aria-hidden="true">
-        {photos.map((photo, i) => (
-          <div className={`hero-2026-frame${i === index ? " is-active" : ""}`} key={photo.id}>
-            <SmartImage
-              alt=""
-              priority={i === 0}
-              sizes="100vw"
-              src={photo.imageUrl}
-              srcSet={srcSetFor(photo)}
-            />
-          </div>
-        ))}
-      </div>
-      <div className="hero-2026-copy">
-        <p className="hero-2026-year">{heading}</p>
-        <div className="hero-2026-route" aria-hidden="true">
-          <span className="dot" />
-          <span className="seg" />
-          <Plane size={13} style={{ transform: "rotate(45deg)" }} />
-          <span className="seg" />
-          <span className="dot" />
+    <section className="europe-hijack-wrap scroll-reveal" ref={wrapRef} aria-label={`${heading} — view the gallery`}>
+      <div className="europe-hijack-sticky">
+        <div className="europe-hijack-track" ref={trackRef}>
+          {shown.map((photo, i) => (
+            <button className="europe-hijack-panel" key={photo.id} type="button" onClick={onOpen}>
+              <SmartImage alt="" priority={i === 0} sizes="100vw" src={photo.imageUrl} srcSet={srcSetFor(photo)} />
+              {photo.location ? <span className="europe-hijack-cap">{photo.location}</span> : null}
+            </button>
+          ))}
         </div>
-        {locationTicker.length ? <p className="hero-2026-locs">{locationTicker.join(" · ")}</p> : null}
+        <div className="europe-hijack-head">
+          <p className="europe-hijack-year">{heading}</p>
+          {locationRoute.length ? (
+            <div className="europe-hijack-route">
+              <span className="dot" />
+              <span className="seg" />
+              <Plane size={13} style={{ transform: "rotate(45deg)" }} />
+              <span className="seg" />
+              <span className="dot" />
+            </div>
+          ) : null}
+          {locationRoute.length ? <p className="europe-hijack-locs">{locationRoute.join(" · ")}</p> : null}
+        </div>
+        {shown.length > 1 ? (
+          <>
+            <div className="europe-hijack-meta"><span ref={countRef}>01</span>/{String(shown.length).padStart(2, "0")}</div>
+            <div className="europe-hijack-bar"><span className="europe-hijack-fill" ref={fillRef} /></div>
+          </>
+        ) : null}
+        <button className="europe-hijack-cta" type="button" onClick={onOpen}>View the gallery <ArrowRight size={13} aria-hidden="true" /></button>
       </div>
     </section>
   );
@@ -4525,7 +4556,7 @@ function CollectionsAdmin({ photos }: { photos: Photo[] }) {
 // The public visibility flags the admin can toggle. Labels live here (not just
 // the DB) so the panel reads well even if a seed row is missing.
 const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
-  { key: "hero_2026", label: "Home — 2026 Europe hero", hint: "The crossfading trip banner near the top of the home page." },
+  { key: "hero_2026", label: "Home — 2026 Europe hero", hint: "The pinned horizontal scroll-through trip banner near the top of the home page." },
   { key: "ticker_banner", label: "Home — Scrolling banner", hint: "The horizontal scrolling promo strip between the Europe hero and Recent Work." },
   { key: "recent_work", label: "Home — Recent Work mosaic", hint: "The editorial photo mosaic near the top of the home page." },
   { key: "home_print_carousel", label: "Home — Available prints carousel", hint: "The light framed-print card directly below Recent Work." },
@@ -4643,9 +4674,9 @@ function VisibilityAdmin({ photos, locations }: { photos: Photo[]; locations: Ga
       </div>
       <div className="admin-sec-head vis-banner-head"><Images size={16} aria-hidden="true" /><h2>2026 Europe hero</h2></div>
       <p className="admin-sec-hint">
-        Photos that crossfade in the home page's "2026" banner. Order sets the crossfade sequence and the
-        location ticker beneath it — pick them in the order you want the trip to read. Empty = the banner
-        stays hidden.
+        The 3 photos that pan across in the home page's "2026" banner (a brief, pinned scroll-through — it
+        releases straight back into normal scrolling after). Order sets the pan sequence and the location
+        line beneath it. Empty = the banner stays hidden.
       </p>
       <div className="hero2026-strip">
         {hero2026Chosen.length ? (
@@ -4698,9 +4729,9 @@ function VisibilityAdmin({ photos, locations }: { photos: Photo[]; locations: Ga
       </label>
       {curatingHero2026 ? (
         <OrderedPhotoPicker
-          title="2026 Europe hero carousel"
-          hint="Pick and order up to 16 photos from the trip. They crossfade in that order on the home page; the ticker beneath reads their locations, first-seen order."
-          max={16}
+          title="2026 Europe hero"
+          hint="Pick and order up to 3 photos from the trip. They pan across in that order on the home page; the line beneath reads their locations, first-seen order."
+          max={3}
           photos={photos.filter((p) => p.published && regionByLocation.get(p.location) === "Europe")}
           initialIds={hero2026Ids}
           onClose={() => setCuratingHero2026(false)}
@@ -7411,25 +7442,69 @@ function AboutOverlay({
   );
 }
 
-// The home page's professional-work promo: a paper card matching
-// .home-print-promo's box (same width/margin/border/radius) that sits where
-// the old "Let's work together" prompt used to, and clicks through to /work.
-function ProfessionalWorkPromo({ photo, onOpen }: { photo: Photo | null; onOpen: () => void }) {
+// A quiet section divider between Collections and the professional-work
+// band — the same "where these were shot" line the Europe hijack uses under
+// its heading, reused here as connective tissue between two otherwise
+// unrelated sections rather than packed into any one hero.
+function LocationDivider({ locations }: { locations: string[] }) {
+  if (!locations.length) return null;
   return (
-    <section className="pro-work-promo scroll-reveal" aria-label="Professional work">
-      <div className="pro-work-promo-copy">
+    <div className="location-divider scroll-reveal">
+      <span className="eyebrow">Shot across</span>
+      <p>{locations.join(" · ")}</p>
+    </div>
+  );
+}
+
+// The home page's professional-work promo: a full-bleed cinematic band (same
+// inset-card language as .hero-2026, not a separate paper-card component),
+// with a slow scroll parallax on the photo. Sits where the old "Let's work
+// together" prompt used to, and clicks through to /work.
+function ProfessionalWorkPromo({ photo, onOpen }: { photo: Photo | null; onOpen: () => void }) {
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!img) return undefined;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
+    let ticking = false;
+    function update() {
+      if (!img) return;
+      const rect = img.parentElement!.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const progress = Math.max(0, Math.min(1, (vh - rect.top) / (vh + rect.height)));
+      const shift = (progress - 0.5) * 36;
+      img.style.transform = `translateY(${shift.toFixed(1)}px) scale(1.12)`;
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => { update(); ticking = false; });
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    update();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [photo?.id]);
+
+  return (
+    <section className="pro-work-band scroll-reveal" aria-label="Professional work">
+      {photo ? (
+        <div className="pro-work-band-photo">
+          <img ref={imgRef} src={photo.imageUrl} alt="" loading="lazy" decoding="async" />
+        </div>
+      ) : null}
+      <div className="pro-work-band-copy">
         <p className="eyebrow">Available for hire</p>
         <h2>I also shoot real estate, events &amp; brand work.</h2>
         <p>If you need a drone or a camera for a listing, an event or your brand, I&rsquo;m keen to help.</p>
-        <button className="pro-work-promo-link" type="button" onClick={onOpen}>
+        <button className="pro-work-band-link" type="button" onClick={onOpen}>
           See my work <ArrowRight size={14} aria-hidden="true" />
         </button>
       </div>
-      {photo ? (
-        <button className="pro-work-promo-thumb" type="button" onClick={onOpen} aria-label="See professional work examples">
-          <img src={photo.imageUrl} alt="" loading="lazy" decoding="async" />
-        </button>
-      ) : null}
     </section>
   );
 }
