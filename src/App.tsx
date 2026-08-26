@@ -860,7 +860,6 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "collection_cards")} label="Collections">
             <CollectionCards photos={publicPhotos} locations={locations} onOpen={openLocation} onOpenAll={() => goToGalleries()} isAdmin={isAdmin} onEdit={setEditingCollection} />
           </AdminHideable>
-          <LocationDivider locations={locationNames} />
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "contact_prompt")} label="Professional work banner">
             <ProfessionalWorkPromo photo={professionalHeroPhoto} onOpen={goToWork} />
           </AdminHideable>
@@ -7438,20 +7437,6 @@ function AboutOverlay({
           <a href={content.instagramUrl} target="_blank" rel="noopener noreferrer"><Instagram size={14} aria-hidden="true" /> @{content.instagramHandle}</a>
         </div>
       </section>
-    </div>
-  );
-}
-
-// A quiet section divider between Collections and the professional-work
-// band — the same "where these were shot" line the Europe hijack uses under
-// its heading, reused here as connective tissue between two otherwise
-// unrelated sections rather than packed into any one hero.
-function LocationDivider({ locations }: { locations: string[] }) {
-  if (!locations.length) return null;
-  return (
-    <div className="location-divider scroll-reveal">
-      <span className="eyebrow">Shot across</span>
-      <p>{locations.join(" · ")}</p>
     </div>
   );
 }

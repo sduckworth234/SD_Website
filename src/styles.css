@@ -1717,28 +1717,6 @@ body:has(.contact-overlay) {
   .europe-hijack-track { flex-wrap: wrap; }
 }
 
-/* Location Divider: quiet connective strip between Collections and the
-   professional-work band — reads the currently-visible location set. */
-.location-divider {
-  max-width: 900px;
-  margin: clamp(36px, 6vw, 64px) auto;
-  padding: clamp(20px, 3vw, 30px) clamp(18px, 4vw, 40px);
-  text-align: center;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-}
-
-.location-divider .eyebrow { color: var(--muted); }
-
-.location-divider p {
-  margin: 8px 0 0;
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
 /* --- Instagram feed: the strip that closes the home page -------------------
    Light to match the rest of the page: paper ground, hairline card borders,
    caption always readable beneath each post (no hover), so it reads the same
