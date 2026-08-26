@@ -6251,12 +6251,19 @@ body:has(.contact-overlay) {
 /* ================= /work: the professional-work services & enquiry page ================= */
 .work-page { background: var(--paper); min-height: 100dvh; }
 
+/* Centered cinematic hero — same formula as the home page's .landing-stage.
+   cinematic (full-viewport photo, generous top/bottom padding that clears
+   the fixed header, centered copy) instead of a left/bottom-pinned banner. */
 .work-hero {
   position: relative;
   overflow: hidden;
-  min-height: 62vh;
+  min-height: 100svh;
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: clamp(56px, 12vh, 140px) clamp(18px, 4vw, 56px);
 }
 
 .work-hero-img {
@@ -6272,18 +6279,20 @@ body:has(.contact-overlay) {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(var(--shade-rgb), 0.35) 0%, rgba(var(--shade-rgb), 0.15) 35%, rgba(var(--shade-rgb), 0.88) 100%);
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(var(--shade-rgb), 0.34), rgba(var(--shade-rgb), 0.03) 30%, rgba(var(--shade-rgb), 0.07) 58%, rgba(var(--shade-rgb), 0.5)),
+    radial-gradient(circle at 50% 42%, rgba(var(--shade-rgb), 0), rgba(var(--shade-rgb), 0.15) 98%);
 }
 
 .work-hero-copy {
   position: relative;
   z-index: 1;
   max-width: 720px;
-  padding: clamp(28px, 5vw, 64px) clamp(18px, 5vw, 64px) clamp(40px, 6vw, 72px);
   color: var(--on-photo);
 }
 
-.work-hero-copy .eyebrow { color: rgba(var(--on-photo-rgb), 0.82); }
+.work-hero-copy .eyebrow { color: rgba(var(--on-photo-rgb), 0.86); }
 
 .work-hero-copy h1 {
   margin: 0.12em 0 14px;
@@ -6293,10 +6302,11 @@ body:has(.contact-overlay) {
   letter-spacing: var(--head-track);
   line-height: 1.03;
   text-wrap: balance;
+  text-shadow: 0 2px 44px rgba(0, 0, 0, 0.36);
 }
 
 .work-hero-copy > p {
-  margin: 0 0 22px;
+  margin: 0 auto 22px;
   max-width: 54ch;
   font-size: 1rem;
   line-height: 1.55;
@@ -6311,7 +6321,7 @@ body:has(.contact-overlay) {
 
 .work-services {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: clamp(16px, 2.4vw, 28px);
   max-width: 1180px;
   margin: 0 auto;
@@ -6407,11 +6417,10 @@ body:has(.contact-overlay) {
 .work-contact-details a:hover { color: var(--sea); }
 
 @media (max-width: 900px) {
-  .work-services { grid-template-columns: repeat(2, 1fr); }
+  .work-services { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 560px) {
-  .work-services { grid-template-columns: 1fr; }
   .about-work-card { flex-direction: column; }
 }
 

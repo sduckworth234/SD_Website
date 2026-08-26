@@ -5,9 +5,14 @@ import { usePublicContent } from "./lib/publicContent";
 import { useSeo } from "./lib/seo";
 import { Header } from "./components/Header";
 import { ContactOverlay } from "./components/ContactOverlay";
-import { PhotoLightbox, photoLightboxSrcSet, PHOTO_LIGHTBOX_SIZES } from "./components/PhotoLightbox";
+import { PhotoLightbox, photoLightboxSrcSet } from "./components/PhotoLightbox";
 import { SmartImage } from "./components/SmartImage";
 import type { Photo } from "./types";
+
+// Three-column box grid (see .work-gallery-grid), same shape as the main
+// gallery's GRID_SIZES — not PHOTO_LIGHTBOX_SIZES, which describes the much
+// larger modal view and was picking unnecessarily low-res thumbnails here.
+const WORK_GRID_SIZES = "(max-width: 700px) 45vw, (max-width: 1180px) 30vw, 380px";
 
 // Hardcoded fallback so the hero always has a photo before any row is marked
 // is_professional_work in the admin Shop tab — the "Flare" 2024 Manly wharf
@@ -121,7 +126,7 @@ export default function WorkPage({ onNavigate }: { onNavigate: (route: string) =
                 <SmartImage
                   src={photo.imageUrl}
                   srcSet={photoLightboxSrcSet(photo)}
-                  sizes={PHOTO_LIGHTBOX_SIZES}
+                  sizes={WORK_GRID_SIZES}
                   alt={photo.title}
                 />
               </button>
