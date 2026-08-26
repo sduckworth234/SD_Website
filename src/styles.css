@@ -1703,11 +1703,34 @@ body:has(.contact-overlay) {
 
 @media (max-width: 760px) {
   .europe-hijack-wrap { height: auto; }
-  .europe-hijack-sticky { position: static; height: auto; margin: 0 14px; }
-  .europe-hijack-track { overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
-  .europe-hijack-panel { flex: 0 0 88%; aspect-ratio: 4 / 5; scroll-snap-align: center; }
+  .europe-hijack-sticky {
+    position: static;
+    height: auto;
+    margin: 0 14px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .europe-hijack-track {
+    display: flex;
+    height: auto;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .europe-hijack-track::-webkit-scrollbar { display: none; }
+  .europe-hijack-panel {
+    flex: 0 0 100%;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 3 / 4;
+    scroll-snap-align: start;
+  }
   .europe-hijack-meta, .europe-hijack-bar { display: none; }
   .europe-hijack-year { font-size: clamp(1.9rem, 9vw, 2.6rem); }
+  .europe-hijack-head { left: 16px; bottom: 16px; }
+  .europe-hijack-cap { right: 16px; bottom: 16px; }
+  .europe-hijack-cta { right: 16px; bottom: auto; top: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
