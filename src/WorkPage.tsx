@@ -9,10 +9,10 @@ import { PhotoLightbox, photoLightboxSrcSet } from "./components/PhotoLightbox";
 import { SmartImage } from "./components/SmartImage";
 import type { Photo } from "./types";
 
-// Three-column box grid (see .work-gallery-grid), same shape as the main
-// gallery's GRID_SIZES — not PHOTO_LIGHTBOX_SIZES, which describes the much
-// larger modal view and was picking unnecessarily low-res thumbnails here.
-const WORK_GRID_SIZES = "(max-width: 700px) 45vw, (max-width: 1180px) 30vw, 380px";
+// Sizing for the uniform ~340px gallery tiles (see .work-gallery-grid) — not
+// PHOTO_LIGHTBOX_SIZES, which describes the much larger modal view and was
+// picking unnecessarily low-res thumbnails here.
+const WORK_GRID_SIZES = "(max-width: 700px) 45vw, (max-width: 1180px) 30vw, 340px";
 
 // Hardcoded fallback so the hero always has a photo before any row is marked
 // is_professional_work in the admin Shop tab — the "Flare" 2024 Manly wharf
@@ -23,18 +23,18 @@ const FALLBACK_HERO_URL =
 const SERVICES = [
   {
     icon: Building2,
-    title: "Real estate & aerial",
-    body: "Drone shots and listing photos that show a place off properly, inside and out.",
+    title: "Property",
+    body: "Drone gives bird's-eye and oblique angles you can't get any other way — photo and video, inside and out.",
   },
   {
     icon: PartyPopper,
     title: "Events",
-    body: "I'll get around and get the shots without getting in the way.",
+    body: "Commercial events, pubs, clubs, outdoor gigs — including drone coverage.",
   },
   {
     icon: Sparkles,
     title: "Brand & content",
-    body: "Photos for your website, socials or a campaign — shot to suit what you're going for.",
+    body: "Photos and video for social media, your website, or a campaign.",
   },
 ];
 
@@ -89,9 +89,9 @@ export default function WorkPage({ onNavigate }: { onNavigate: (route: string) =
           decoding="async"
         />
         <div className="work-hero-copy">
-          <p className="eyebrow">Also available for hire</p>
+          <p className="eyebrow">Available for hire</p>
           <h1>I also shoot real estate, events &amp; brand work.</h1>
-          <p>I've been doing this for ten years, mostly for myself — but I take on real estate, event and brand jobs too. Based in Sydney, happy to travel.</p>
+          <p>I've been doing this for ten years, mostly for myself — but I take on real estate, event and brand jobs too. Based in Sydney.</p>
           <button className="solid-button" type="button" onClick={() => setContactOpen(true)}>
             Get in touch <ArrowRight size={15} aria-hidden="true" />
           </button>
@@ -114,10 +114,10 @@ export default function WorkPage({ onNavigate }: { onNavigate: (route: string) =
           <h2>{photos.length ? "A few examples." : "Examples coming soon."}</h2>
         </div>
         {photos.length ? (
-          <div className="gallery view-box work-gallery-grid">
+          <div className="work-gallery-grid">
             {photos.map((photo) => (
               <button
-                className="photo-tile"
+                className="photo-tile work-gallery-tile"
                 key={photo.id}
                 type="button"
                 onClick={() => setSelected(photo)}

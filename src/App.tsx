@@ -7395,7 +7395,7 @@ function AboutOverlay({
             <img src={workPhoto.imageUrl} alt="" loading="lazy" decoding="async" />
           ) : null}
           <span className="about-work-card-copy">
-            <span className="eyebrow">Also available for hire</span>
+            <span className="eyebrow">Available for hire</span>
             <strong>I also shoot real estate, events &amp; brand work</strong>
             <span className="about-work-card-cta">See my work <ArrowRight size={14} aria-hidden="true" /></span>
           </span>
@@ -7418,9 +7418,9 @@ function ProfessionalWorkPromo({ photo, onOpen }: { photo: Photo | null; onOpen:
   return (
     <section className="pro-work-promo scroll-reveal" aria-label="Professional work">
       <div className="pro-work-promo-copy">
-        <p className="eyebrow">Also available for hire</p>
+        <p className="eyebrow">Available for hire</p>
         <h2>I also shoot real estate, events &amp; brand work.</h2>
-        <p>If you need a drone or a camera for a listing, an event or your brand, I&rsquo;m around and keen to help.</p>
+        <p>If you need a drone or a camera for a listing, an event or your brand, I&rsquo;m keen to help.</p>
         <button className="pro-work-promo-link" type="button" onClick={onOpen}>
           See my work <ArrowRight size={14} aria-hidden="true" />
         </button>
