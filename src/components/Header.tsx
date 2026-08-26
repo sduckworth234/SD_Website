@@ -108,6 +108,11 @@ export function Header({
         <a className="brand" href="/" onClick={(event) => navTo(event, "/")} aria-label="SD Gallery home">SD</a>
       )}
       <nav aria-label="Primary navigation">
+        {!isHome ? (
+          <a className="nav-link" href="/" onClick={(event) => navTo(event, "/")}>
+            Home
+          </a>
+        ) : null}
         <a
           className={`nav-link${path.startsWith("/galleries") ? " is-active" : ""}`}
           href="/galleries"
