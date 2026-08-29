@@ -1805,10 +1805,19 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   const studioPhoto = studioPhotos[studioIndex % Math.max(studioPhotos.length, 1)];
   const studioOrientation = studioPhoto ? orientOf(studioPhoto) : "portrait";
 
+  // Advance to the next/previous card exactly — not a viewport-percentage
+  // guess, which could land mid-card instead of on the snap point.
   function scrollEditions(direction: 1 | -1) {
     const track = editionsTrackRef.current;
     if (!track) return;
-    track.scrollBy({ left: direction * Math.max(320, track.clientWidth * 0.78), behavior: "smooth" });
+    const cards = Array.from(track.children) as HTMLElement[];
+    if (!cards.length) return;
+    const current = track.scrollLeft;
+    const next = direction > 0
+      ? cards.find((card) => card.offsetLeft > current + 4)
+      : [...cards].reverse().find((card) => card.offsetLeft < current - 4);
+    const target = next ?? (direction > 0 ? cards[cards.length - 1] : cards[0]);
+    track.scrollTo({ left: target.offsetLeft, behavior: "smooth" });
   }
 
   useEffect(() => {
@@ -3045,7 +3054,11 @@ function Hero2026Hijack({ heading, photos, onOpen }: { heading: string; photos: 
               <span className="dot" />
             </div>
           ) : null}
-          {locationRoute.length ? <p className="europe-hijack-locs">{locationRoute.join(" · ")}</p> : null}
+          {locationRoute.length ? (
+            <ul className="europe-hijack-locs">
+              {locationRoute.map((loc) => <li key={loc}>{loc}</li>)}
+            </ul>
+          ) : null}
         </div>
         {shown.length > 1 ? (
           <>

@@ -1633,13 +1633,29 @@ body:has(.contact-overlay) {
 .europe-hijack-route .dot { width: 4px; height: 4px; border-radius: 50%; background: rgb(var(--mint-rgb)); }
 .europe-hijack-route .seg { width: 30px; height: 1px; background: linear-gradient(90deg, rgba(var(--mint-rgb), 0.15), rgba(var(--mint-rgb), 0.7), rgba(var(--mint-rgb), 0.15)); }
 
+/* Each location is its own list item rather than one `letter-spacing`-heavy
+   joined string — that let extreme per-character spacing balloon the line
+   past the card's width, so it wrapped unpredictably and could strand the
+   last name on its own line (reading as "off to the right"). flex-wrap lets
+   each name wrap as a whole unit with a matching gap on every side. */
 .europe-hijack-locs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 0;
   margin: 0;
+  padding: 0;
+  list-style: none;
   font-size: 0.68rem;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: rgba(var(--on-photo-rgb), 0.9);
   text-shadow: 0 1px 18px rgba(0, 0, 0, 0.4);
+}
+.europe-hijack-locs li:not(:last-child)::after {
+  content: "·";
+  margin: 0 10px;
+  opacity: 0.55;
 }
 
 .europe-hijack-meta {
@@ -1704,7 +1720,15 @@ body:has(.contact-overlay) {
 @media (max-width: 760px) {
   .europe-hijack-wrap { height: auto; }
   .europe-hijack-sticky {
-    position: static;
+    /* Was `position: static` — but .europe-hijack-head/-cap/-cta are all
+       position:absolute expecting THIS element as their containing block.
+       Going static handed that off to .europe-hijack-wrap instead (the only
+       other positioned ancestor), which has no side inset — so the heading
+       rendered flush against the true viewport edge and the CTA hugged the
+       opposite edge, both ignoring this element's own 14px margin. `relative`
+       keeps the same non-sticky mobile layout while restoring the correct
+       containing block. */
+    position: relative;
     height: auto;
     margin: 0 14px;
     border-radius: 8px;
@@ -1728,7 +1752,9 @@ body:has(.contact-overlay) {
   }
   .europe-hijack-meta, .europe-hijack-bar { display: none; }
   .europe-hijack-year { font-size: clamp(1.9rem, 9vw, 2.6rem); }
-  .europe-hijack-head { left: 16px; bottom: 16px; }
+  /* `right` bounds the box (it was left-only + shrink-to-fit before), so the
+     locations row below wraps within the card instead of overflowing it. */
+  .europe-hijack-head { left: 16px; right: 16px; bottom: 16px; }
   .europe-hijack-cap { right: 16px; bottom: 16px; }
   .europe-hijack-cta { right: 16px; bottom: auto; top: 16px; }
 }
@@ -2221,6 +2247,10 @@ body:has(.contact-overlay) {
     justify-content: space-between;
     min-height: 44px;
     padding-block: 12px;
+    /* The border read as a stray full-width rule once the link stretched to
+       fill the row on mobile — it only ever suited a short, inline desktop
+       link. */
+    border-bottom: 0;
   }
   /* Below the desktop hover breakpoint there's no pointer that can hover to
      pause the marquee, and no reliable way to tell a scroll-intent drag from
@@ -4301,7 +4331,7 @@ body:has(.contact-overlay) {
   justify-content: center;
   gap: clamp(34px, 6vw, 84px);
   width: min(80vw, 100%);
-  margin: clamp(6px, 2vw, 18px) auto 0;
+  margin: clamp(6px, 2vw, 18px) auto;
   padding: clamp(26px, 3.4vw, 44px) clamp(12px, 2vw, 28px);
   border-block: 1px solid var(--line);
   text-align: left;
@@ -6109,12 +6139,21 @@ body:has(.contact-overlay) {
   .shop-studio-disclaimer { right: 14px; bottom: 68px; }
   .shop-studio-frame { width: min(235px,58%); }
   .shop-studio-frame.landscape { width: min(315px,98%); }
-  .shop .shop-grid { grid-template-columns: 1fr; gap: 42px; }
-  .shop .shop-card:nth-child(n) { grid-column: 1; }
-  .shop .shop-card:nth-child(n) .shop-card-frame { min-height: 0; }
-  .shop .shop-card { width: min(84vw, 390px); }
-  .shop .shop-card.landscape { width: 468px; }
-  .shop .shop-card-frame { height: 340px; }
+  /* Both orientations share one viewport-scaled width cap (the base desktop
+     rule's clamp() floors out at 455px for landscape — far wider than a
+     phone screen, which is what was forcing landscape prints to spill past
+     the edge and read as an oversized, cropped-in close-up). The frame's own
+     height comes from its aspect-ratio at that width — no fixed height, so
+     nothing stretches or clips. */
+  .shop .shop-grid { gap: 20px; }
+  .shop .shop-card, .shop .shop-card.landscape { width: min(80vw, 360px); }
+  .shop .shop-card-frame { height: auto; min-height: 0; }
+  /* The base (desktop) rule sizes the portrait oak from the frame's height
+     (`height: 100%`), which needs a definite parent height — exactly what
+     the fixed 340px above supplied and `height: auto` above just removed.
+     Drive it from width instead, same as landscape already does, so both
+     orientations size from their own aspect-ratio with no fixed height. */
+  .shop .shop-card.portrait .shop-card-frame .oak { width: 100%; height: auto; }
   .shop-sec-head { align-items: flex-start; }
   .shop-sec-actions { align-items: flex-end; }
   .shop-edition-nav-bottom { margin: 2px 0 28px; }
@@ -6164,10 +6203,10 @@ body:has(.contact-overlay) {
     gap: 2px;
     border: 1px solid var(--line);
     border-radius: 20px;
-    background: rgba(var(--foam-rgb), .78);
-    -webkit-backdrop-filter: blur(28px) saturate(160%);
-    backdrop-filter: blur(28px) saturate(160%);
-    box-shadow: 0 8px 24px rgba(var(--ink-rgb), .16), inset 0 1px 0 rgba(255, 255, 255, .3);
+    background: rgba(var(--foam-rgb), .64);
+    -webkit-backdrop-filter: blur(34px) saturate(190%);
+    backdrop-filter: blur(34px) saturate(190%);
+    box-shadow: 0 8px 24px rgba(var(--ink-rgb), .16), inset 0 1px 0 rgba(255, 255, 255, .35);
     padding: 4px;
     transition: transform 240ms ease, opacity 200ms ease;
   }
