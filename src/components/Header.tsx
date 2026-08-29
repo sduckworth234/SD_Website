@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Menu, Moon, Sun, X } from "lucide-react";
 import { SHOP_FEATURE_ENABLED } from "../lib/features";
 import { applyTheme, readTheme, type Theme } from "../lib/theme";
+import { MobileBottomNav } from "./MobileBottomNav";
 
 // Light/dark switch. index.html has already set <html data-theme> before first
 // paint, so this only mirrors that value into React state and writes changes
@@ -53,6 +54,40 @@ export function ThemeToggle() {
   );
 }
 
+// Mobile-only auto-hide toolbar behaviour (Safari/Instagram-style): hides on
+// scroll-down, reveals on scroll-up or near the top. The floating bottom tab
+// bar carries primary navigation full-time now, so the top bar's remaining
+// job (brand, theme toggle, the hamburger's About Me / cart) doesn't need to
+// stay pinned while reading. The CSS that actually hides anything only
+// applies at ≤640px (see .is-auto-hidden in styles.css) — this hook runs on
+// every viewport but is a no-op in paint terms on desktop. Shared with
+// ShopPage's own ShopNav, which doesn't render <Header>.
+export function useAutoHideOnScroll() {
+  const [autoHidden, setAutoHidden] = useState(false);
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+    let ticking = false;
+    function update() {
+      const y = window.scrollY;
+      const delta = y - lastY;
+      if (y < 60) setAutoHidden(false);
+      else if (Math.abs(delta) > 6) setAutoHidden(delta > 0);
+      lastY = y;
+      ticking = false;
+    }
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(update);
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return autoHidden;
+}
+
 // Shared site header / primary nav. "Gallery" → the full /galleries page, "Map" →
 // /map, About opens the overlay when a handler is supplied (home) else returns
 // home. The Shop link follows the public build gate, with an explicit override
@@ -71,6 +106,7 @@ export function Header({
   showShop?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const autoHidden = useAutoHideOnScroll();
   const path = typeof window !== "undefined" ? window.location.pathname : "/";
   const isHome = path === "/";
 
@@ -101,7 +137,8 @@ export function Header({
   }, [menuOpen]);
 
   return (
-    <header className={`site-header${isScrolled ? " is-visible" : ""}`}>
+    <>
+    <header className={`site-header${isScrolled ? " is-visible" : ""}${autoHidden ? " is-auto-hidden" : ""}`}>
       {isHome ? (
         <a className="brand" href="#top" aria-label="SD Gallery home">SD</a>
       ) : (
@@ -167,5 +204,7 @@ export function Header({
         <button onClick={handleContact} type="button">Contact</button>
       </nav>
     </header>
+    <MobileBottomNav onNavigate={onNavigate} onOpenContact={onOpenContact} showShop={showShop} />
+    </>
   );
 }

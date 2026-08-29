@@ -104,7 +104,8 @@ import type { ExtractedPhotoMeta } from "./lib/ingest";
 import { reverseGeocode } from "./lib/geocode";
 import type { Placement } from "./lib/geocode";
 import { useSeo } from "./lib/seo";
-import { Header, ThemeToggle } from "./components/Header";
+import { Header, ThemeToggle, useAutoHideOnScroll } from "./components/Header";
+import { MobileBottomNav } from "./components/MobileBottomNav";
 import { OakFrame } from "./components/OakFrame";
 import { SmartImage } from "./components/SmartImage";
 import { SDLoader } from "./components/SDLoader";
@@ -1719,6 +1720,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   const realCart = useCart();
   const [cartOpen, setCartOpen] = useState(false);
   const [shopMenuOpen, setShopMenuOpen] = useState(false);
+  const shopAutoHidden = useAutoHideOnScroll();
   const [filter, setFilter] = useState("All");
   const [curating, setCurating] = useState<null | "considered" | "wall">(null);
   const [studioIndex, setStudioIndex] = useState(0);
@@ -1878,7 +1880,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   }
 
   const ShopNav = (
-    <header className={`shop-nav${shopMenuOpen ? " menu-open" : ""}`}>
+    <header className={`shop-nav${shopMenuOpen ? " menu-open" : ""}${shopAutoHidden ? " is-auto-hidden" : ""}`}>
       <button className="shop-logo" onClick={goShopTop} type="button" aria-label="Framed Editions shop home">FRAMED EDITIONS</button>
       <nav className="shop-nav-primary" aria-label="Primary navigation">
         <a className="nav-link" href="/" onClick={(event) => { event.preventDefault(); goTo("/"); }}>Home</a>
@@ -1925,6 +1927,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
         <section className="shop-data-loading">
           <SDLoader label="Preparing framed editions" />
         </section>
+        <MobileBottomNav onNavigate={goTo} showShop />
       </main>
     );
   }
@@ -2190,6 +2193,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
           onSave={saveWall}
         />
       ) : null}
+      <MobileBottomNav onNavigate={goTo} showShop />
     </main>
   );
 }
