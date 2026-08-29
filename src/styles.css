@@ -6141,29 +6141,34 @@ body:has(.contact-overlay) {
   .admin-order-help li { min-height: 0; }
 
   /* App-style bottom tab bar — Home / Gallery / Map / Shop / Contact. A
-     floating "liquid glass" pill (frosted, rounded, inset from the edges)
-     rather than an edge-to-edge bar, echoing Apple's current tab-bar
-     language. Fixed and always visible (unlike .site-header, which now
-     auto-hides on mobile scroll — see below), so mobile keeps one-tap
-     access to every primary destination throughout. Rendered by
-     <MobileBottomNav>, mounted inside Header (every page that shows Header
-     gets it for free) and directly on ShopPage (which has its own nav
-     instead of Header). Sits below the hamburger/shop dropdowns in the
-     stacking order, and steps aside entirely while one is open. */
+     compact floating "liquid glass" pill (frosted, rounded, inset from the
+     edges), sitting close to the true bottom edge rather than eating a
+     chunk of page real estate — closer to iOS 26's Liquid Glass tab bar
+     than the taller, more distant floating panel this replaced. The active
+     tab is a single filled capsule wrapping the whole item — icon and
+     label together — not a small dot floating behind just the icon.
+     Fixed and always visible (unlike .site-header, which now auto-hides on
+     mobile scroll — see below), so mobile keeps one-tap access to every
+     primary destination throughout. Rendered by <MobileBottomNav>, mounted
+     inside Header (every page that shows Header gets it for free) and
+     directly on ShopPage (which has its own nav instead of Header). Sits
+     below the hamburger/shop dropdowns in the stacking order, and steps
+     aside entirely while one is open. */
   .mobile-tab-bar {
     position: fixed;
-    right: 14px;
-    bottom: max(14px, env(safe-area-inset-bottom));
-    left: 14px;
+    right: 10px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 10px;
     z-index: 40;
     display: flex;
+    gap: 2px;
     border: 1px solid var(--line);
-    border-radius: 24px;
-    background: rgba(var(--foam-rgb), .72);
+    border-radius: 20px;
+    background: rgba(var(--foam-rgb), .78);
     -webkit-backdrop-filter: blur(28px) saturate(160%);
     backdrop-filter: blur(28px) saturate(160%);
-    box-shadow: 0 14px 34px rgba(var(--ink-rgb), .18), inset 0 1px 0 rgba(255, 255, 255, .3);
-    padding: 6px 4px;
+    box-shadow: 0 8px 24px rgba(var(--ink-rgb), .16), inset 0 1px 0 rgba(255, 255, 255, .3);
+    padding: 4px;
     transition: transform 240ms ease, opacity 200ms ease;
   }
   body:has(.mobile-nav-panel.is-open) .mobile-tab-bar,
@@ -6177,42 +6182,40 @@ body:has(.contact-overlay) {
     display: flex;
     flex: 1 1 0;
     min-width: 0;
-    min-height: 52px;
+    min-height: 46px;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 2px;
     border: 0;
-    border-radius: 20px;
+    border-radius: 14px;
     background: none;
     color: var(--muted);
-    font: 600 9px/1 var(--font-mono);
-    letter-spacing: .04em;
+    font: 600 8px/1 var(--font-mono);
+    letter-spacing: .03em;
     text-transform: uppercase;
     text-align: center;
     cursor: pointer;
     transition: color 200ms ease;
   }
-  /* The glass "bubble" that appears behind the active tab's icon — sits in
-     its own paint layer (z-index) below the icon/label, which need an
-     explicit stacking context of their own to land on top of it. */
+  /* The glass "bubble" — a full capsule behind the whole item (icon and
+     label together), not just the icon — sits in its own paint layer
+     below the icon/label, which need an explicit stacking context of
+     their own to land on top of it. */
   .mtb-item svg, .mtb-item span { position: relative; z-index: 1; }
-  .mtb-item svg { transition: transform 200ms cubic-bezier(.2, .8, .2, 1); }
+  .mtb-item svg { width: 19px; height: 19px; transition: transform 200ms cubic-bezier(.2, .8, .2, 1); }
   .mtb-item:active svg { transform: scale(.86); }
   .mtb-item.is-active { color: var(--sea); }
   .mtb-item::before {
     content: "";
     position: absolute;
-    top: 3px;
-    right: 15%;
-    left: 15%;
-    height: 30px;
-    border-radius: 15px;
+    inset: 2px;
+    border-radius: 12px;
     background: rgba(var(--sea-rgb), .16);
     border: 1px solid rgba(var(--sea-rgb), .3);
     opacity: 0;
-    transform: scale(.7);
-    transition: opacity 240ms cubic-bezier(.2, .8, .2, 1), transform 240ms cubic-bezier(.34, 1.56, .64, 1);
+    transform: scale(.9);
+    transition: opacity 220ms cubic-bezier(.2, .8, .2, 1), transform 220ms cubic-bezier(.34, 1.56, .64, 1);
   }
   .mtb-item.is-active::before { opacity: 1; transform: scale(1); }
 
@@ -6220,17 +6223,17 @@ body:has(.contact-overlay) {
      last row of content — set on <body> by MobileBottomNav itself, so pages
      that don't render it (checkout, the print configurator, /admin) are
      untouched. */
-  body.has-mobile-tabbar { padding-bottom: calc(max(14px, env(safe-area-inset-bottom)) + 80px); }
+  body.has-mobile-tabbar { padding-bottom: calc(max(8px, env(safe-area-inset-bottom)) + 62px); }
   /* The landing hero's scroll cue sits at the foot of the first viewport —
      lift it clear of the tab bar rather than let the bar cover it. */
   body.has-mobile-tabbar .landing-stage .scroll-cue {
-    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 80px + clamp(10px, 2vh, 20px));
+    bottom: calc(max(8px, env(safe-area-inset-bottom)) + 62px + clamp(10px, 2vh, 20px));
   }
   /* MapLibre's own zoom + attribution controls default to the viewport
      edge; lift them clear of the floating tab bar the same way. */
   body.has-mobile-tabbar .map-stage .maplibregl-ctrl-bottom-right,
   body.has-mobile-tabbar .map-stage .maplibregl-ctrl-bottom-left {
-    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 80px + 8px);
+    bottom: calc(max(8px, env(safe-area-inset-bottom)) + 62px + 8px);
   }
 
   /* Auto-hiding top chrome, mobile only: .site-header (and ShopPage's own

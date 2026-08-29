@@ -66,13 +66,22 @@ export function useAutoHideOnScroll() {
   const [autoHidden, setAutoHidden] = useState(false);
 
   useEffect(() => {
-    let lastY = window.scrollY;
+    // Clamp to the real scrollable range — iOS Safari's elastic overscroll
+    // reports scrollY briefly past 0 or the page's max while bouncing, which
+    // otherwise reads as a spurious direction reversal and makes the header
+    // flicker at the top/bottom of a page. A higher delta threshold (vs. a
+    // plain "any movement" check) absorbs the rest of that jitter.
+    const clampY = (y: number) => {
+      const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      return Math.max(0, Math.min(y, max));
+    };
+    let lastY = clampY(window.scrollY);
     let ticking = false;
     function update() {
-      const y = window.scrollY;
+      const y = clampY(window.scrollY);
       const delta = y - lastY;
       if (y < 60) setAutoHidden(false);
-      else if (Math.abs(delta) > 6) setAutoHidden(delta > 0);
+      else if (Math.abs(delta) > 10) setAutoHidden(delta > 0);
       lastY = y;
       ticking = false;
     }

@@ -58,7 +58,7 @@ export function MobileBottomNav({
         aria-current={isHome ? "page" : undefined}
         onClick={(event) => go(event, "/")}
       >
-        <Home size={21} strokeWidth={isHome ? 2.25 : 1.75} aria-hidden="true" />
+        <Home size={19} strokeWidth={isHome ? 2.25 : 1.75} aria-hidden="true" />
         <span>Home</span>
       </a>
       <a
@@ -67,7 +67,7 @@ export function MobileBottomNav({
         aria-current={isGallery ? "page" : undefined}
         onClick={(event) => go(event, "/galleries")}
       >
-        <Images size={21} strokeWidth={isGallery ? 2.25 : 1.75} aria-hidden="true" />
+        <Images size={19} strokeWidth={isGallery ? 2.25 : 1.75} aria-hidden="true" />
         <span>Gallery</span>
       </a>
       <a
@@ -76,7 +76,7 @@ export function MobileBottomNav({
         aria-current={isMap ? "page" : undefined}
         onClick={(event) => go(event, "/map")}
       >
-        <Map size={21} strokeWidth={isMap ? 2.25 : 1.75} aria-hidden="true" />
+        <Map size={19} strokeWidth={isMap ? 2.25 : 1.75} aria-hidden="true" />
         <span>Map</span>
       </a>
       {SHOP_FEATURE_ENABLED || showShop ? (
@@ -86,12 +86,12 @@ export function MobileBottomNav({
           aria-current={isShop ? "page" : undefined}
           onClick={(event) => go(event, "/shop")}
         >
-          <ShoppingBag size={21} strokeWidth={isShop ? 2.25 : 1.75} aria-hidden="true" />
+          <ShoppingBag size={19} strokeWidth={isShop ? 2.25 : 1.75} aria-hidden="true" />
           <span>Shop</span>
         </a>
       ) : null}
       <button className="mtb-item" type="button" onClick={contact}>
-        <Mail size={21} strokeWidth={1.75} aria-hidden="true" />
+        <Mail size={19} strokeWidth={1.75} aria-hidden="true" />
         <span>Contact</span>
       </button>
     </nav>
