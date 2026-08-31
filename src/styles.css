@@ -273,6 +273,7 @@ main {
 .portfolio-hero-copy { max-width: 1320px; }
 .portfolio-kicker { margin: 0 0 22px; color: var(--sea); }
 .portfolio-hero h1 {
+  max-width: none;
   margin: 0;
   font: var(--head-weight) clamp(3rem, 6vw, 6.4rem)/.92 var(--font-sans);
   letter-spacing: -.055em;
@@ -319,14 +320,16 @@ main {
 .portfolio-jump-nav a {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 12px;
   padding: 26px clamp(18px, 2.6vw, 30px) 30px;
   border-right: 1px solid var(--line);
+  text-align: center;
   transition: background 180ms ease;
 }
 .portfolio-jump-nav a:last-child { border-right: 0; }
 .portfolio-jump-nav a:hover { background: var(--foam); }
-.portfolio-jump-nav .jump-meta { display: flex; align-items: baseline; gap: 10px; }
+.portfolio-jump-nav .jump-meta { display: flex; align-items: baseline; justify-content: center; gap: 10px; }
 .portfolio-jump-nav .jump-index { color: var(--ink-soft); }
 .portfolio-jump-nav .jump-when { color: var(--sea); }
 .portfolio-jump-nav b { font: var(--head-weight) clamp(1.15rem, 1.6vw, 1.4rem)/1.15 var(--font-sans); letter-spacing: -.02em; }
