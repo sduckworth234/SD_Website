@@ -267,7 +267,7 @@ export default function PortfolioPage() {
 
   useSeo("Sam Duckworth Professional Portfolio", {
     path: "/portfolio",
-    image: "/portfolio/og-simple.png",
+    image: "/portfolio/og-simple-v2.png",
     description: "Data and AI, mechatronic engineering, computer vision, agentic software and photography by Sam Duckworth.",
     type: "website",
   });
