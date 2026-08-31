@@ -2019,94 +2019,52 @@ body:has(.contact-overlay) {
   scroll-margin-top: 92px;
 }
 
-/* 2026 Europe hijack: a bounded, pinned horizontal scroll-through (not a
-   crossfade) — the wrapper carries the scroll budget (3 photos × ~85vh), the
-   sticky inner card is the same inset-card language as the rest of the home
-   page (Recent Work rounding/gutter), and once the wrapper's extra height is
-   consumed the section un-stickies and normal scrolling continues straight
-   into the ticker/Recent Work. Desktop-only mechanic: below 761px (and under
-   prefers-reduced-motion) the wrapper height collapses to auto and the panels
-   become a plain flex row — no pinning fights native touch-scroll physics. */
-.europe-hijack-wrap {
-  position: relative;
-  height: 255vh;
+/* 2026 Europe: one restrained editorial cover rather than a scroll takeover.
+   The same home-page gutter and small corner radius used by the surrounding
+   cards keep the image prominent without making it feel edge-to-edge. */
+.europe-feature-wrap {
   margin: clamp(36px, 7vw, 84px) 0 0;
   --reveal-distance: 16px;
   --reveal-scale: 0.995;
 }
 
-.europe-hijack-sticky {
-  position: sticky;
-  top: 0;
-  height: 86vh;
-  min-height: 420px;
+.europe-feature-card {
+  position: relative;
+  height: clamp(500px, 68svh, 720px);
   margin: 0 clamp(18px, 4vw, 56px);
   border-radius: 8px;
   overflow: hidden;
   background: var(--shade);
 }
 
-.europe-hijack-track {
-  display: flex;
-  height: 100%;
-  will-change: transform;
-}
-
-.europe-hijack-panel {
-  position: relative;
-  flex: 0 0 100%;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  padding: 0;
-  overflow: hidden;
-  cursor: var(--circle-cursor), pointer;
-}
-
-.europe-hijack-panel .smart-img,
-.europe-hijack-panel img {
+.europe-feature-card .smart-img,
+.europe-feature-card img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.europe-hijack-panel::after {
-  content: "";
+.europe-feature-shade {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(var(--shade-rgb), 0.5), rgba(var(--shade-rgb), 0.05) 30%, rgba(var(--shade-rgb), 0.1) 55%, rgba(var(--shade-rgb), 0.62)),
-    radial-gradient(circle at 50% 42%, rgba(var(--shade-rgb), 0), rgba(var(--shade-rgb), 0.2) 98%);
+    linear-gradient(180deg, rgba(var(--shade-rgb), 0.05) 36%, rgba(var(--shade-rgb), 0.64)),
+    linear-gradient(90deg, rgba(var(--shade-rgb), 0.28), transparent 58%);
 }
 
-.europe-hijack-cap {
-  position: absolute;
-  right: clamp(16px, 3vw, 28px);
-  bottom: clamp(16px, 3vw, 28px);
-  z-index: 1;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(var(--on-photo-rgb), 0.85);
-}
-
-.europe-hijack-head {
+.europe-feature-copy {
   position: absolute;
   z-index: 2;
   left: clamp(18px, 4vw, 40px);
   bottom: clamp(18px, 4vw, 40px);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  max-width: min(58%, 680px);
   color: var(--on-photo);
   pointer-events: none;
 }
 
-.europe-hijack-year {
+.europe-feature-title {
   margin: 0;
-  max-width: 80vw;
   font-family: var(--font-sans);
   font-weight: 600;
   font-size: clamp(2.2rem, 6.4vw, 4.4rem);
@@ -2116,68 +2074,17 @@ body:has(.contact-overlay) {
   text-shadow: 0 2px 44px rgba(0, 0, 0, 0.36);
 }
 
-.europe-hijack-route { display: flex; align-items: center; gap: 10px; color: rgb(var(--mint-rgb)); }
-.europe-hijack-route .dot { width: 4px; height: 4px; border-radius: 50%; background: rgb(var(--mint-rgb)); }
-.europe-hijack-route .seg { width: 30px; height: 1px; background: linear-gradient(90deg, rgba(var(--mint-rgb), 0.15), rgba(var(--mint-rgb), 0.7), rgba(var(--mint-rgb), 0.15)); }
-
-/* Each location is its own list item rather than one `letter-spacing`-heavy
-   joined string — that let extreme per-character spacing balloon the line
-   past the card's width, so it wrapped unpredictably and could strand the
-   last name on its own line (reading as "off to the right"). flex-wrap lets
-   each name wrap as a whole unit with a matching gap on every side. */
-.europe-hijack-locs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.europe-feature-location {
+  margin: 14px 0 0;
+  font-family: var(--font-mono);
   font-size: 0.68rem;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(var(--on-photo-rgb), 0.9);
+  color: rgba(var(--on-photo-rgb), 0.82);
   text-shadow: 0 1px 18px rgba(0, 0, 0, 0.4);
 }
-.europe-hijack-locs li:not(:last-child)::after {
-  content: "·";
-  margin: 0 10px;
-  opacity: 0.55;
-}
 
-.europe-hijack-meta {
-  position: absolute;
-  z-index: 2;
-  top: clamp(18px, 3vw, 32px);
-  right: clamp(18px, 4vw, 40px);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
-  color: rgba(var(--on-photo-rgb), 0.75);
-  pointer-events: none;
-}
-
-.europe-hijack-bar {
-  position: absolute;
-  z-index: 2;
-  left: clamp(18px, 4vw, 40px);
-  right: clamp(18px, 4vw, 40px);
-  top: clamp(42px, 5.4vw, 56px);
-  height: 2px;
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 2px;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.europe-hijack-fill {
-  display: block;
-  height: 100%;
-  width: 0%;
-  background: rgb(var(--mint-rgb));
-}
-
-.europe-hijack-cta {
+.europe-feature-cta {
   position: absolute;
   z-index: 2;
   right: clamp(18px, 4vw, 40px);
@@ -2199,58 +2106,21 @@ body:has(.contact-overlay) {
   transition: transform 200ms cubic-bezier(0.2, 0.9, 0.3, 1.3);
 }
 
-.europe-hijack-cta:hover,
-.europe-hijack-cta:focus-visible {
+.europe-feature-cta:hover,
+.europe-feature-cta:focus-visible {
   transform: translateY(-2px);
 }
 
 @media (max-width: 760px) {
-  .europe-hijack-wrap { height: auto; }
-  .europe-hijack-sticky {
-    /* Was `position: static` — but .europe-hijack-head/-cap/-cta are all
-       position:absolute expecting THIS element as their containing block.
-       Going static handed that off to .europe-hijack-wrap instead (the only
-       other positioned ancestor), which has no side inset — so the heading
-       rendered flush against the true viewport edge and the CTA hugged the
-       opposite edge, both ignoring this element's own 14px margin. `relative`
-       keeps the same non-sticky mobile layout while restoring the correct
-       containing block. */
-    position: relative;
+  .europe-feature-card {
     height: auto;
-    margin: 0 14px;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  .europe-hijack-track {
-    display: flex;
-    height: auto;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .europe-hijack-track::-webkit-scrollbar { display: none; }
-  .europe-hijack-panel {
-    flex: 0 0 100%;
-    width: 100%;
-    height: auto;
+    min-height: 0;
     aspect-ratio: 3 / 4;
-    scroll-snap-align: start;
+    margin: 0 14px;
   }
-  .europe-hijack-meta, .europe-hijack-bar { display: none; }
-  .europe-hijack-year { font-size: clamp(1.9rem, 9vw, 2.6rem); }
-  /* `right` bounds the box (it was left-only + shrink-to-fit before), so the
-     locations row below wraps within the card instead of overflowing it. */
-  .europe-hijack-head { left: 16px; right: 16px; bottom: 16px; }
-  .europe-hijack-cap { right: 16px; bottom: 16px; }
-  .europe-hijack-cta { right: 16px; bottom: auto; top: 16px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .europe-hijack-wrap { height: auto; }
-  .europe-hijack-sticky { position: static; height: auto; }
-  .europe-hijack-panel { aspect-ratio: 4 / 5; }
-  .europe-hijack-track { flex-wrap: wrap; }
+  .europe-feature-title { font-size: clamp(1.9rem, 9vw, 2.6rem); }
+  .europe-feature-copy { left: 16px; right: 16px; bottom: 18px; max-width: none; }
+  .europe-feature-cta { right: 16px; bottom: auto; top: 16px; }
 }
 
 /* --- Instagram feed: the strip that closes the home page -------------------

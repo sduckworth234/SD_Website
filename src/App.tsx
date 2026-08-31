@@ -30,7 +30,6 @@ import {
   ChevronRight,
   LoaderCircle,
   Pencil,
-  Plane,
   Plus,
   RotateCw,
   Search,
@@ -780,9 +779,9 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
     return () => window.clearTimeout(timer);
   }, [homePrintPhotos.length, isLoading]);
 
-  // The 2026 Europe hero: an admin-curated, ordered photo list stored as a
-  // JSON id array in site_settings (same pattern as the shop's "wall" preview).
-  // Empty/unset = the section doesn't render at all (see Hero2026).
+  // The 2026 Europe feature: one admin-curated cover photo stored in the same
+  // JSON-array setting used by the earlier multi-photo treatment. Keeping the
+  // storage shape avoids a settings migration; only the first valid id is used.
   const hero2026Photos = useMemo(() => {
     let ids: string[] = [];
     try {
@@ -791,7 +790,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
       ids = [];
     }
     const byId = new Map(publicPhotos.map((p) => [p.id, p]));
-    return ids.map((id) => byId.get(id)).filter((p): p is Photo => Boolean(p));
+    return ids.map((id) => byId.get(id)).filter((p): p is Photo => Boolean(p)).slice(0, 1);
   }, [publicPhotos, settingValue.hero_2026_photos]);
 
   // Where the banner clicks through to. Defaults to whichever collection its own
@@ -837,7 +836,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
         <>
           {hero2026Photos.length ? (
             <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "hero_2026")} label="2026 Europe hero">
-              <Hero2026Hijack
+              <Hero2026Feature
                 heading={settingValue.hero_2026_title || "Europe 2026"}
                 onOpen={() => goToGalleries(hero2026Target)}
                 photos={hero2026Photos}
@@ -2972,110 +2971,23 @@ function RotatingLocations({ locations }: { locations: string[] }) {
   );
 }
 
-// The 2026 Europe trip banner: a themed sibling to the landing Hero, sat
-// between it and Recent Work. Crossfades through the admin-curated photo set
-// (site_settings "hero_2026_photos" — see VisibilityAdmin); "2026" stands in
-// for the wordmark and the location ticker is read straight off the curated
-// photos' own `location` field, so nothing about which countries is hardcoded.
-// Renders nothing until at least one photo is curated.
-// Horizontal scroll-hijack: the section pins for a bounded scroll run (not
-// the whole page) while up to 3 admin-picked photos pan across underneath —
-// then releases back into normal scroll straight into the ticker/Recent Work.
-// Reuses the same hero_2026_photos/hero_2026_title settings as the old
-// crossfade banner; only the first 3 picks are used. Falls back to a static
-// first frame under prefers-reduced-motion or on narrow (touch) viewports,
-// where a pinned horizontal pan fights native scroll physics.
-function Hero2026Hijack({ heading, photos, onOpen }: { heading: string; photos: Photo[]; onOpen: () => void }) {
-  const shown = useMemo(() => photos.slice(0, 3), [photos]);
-  const wrapRef = useRef<HTMLElement | null>(null);
-  const trackRef = useRef<HTMLDivElement | null>(null);
-  const fillRef = useRef<HTMLSpanElement | null>(null);
-  const countRef = useRef<HTMLSpanElement | null>(null);
-
-  useEffect(() => {
-    const wrap = wrapRef.current;
-    const track = trackRef.current;
-    if (!wrap || !track) return undefined;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
-    if (!window.matchMedia("(min-width: 761px)").matches) return undefined;
-
-    let ticking = false;
-    function update() {
-      if (!wrap || !track) return;
-      const vh = window.innerHeight;
-      const total = wrap.offsetHeight - vh;
-      const scrolled = -wrap.getBoundingClientRect().top;
-      const progress = total > 0 ? Math.max(0, Math.min(1, scrolled / total)) : 0;
-      const maxTranslate = Math.max(0, track.scrollWidth - track.clientWidth);
-      track.style.transform = `translateX(${(-progress * maxTranslate).toFixed(1)}px)`;
-      if (fillRef.current) fillRef.current.style.width = `${(progress * 100).toFixed(1)}%`;
-      if (countRef.current) {
-        countRef.current.textContent = String(Math.min(shown.length, Math.floor(progress * shown.length) + 1)).padStart(2, "0");
-      }
-    }
-    function onScroll() {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => { update(); ticking = false; });
-    }
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    update();
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-    };
-  }, [shown.length]);
-
-  const locationRoute = useMemo(() => {
-    const seen = new Set<string>();
-    const list: string[] = [];
-    for (const photo of shown) {
-      if (photo.location && !seen.has(photo.location)) {
-        seen.add(photo.location);
-        list.push(photo.location);
-      }
-    }
-    return list;
-  }, [shown]);
-
-  if (!shown.length) return null;
+// A quiet, static editorial card between the landing hero and Recent Work.
+// The first curated photo is the cover; the image is allowed to hold the stage
+// without a pinned scroll run, carousel chrome or competing location labels.
+function Hero2026Feature({ heading, photos, onOpen }: { heading: string; photos: Photo[]; onOpen: () => void }) {
+  const photo = photos[0];
+  if (!photo) return null;
 
   return (
-    <section className="europe-hijack-wrap scroll-reveal" ref={wrapRef} aria-label={`${heading} — view the gallery`}>
-      <div className="europe-hijack-sticky">
-        <div className="europe-hijack-track" ref={trackRef}>
-          {shown.map((photo, i) => (
-            <button className="europe-hijack-panel" key={photo.id} type="button" onClick={onOpen}>
-              <SmartImage alt="" priority={i === 0} sizes="100vw" src={photo.imageUrl} srcSet={srcSetFor(photo)} />
-              {photo.location ? <span className="europe-hijack-cap">{photo.location}</span> : null}
-            </button>
-          ))}
+    <section className="europe-feature-wrap scroll-reveal" aria-label={`${heading} — view the gallery`}>
+      <div className="europe-feature-card">
+        <SmartImage alt="" priority sizes="(max-width: 760px) calc(100vw - 28px), calc(100vw - 112px)" src={photo.imageUrl} srcSet={srcSetFor(photo)} />
+        <div className="europe-feature-shade" aria-hidden="true" />
+        <div className="europe-feature-copy">
+          <p className="europe-feature-title">{heading}</p>
+          {photo.location ? <p className="europe-feature-location">{photo.location}</p> : null}
         </div>
-        <div className="europe-hijack-head">
-          <p className="europe-hijack-year">{heading}</p>
-          {locationRoute.length ? (
-            <div className="europe-hijack-route">
-              <span className="dot" />
-              <span className="seg" />
-              <Plane size={13} style={{ transform: "rotate(45deg)" }} />
-              <span className="seg" />
-              <span className="dot" />
-            </div>
-          ) : null}
-          {locationRoute.length ? (
-            <ul className="europe-hijack-locs">
-              {locationRoute.map((loc) => <li key={loc}>{loc}</li>)}
-            </ul>
-          ) : null}
-        </div>
-        {shown.length > 1 ? (
-          <>
-            <div className="europe-hijack-meta"><span ref={countRef}>01</span>/{String(shown.length).padStart(2, "0")}</div>
-            <div className="europe-hijack-bar"><span className="europe-hijack-fill" ref={fillRef} /></div>
-          </>
-        ) : null}
-        <button className="europe-hijack-cta" type="button" onClick={onOpen}>View the gallery <ArrowRight size={13} aria-hidden="true" /></button>
+        <button className="europe-feature-cta" type="button" onClick={onOpen}>View the gallery <ArrowRight size={13} aria-hidden="true" /></button>
       </div>
     </section>
   );
@@ -4581,7 +4493,7 @@ function CollectionsAdmin({ photos }: { photos: Photo[] }) {
 // The public visibility flags the admin can toggle. Labels live here (not just
 // the DB) so the panel reads well even if a seed row is missing.
 const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
-  { key: "hero_2026", label: "Home — 2026 Europe hero", hint: "The pinned horizontal scroll-through trip banner near the top of the home page." },
+  { key: "hero_2026", label: "Home — 2026 Europe hero", hint: "The static editorial trip feature near the top of the home page." },
   { key: "ticker_banner", label: "Home — Scrolling banner", hint: "The horizontal scrolling promo strip between the Europe hero and Recent Work." },
   { key: "recent_work", label: "Home — Recent Work mosaic", hint: "The editorial photo mosaic near the top of the home page." },
   { key: "home_print_carousel", label: "Home — Available prints carousel", hint: "The light framed-print card directly below Recent Work." },
@@ -4649,8 +4561,8 @@ function VisibilityAdmin({ photos, locations }: { photos: Photo[]; locations: Ga
       setBusy(false);
     }
   }
-  // The 2026 Europe hero carousel: an ordered id list in one site_settings
-  // value (same JSON-array-in-a-string trick the shop's "wall" preview uses).
+  // The 2026 Europe cover remains an id array in site_settings for backwards
+  // compatibility with the previous multi-photo treatment.
   const hero2026Ids = useMemo(() => {
     try {
       return value.hero_2026_photos ? (JSON.parse(value.hero_2026_photos) as string[]) : [];
@@ -4660,7 +4572,7 @@ function VisibilityAdmin({ photos, locations }: { photos: Photo[]; locations: Ga
   }, [value.hero_2026_photos]);
   const hero2026Chosen = useMemo(() => {
     const byId = new Map(photos.map((p) => [p.id, p]));
-    return hero2026Ids.map((id) => byId.get(id)).filter((p): p is Photo => Boolean(p));
+    return hero2026Ids.map((id) => byId.get(id)).filter((p): p is Photo => Boolean(p)).slice(0, 1);
   }, [hero2026Ids, photos]);
   async function saveHero2026(orderedIds: string[]) {
     setBusy(true);
@@ -4699,9 +4611,8 @@ function VisibilityAdmin({ photos, locations }: { photos: Photo[]; locations: Ga
       </div>
       <div className="admin-sec-head vis-banner-head"><Images size={16} aria-hidden="true" /><h2>2026 Europe hero</h2></div>
       <p className="admin-sec-hint">
-        The 3 photos that pan across in the home page's "2026" banner (a brief, pinned scroll-through — it
-        releases straight back into normal scrolling after). Order sets the pan sequence and the location
-        line beneath it. Empty = the banner stays hidden.
+        Choose the single cover photo for the static Europe feature on the home page. Its location appears
+        beneath the heading. Empty = the feature stays hidden.
       </p>
       <div className="hero2026-strip">
         {hero2026Chosen.length ? (
@@ -4717,7 +4628,7 @@ function VisibilityAdmin({ photos, locations }: { photos: Photo[]; locations: Ga
       </div>
       <div className="banner-slot-actions">
         <button className="ghost-button" type="button" onClick={() => setCuratingHero2026(true)} disabled={busy}>
-          Choose photos
+          Choose cover photo
         </button>
         {hero2026Chosen.length ? (
           <button className="text-button" type="button" onClick={() => saveHero2026([])} disabled={busy}>
@@ -4755,10 +4666,10 @@ function VisibilityAdmin({ photos, locations }: { photos: Photo[]; locations: Ga
       {curatingHero2026 ? (
         <OrderedPhotoPicker
           title="2026 Europe hero"
-          hint="Pick and order up to 3 photos from the trip. They pan across in that order on the home page; the line beneath reads their locations, first-seen order."
-          max={3}
+          hint="Pick one strong cover photo from the trip. Its location appears beneath the heading on the home page."
+          max={1}
           photos={photos.filter((p) => p.published && regionByLocation.get(p.location) === "Europe")}
-          initialIds={hero2026Ids}
+          initialIds={hero2026Ids.slice(0, 1)}
           onClose={() => setCuratingHero2026(false)}
           onSave={saveHero2026}
         />
