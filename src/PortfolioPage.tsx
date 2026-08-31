@@ -17,8 +17,8 @@ const REPORTS = {
 
 const JUMP_LINKS = [
   { n: "01", when: "2025", title: "Honours thesis", note: "First Class · UAV vision", href: "#thesis" },
-  { n: "02", when: "2024", title: "Computer vision", note: "AMME5710 major project", href: "#vision" },
-  { n: "03", when: "Ongoing", title: "Daily OS", note: "AI-run personal dashboard", href: "#dailyos" },
+  { n: "02", when: "Ongoing", title: "Daily OS", note: "AI-run personal dashboard", href: "#dailyos" },
+  { n: "03", when: "2024", title: "Computer vision", note: "AMME5710 major project", href: "#vision" },
   { n: "04", when: "2021 –", title: "Photography", note: "samduckworth.com", href: "#photography" },
 ];
 
@@ -120,6 +120,89 @@ function ThesisPipelineDiagram() {
   );
 }
 
+function DailyOSArchitectureDiagram() {
+  return (
+    <svg className="pipeline-diagram" viewBox="0 0 1100 420" role="img" aria-labelledby="daily-os-title">
+      <title id="daily-os-title">Daily OS architecture: input capture, AI routing, Supabase, deterministic finance engine, daily surfaces</title>
+      <defs>
+        <marker id="do-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L8,4 L0,8 Z" className="pd-arrowhead" />
+        </marker>
+      </defs>
+
+      <g className="pd-box">
+        <rect x="16" y="145" width="150" height="100" rx="6" />
+        <text x="91" y="131" className="pd-label">Entry points</text>
+        <text x="91" y="185" className="pd-line">Chat &amp; quick-add</text>
+        <text x="91" y="209" className="pd-line pd-muted">Gmail</text>
+      </g>
+
+      <path d="M166,175 C195,175 195,102 220,102" className="pd-edge" markerEnd="url(#do-arrow)" />
+      <path d="M166,215 C195,215 195,280 220,280" className="pd-edge" markerEnd="url(#do-arrow)" />
+
+      <g className="pd-box">
+        <rect x="220" y="30" width="190" height="145" rx="6" />
+        <text x="315" y="16" className="pd-label">Gemini 2.5 Flash</text>
+        {["add_task", "add_transaction", "add_subscription"].map((m, i) => (
+          <g key={m}>
+            <rect x="238" y={48 + i * 38} width="154" height="30" rx="4" className="pd-chip" />
+            <text x="315" y={48 + i * 38 + 20} className="pd-chip-text">{m}</text>
+          </g>
+        ))}
+      </g>
+
+      <g className="pd-box">
+        <rect x="220" y="225" width="190" height="110" rx="6" />
+        <text x="315" y="211" className="pd-label">Claude agent</text>
+        <text x="315" y="257" className="pd-line">Gmail → tasks, daily</text>
+        <text x="315" y="281" className="pd-line pd-muted">evidence-gated memory</text>
+      </g>
+
+      <path d="M410,102 C445,102 445,140 470,140" className="pd-edge" markerEnd="url(#do-arrow)" />
+      <path d="M410,280 C445,280 445,220 470,220" className="pd-edge" markerEnd="url(#do-arrow)" />
+
+      <g className="pd-box">
+        <rect x="470" y="90" width="210" height="175" rx="6" />
+        <text x="575" y="76" className="pd-label">Supabase Postgres</text>
+        <text x="575" y="112" className="pd-line pd-muted">Row-level security · every table</text>
+        {["tasks", "transactions", "agent_memories"].map((m, i) => (
+          <g key={m}>
+            <rect x="488" y={128 + i * 36} width="174" height="28" rx="4" className="pd-chip" />
+            <text x="575" y={128 + i * 36 + 19} className="pd-chip-text">{m}</text>
+          </g>
+        ))}
+      </g>
+
+      <path d="M575,265 V310" className="pd-edge" markerEnd="url(#do-arrow)" />
+      <text x="700" y="285" className="pd-tag">pg_cron</text>
+
+      <g className="pd-box">
+        <rect x="470" y="310" width="210" height="80" rx="6" className="pd-output" />
+        <text x="575" y="342" className="pd-line pd-output-text">RSI · MACD · Bollinger</text>
+        <text x="575" y="366" className="pd-line pd-output-text pd-muted-light">Ledoit-Wolf · max-Sharpe · VaR</text>
+      </g>
+      <text x="575" y="296" className="pd-label" textAnchor="middle">portfolio-agent</text>
+
+      <path d="M480,310 H430 V175 H380" className="pd-edge pd-dashed" markerEnd="url(#do-arrow)" />
+      <text x="430" y="252" className="pd-tag" transform="rotate(-90 430 252)">narrate only</text>
+
+      <path d="M680,177 H760" className="pd-edge" markerEnd="url(#do-arrow)" />
+      <path d="M680,350 C720,350 720,129 760,129" className="pd-edge pd-loop" markerEnd="url(#do-arrow)" />
+
+      <g className="pd-box">
+        <rect x="760" y="50" width="210" height="170" rx="6" />
+        <text x="865" y="36" className="pd-label">Daily surfaces</text>
+        {["Task list", "Finance dashboard", "Morning briefing (Slack)"].map((m, i) => (
+          <g key={m}>
+            <rect x="778" y={68 + i * 44} width="174" height="34" rx="4" className="pd-chip" />
+            <text x="865" y={68 + i * 44 + 21} className="pd-chip-text">{m}</text>
+          </g>
+        ))}
+      </g>
+    </svg>
+  );
+}
+
 function TaskDashboardMockup() {
   const tasks = [
     ["Review prototype test results", "Today · 10:30", "important"],
@@ -200,7 +283,7 @@ export default function PortfolioPage() {
   const [dashboardView, setDashboardView] = useState<"tasks" | "finance">("tasks");
   const [photos, setPhotos] = useState<Photo[]>([]);
 
-  useSeo("Sam Duckworth | Engineer, Builder & Photographer", {
+  useSeo("Sam Duckworth | Data & AI Analyst and Photographer", {
     path: "/portfolio",
     image: "/portfolio/og.png",
     description: "The professional portfolio of Sam Duckworth: mechatronic engineering, computer vision, autonomous systems, agentic software and photography.",
@@ -228,8 +311,8 @@ export default function PortfolioPage() {
         <div className="portfolio-hero-copy">
           <p className="portfolio-kicker">Mechatronic Engineering &amp; Commerce · Sydney, Australia</p>
           <h1 id="portfolio-title">Sam Duckworth</h1>
-          <p className="portfolio-hero-role">Mechatronics engineer, builder and photographer.</p>
-          <p className="portfolio-intro">I&rsquo;m a First Class Honours engineering graduate who likes building things that think a little for themselves: drones that see in the dark, a dashboard that writes its own to-do list, cameras that wait for good light. Somewhere between an engineering degree and a finance one I got hooked on AI and agentic systems, and that thread runs through most of what&rsquo;s below.</p>
+          <p className="portfolio-hero-role">Graduate Data &amp; AI Analyst at Quantium, photographer on the side.</p>
+          <p className="portfolio-intro">I&rsquo;m a First Class Honours engineering graduate who likes building things that think a little for themselves: drones that see in the dark, a dashboard that writes its own to-do list. Somewhere between an engineering degree and a finance one I got hooked on AI and agentic systems, and that thread runs through most of what&rsquo;s below.</p>
           <div className="portfolio-hero-meta">
             <span>BE (Mechatronic) &amp; BCom, Finance</span>
             <span>First Class Honours</span>
@@ -274,8 +357,27 @@ export default function PortfolioPage() {
           </div>
         </article>
 
-        <article className="portfolio-case tennis-case" id="vision">
+        <article className="portfolio-case dashboard-case" id="dailyos">
           <div className="portfolio-case-number">02</div>
+          <div className="portfolio-case-copy dashboard-copy">
+            <p className="portfolio-case-type"><LockKeyhole size={14} /> Private product · Agentic workflows · Ongoing</p>
+            <h3>Daily OS</h3>
+            <p className="portfolio-case-deck">The private dashboard I actually use every day, with the boring parts run by agents.</p>
+            <p>Tasks, finance, budgeting and a morning briefing, one login instead of six apps. Type a task, a trade or a bill in plain English and Gemini 2.5 Flash sorts out what it is and where it belongs. A scheduled Claude agent reads my inbox each morning and turns emails into tasks on its own, checked against a namespaced memory table that only trusts a sender once it has seen enough consistent evidence.</p>
+            <p>On the finance side it tracks my stock positions and portfolio performance, and surfaces the metrics and market updates that actually matter, no spreadsheet required.</p>
+            <div className="portfolio-tags">{['Next.js', 'TypeScript', 'Supabase', 'PostgreSQL', 'Gemini 2.5', 'Claude agents', 'Portfolio tracking', 'Vercel'].map((tag) => <span key={tag}>{tag}</span>)}</div>
+          </div>
+          <div className="dashboard-showcase">
+            <div className="dashboard-switch"><button className={dashboardView === "tasks" ? "is-active" : ""} onClick={() => setDashboardView("tasks")} type="button">Task workspace</button><button className={dashboardView === "finance" ? "is-active" : ""} onClick={() => setDashboardView("finance")} type="button">Finance workspace</button><span><LockKeyhole size={12} /> Mockup · dummy data</span></div>
+            {dashboardView === "tasks" ? <TaskDashboardMockup /> : <FinanceDashboardMockup />}
+          </div>
+          <div className="portfolio-architecture">
+            <DailyOSArchitectureDiagram />
+          </div>
+        </article>
+
+        <article className="portfolio-case tennis-case" id="vision">
+          <div className="portfolio-case-number">03</div>
           <div className="portfolio-case-copy">
             <p className="portfolio-case-type"><Layers3 size={14} /> AMME5710 · Computer Vision major project</p>
             <h3>Autonomous Tennis Analysis</h3>
@@ -289,22 +391,6 @@ export default function PortfolioPage() {
             <img src="/portfolio/images/tennis-architecture.webp" alt="System architecture for the autonomous tennis analysis pipeline" loading="lazy" />
             <figcaption>Classification → court &amp; corner detection → player/ball tracking → homography → bird&rsquo;s-eye overlay.</figcaption>
           </figure>
-        </article>
-
-        <article className="portfolio-case dashboard-case" id="dailyos">
-          <div className="portfolio-case-number">03</div>
-          <div className="portfolio-case-copy dashboard-copy">
-            <p className="portfolio-case-type"><LockKeyhole size={14} /> Private product · Agentic workflows · Ongoing</p>
-            <h3>Daily OS</h3>
-            <p className="portfolio-case-deck">The private dashboard I actually use every day, with the boring parts run by agents.</p>
-            <p>Tasks, finance, budgeting and a morning briefing, one login instead of six apps. Type a task, a trade or a bill in plain English and Gemini 2.5 Flash sorts out what it is and where it belongs. A scheduled Claude agent reads my inbox each morning and turns emails into tasks on its own, checked against a namespaced memory table that only trusts a sender once it has seen enough consistent evidence.</p>
-            <p>The finance side keeps AI away from the maths: holdings rebuild live from raw transactions, and a separate engine handles the real quant work, RSI, MACD, Bollinger bands, Ledoit-Wolf covariance shrinkage, max-Sharpe and risk-parity optimisation. Gemini is only ever allowed to narrate numbers that engine already computed, never invent its own.</p>
-            <div className="portfolio-tags">{['Next.js', 'TypeScript', 'Supabase', 'PostgreSQL', 'Gemini 2.5', 'Claude agents', 'Quant finance', 'Vercel'].map((tag) => <span key={tag}>{tag}</span>)}</div>
-          </div>
-          <div className="dashboard-showcase">
-            <div className="dashboard-switch"><button className={dashboardView === "tasks" ? "is-active" : ""} onClick={() => setDashboardView("tasks")} type="button">Task workspace</button><button className={dashboardView === "finance" ? "is-active" : ""} onClick={() => setDashboardView("finance")} type="button">Finance workspace</button><span><LockKeyhole size={12} /> Mockup · dummy data</span></div>
-            {dashboardView === "tasks" ? <TaskDashboardMockup /> : <FinanceDashboardMockup />}
-          </div>
         </article>
 
         <article className="portfolio-case photography-case" id="photography">
@@ -326,7 +412,7 @@ export default function PortfolioPage() {
       </section>
 
       <section className="portfolio-education" id="education">
-        <div className="portfolio-section-heading"><p className="portfolio-kicker">Education / University of Sydney</p><h2>Engineering rigour.<br />A commercial eye.</h2></div>
+        <div className="portfolio-section-heading portfolio-section-heading-compact"><p className="portfolio-kicker">Education / University of Sydney</p></div>
         <div className="portfolio-degree">
           <div>
             <span>2021–2025</span>
@@ -349,9 +435,9 @@ export default function PortfolioPage() {
         <div className="portfolio-about-image"><img src="/about-sam.webp" alt="Sam Duckworth" loading="lazy" /></div>
         <div className="portfolio-about-copy">
           <p className="portfolio-kicker">About Sam</p>
-          <h2>Curious by default.<br />Practical by design.</h2>
-          <p>I like taking ambiguous problems from first principles to a working answer, whether that&rsquo;s a vision pipeline that won&rsquo;t converge, a dashboard that should just handle itself, or waiting for the right light over Sydney&rsquo;s coastline. Most of what I build ends up a little bit agentic, on purpose.</p>
-          <div className="portfolio-about-details"><span><MapPin size={14} /> Sydney, Australia</span><span><Check size={14} /> Engineering · Product · Photography</span></div>
+          <h2>Still take things apart to see how they work.</h2>
+          <p>These days it&rsquo;s drones, dashboards and code instead of whatever was lying around the house growing up, but the instinct hasn&rsquo;t changed: pull it apart, figure out why it&rsquo;s broken, put it back together better. Photography&rsquo;s the one hobby that has nothing to do with debugging anything, which is probably why I like it. Based in Sydney, usually got something on the side.</p>
+          <div className="portfolio-about-details"><span><MapPin size={14} /> Sydney, Australia</span><span><Check size={14} /> Engineering · Data &amp; AI · Photography</span></div>
         </div>
       </section>
 
