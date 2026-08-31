@@ -306,7 +306,7 @@ main {
   .portfolio-mark > small { display: none; }
   .portfolio-nav-actions > a { font-size: .6rem; }
   .portfolio-hero { padding-top: 64px; }
-  .portfolio-hero h1 { font-size: clamp(3.25rem, 17vw, 5.8rem); }
+  .portfolio-hero h1 { font-size: clamp(2.7rem, 13.5vw, 4.6rem); }
   .portfolio-intro,
   .portfolio-scroll { margin-left: 0; }
   .portfolio-hero-index { grid-template-columns: 1fr; }
@@ -349,13 +349,13 @@ main {
 
 .portfolio-work,
 .portfolio-education { padding: clamp(90px, 12vw, 170px) clamp(20px, 4vw, 64px); }
-.portfolio-section-heading { display: grid; grid-template-columns: minmax(180px, .45fr) minmax(0, 1.2fr); gap: 40px; align-items: start; margin-bottom: clamp(72px, 10vw, 130px); }
-.portfolio-section-heading .portfolio-kicker { margin: 12px 0 0; }
+.portfolio-section-heading { display: block; margin-bottom: clamp(72px, 10vw, 130px); }
+.portfolio-section-heading .portfolio-kicker { margin: 0 0 22px; }
 .portfolio-section-heading h2 {
-  max-width: 970px;
+  max-width: 1700px;
   margin: 0;
-  font: var(--head-weight) clamp(2.9rem, 6vw, 6.4rem)/.92 var(--font-sans);
-  letter-spacing: -.055em;
+  font: var(--head-weight) clamp(2.7rem, 5.6vw, 5.7rem)/.96 var(--font-sans);
+  letter-spacing: -.05em;
 }
 
 .portfolio-case {
@@ -525,17 +525,17 @@ main {
 .portfolio-study-grid h3 { margin: 42px 0 10px; font-size: 1.3rem; letter-spacing: -.025em; }
 .portfolio-study-grid p { margin: 0; color: rgba(var(--on-photo-rgb), .58); line-height: 1.6; }
 
-.portfolio-about { display: grid; grid-template-columns: minmax(280px, .85fr) minmax(350px, 1.15fr); min-height: 760px; }
+.portfolio-about { display: grid; grid-template-columns: minmax(280px, .72fr) minmax(350px, 1.28fr); min-height: 760px; }
 .portfolio-about-image { min-height: 650px; }
-.portfolio-about-copy { display: flex; flex-direction: column; justify-content: center; padding: clamp(64px, 9vw, 150px); background: var(--paper-deep); }
-.portfolio-about-copy h2 { margin: 0 0 38px; font: var(--head-weight) clamp(3rem, 5.2vw, 6rem)/.92 var(--font-sans); letter-spacing: -.06em; }
+.portfolio-about-copy { display: flex; flex-direction: column; justify-content: center; padding: clamp(56px, 6.5vw, 110px); background: var(--paper-deep); }
+.portfolio-about-copy h2 { margin: 0 0 38px; font: var(--head-weight) clamp(2.6rem, 4.3vw, 5rem)/.98 var(--font-sans); letter-spacing: -.055em; }
 .portfolio-about-copy > p:not(.portfolio-kicker) { max-width: 660px; margin: 0 0 22px; color: var(--ink-soft); font-size: 1rem; line-height: 1.75; }
 .portfolio-about-details { display: flex; flex-wrap: wrap; gap: 18px 28px; margin-top: 26px; padding-top: 24px; border-top: 1px solid var(--line); }
 .portfolio-about-details span { display: flex; align-items: center; gap: 7px; font: 500 .68rem var(--font-mono); text-transform: uppercase; }
 
-.portfolio-footer { padding: clamp(90px, 12vw, 170px) clamp(20px, 4vw, 64px) 36px; }
+.portfolio-footer { display: block; padding: clamp(90px, 12vw, 170px) clamp(20px, 4vw, 64px) 36px; }
 .portfolio-footer > p { margin: 0 0 28px; color: var(--sea); font: 500 .7rem var(--font-mono); letter-spacing: .12em; text-transform: uppercase; }
-.portfolio-footer h2 { max-width: 1100px; margin: 0 0 120px; font: var(--head-weight) clamp(3.2rem, 7.2vw, 7.8rem)/.88 var(--font-sans); letter-spacing: -.065em; }
+.portfolio-footer h2 { max-width: 1650px; margin: 0 0 120px; font: var(--head-weight) clamp(2.6rem, 5.2vw, 5.8rem)/.96 var(--font-sans); letter-spacing: -.055em; }
 .portfolio-footer > div { display: flex; align-items: center; justify-content: space-between; padding-top: 20px; border-top: 1px solid var(--ink); }
 .portfolio-footer a { display: flex; align-items: center; gap: 7px; }
 
@@ -563,7 +563,6 @@ main {
   .portfolio-proof { grid-template-columns: 1fr; }
   .portfolio-proof p { min-height: 96px; border-right: 0; border-bottom: 1px solid var(--line); }
   .portfolio-proof p:last-child { border-bottom: 0; }
-  .portfolio-section-heading { grid-template-columns: 1fr; gap: 25px; }
   .portfolio-section-heading h2 { font-size: clamp(2.7rem, 13vw, 4rem); }
   .portfolio-case,
   .tennis-case,
