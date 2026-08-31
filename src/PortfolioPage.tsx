@@ -1,6 +1,6 @@
 import {
-  Aperture, ArrowDown, ArrowUpRight, Check, Clock3, Code2, Download,
-  FileText, GraduationCap, Layers3, LockKeyhole, MapPin, Plane,
+  Aperture, ArrowDown, ArrowUpRight, Check, Clock3, Download,
+  FileText, Layers3, LockKeyhole, MapPin, Plane,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ThemeToggle } from "./components/Header";
@@ -15,6 +15,28 @@ const REPORTS = {
   tennisPresentation: "/portfolio/reports/autonomous-tennis-analysis-presentation.pdf",
 };
 
+const JUMP_LINKS = [
+  { n: "01", when: "2025", title: "Honours thesis", note: "First Class · UAV vision", href: "#thesis" },
+  { n: "02", when: "2024", title: "Computer vision", note: "AMME5710 major project", href: "#vision" },
+  { n: "03", when: "Ongoing", title: "Daily OS", note: "AI-run personal dashboard", href: "#dailyos" },
+  { n: "04", when: "2021 –", title: "Photography", note: "samduckworth.com", href: "#photography" },
+];
+
+const FINDINGS = [
+  {
+    title: "Built a real low-light dataset",
+    body: "Captured a controlled UAV dataset in the Bennett Lab, eight synchronised sequences with OptiTrack ground truth, to expand the open sequences available for low-light SLAM research.",
+  },
+  {
+    title: "Fused LLIE with live SLAM",
+    body: "Wired five enhancement models into a modular ROS pipeline around ORB-SLAM3, swappable in real time so raw and enhanced footage could be compared under identical conditions.",
+  },
+  {
+    title: "Found where it actually breaks",
+    body: "Enhancement lifts perceived visibility, but ORB-SLAM3 stays remarkably resilient in the dark. The real result was mapping the illumination threshold where it starts to fail.",
+  },
+];
+
 function ReportActions({ report, presentation }: { report: string; presentation: string }) {
   return (
     <div className="portfolio-report-actions">
@@ -22,6 +44,79 @@ function ReportActions({ report, presentation }: { report: string; presentation:
       <a href={report} download><Download size={15} /> Download PDF</a>
       <a href={presentation} target="_blank" rel="noopener noreferrer">View presentation <ArrowUpRight size={14} /></a>
     </div>
+  );
+}
+
+function ThesisPipelineDiagram() {
+  return (
+    <svg className="pipeline-diagram" viewBox="0 0 1040 380" role="img" aria-labelledby="pipeline-title">
+      <title id="pipeline-title">Low-light SLAM evaluation pipeline: capture, optional enhancement, then ORB-SLAM3</title>
+      <defs>
+        <marker id="pd-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L8,4 L0,8 Z" className="pd-arrowhead" />
+        </marker>
+      </defs>
+
+      <g className="pd-box">
+        <rect x="16" y="132" width="132" height="100" rx="6" />
+        <text x="82" y="118" className="pd-label">Input feed</text>
+        <text x="82" y="172" className="pd-line">DJI Mini 4 Pro</text>
+        <text x="82" y="196" className="pd-line pd-muted">TurtleBot3 (sim)</text>
+      </g>
+
+      <path d="M148,182 H210" className="pd-edge" markerEnd="url(#pd-arrow)" />
+
+      <g className="pd-box">
+        <rect x="210" y="132" width="120" height="100" rx="6" />
+        <text x="270" y="118" className="pd-label">Bag conversion</text>
+        <text x="270" y="176" className="pd-line">ROS bag</text>
+        <text x="270" y="200" className="pd-line pd-muted">timing · topics</text>
+      </g>
+
+      <path d="M330,146 V28 H700 V58" className="pd-edge pd-dashed" markerEnd="url(#pd-arrow)" />
+      <text x="500" y="20" className="pd-tag">raw</text>
+
+      <path d="M330,215 Q365,260 420,260" className="pd-edge" markerEnd="url(#pd-arrow)" />
+
+      <g className="pd-box">
+        <rect x="420" y="70" width="200" height="290" rx="6" />
+        <text x="520" y="56" className="pd-label">LLIE model selection</text>
+        {["CLAHE", "Histogram equalisation", "Zero-DCE++", "EnlightenGAN", "SCI"].map((m, i) => (
+          <g key={m}>
+            <rect x="438" y={92 + i * 48} width="164" height="34" rx="4" className="pd-chip" />
+            <text x="520" y={92 + i * 48 + 22} className="pd-chip-text">{m}</text>
+          </g>
+        ))}
+      </g>
+
+      <path d="M620,215 H660" className="pd-edge" markerEnd="url(#pd-arrow)" />
+      <text x="628" y="205" className="pd-tag">enhanced</text>
+
+      <g className="pd-box">
+        <rect x="660" y="60" width="250" height="230" rx="6" />
+        <text x="785" y="46" className="pd-label">ORB-SLAM3</text>
+        <rect x="676" y="86" width="105" height="184" rx="4" className="pd-chip" />
+        <text x="728" y="108" className="pd-chip-text pd-chip-title">Front end</text>
+        <text x="728" y="132" className="pd-chip-text pd-muted">Feature</text>
+        <text x="728" y="150" className="pd-chip-text pd-muted">extraction &amp;</text>
+        <text x="728" y="168" className="pd-chip-text pd-muted">tracking</text>
+        <rect x="789" y="86" width="105" height="184" rx="4" className="pd-chip" />
+        <text x="841" y="108" className="pd-chip-text pd-chip-title">Back end</text>
+        <text x="841" y="132" className="pd-chip-text pd-muted">Mapping &amp;</text>
+        <text x="841" y="150" className="pd-chip-text pd-muted">loop</text>
+        <text x="841" y="168" className="pd-chip-text pd-muted">closure</text>
+      </g>
+
+      <path d="M785,290 V320" className="pd-edge" markerEnd="url(#pd-arrow)" />
+
+      <g className="pd-box">
+        <rect x="660" y="320" width="250" height="52" rx="6" className="pd-output" />
+        <text x="785" y="352" className="pd-line pd-output-text">Trajectory &amp; map output</text>
+      </g>
+
+      <path d="M932,346 H960 V178 H894" className="pd-edge pd-loop" markerEnd="url(#pd-arrow)" />
+      <text x="960" y="260" className="pd-tag pd-tag-vert" transform="rotate(90 960 260)">loop closure</text>
+    </svg>
   );
 }
 
@@ -108,7 +203,7 @@ export default function PortfolioPage() {
   useSeo("Sam Duckworth | Engineer, Builder & Photographer", {
     path: "/portfolio",
     image: "/portfolio/og.png",
-    description: "The professional portfolio of Sam Duckworth: mechatronic engineering, computer vision, autonomous systems, software products and photography.",
+    description: "The professional portfolio of Sam Duckworth: mechatronic engineering, computer vision, autonomous systems, agentic software and photography.",
     type: "profile",
   });
 
@@ -127,70 +222,84 @@ export default function PortfolioPage() {
       </header>
 
       <section className="portfolio-hero" aria-labelledby="portfolio-title">
-        <div className="portfolio-hero-copy">
-          <p className="portfolio-kicker">Mechatronics / Computer vision / Digital products</p>
-          <h1 id="portfolio-title">I build systems that make complex things feel clear.</h1>
-          <p className="portfolio-intro">I&rsquo;m Sam Duckworth, a mechatronic engineering honours graduate, software builder and photographer working across autonomous systems, intelligent tools and visual storytelling.</p>
-          <a className="portfolio-scroll" href="#work">Explore selected work <ArrowDown size={15} /></a>
+        <div className="portfolio-hero-portrait">
+          <img src="/portfolio/images/sam-portrait.webp" alt="Sam Duckworth" />
         </div>
-        <div className="portfolio-hero-index">
-          <article><span>01</span><GraduationCap /><h2>Engineering</h2><p>Honours research in low-light UAV navigation and visual SLAM.</p></article>
-          <article><span>02</span><Code2 /><h2>Digital products</h2><p>Personal software for planning, finance and everyday decisions.</p></article>
-          <article><span>03</span><Aperture /><h2>Photography</h2><p>A growing archive of aerial, coastal and commissioned work.</p></article>
+        <div className="portfolio-hero-copy">
+          <p className="portfolio-kicker">Mechatronic Engineering &amp; Commerce · Sydney, Australia</p>
+          <h1 id="portfolio-title">Sam Duckworth</h1>
+          <p className="portfolio-hero-role">Mechatronics engineer, builder and photographer.</p>
+          <p className="portfolio-intro">I&rsquo;m a First Class Honours engineering graduate who likes building things that think a little for themselves: drones that see in the dark, a dashboard that writes its own to-do list, cameras that wait for good light. Somewhere between an engineering degree and a finance one I got hooked on AI and agentic systems, and that thread runs through most of what&rsquo;s below.</p>
+          <div className="portfolio-hero-meta">
+            <span>BE (Mechatronic) &amp; BCom, Finance</span>
+            <span>First Class Honours</span>
+            <span>2021 – 2025</span>
+          </div>
+          <a className="portfolio-scroll" href="#work">Explore selected work <ArrowDown size={15} /></a>
         </div>
       </section>
 
-      <section className="portfolio-proof">
-        <p><span>Degree</span><strong>BEng Mechatronic Engineering (Honours)</strong></p>
-        <p><span>University</span><strong>The University of Sydney</strong></p>
-        <p><span>Focus</span><strong>Robotics · Vision · Product</strong></p>
-        <p><span>Based</span><strong>Sydney, Australia</strong></p>
-      </section>
+      <nav className="portfolio-jump-nav" aria-label="Jump to a project">
+        {JUMP_LINKS.map((item) => (
+          <a href={item.href} key={item.n}>
+            <span className="jump-meta"><span className="jump-index">{item.n}</span><span className="jump-when">{item.when}</span></span>
+            <b>{item.title}</b>
+            <small>{item.note}</small>
+          </a>
+        ))}
+      </nav>
 
       <section className="portfolio-work" id="work">
         <div className="portfolio-section-heading"><p className="portfolio-kicker">Selected work / 01–04</p><h2>Research, products and practice.</h2></div>
 
-        <article className="portfolio-case thesis-case">
+        <article className="portfolio-case thesis-case" id="thesis">
           <div className="portfolio-case-number">01</div>
           <div className="portfolio-case-copy">
-            <p className="portfolio-case-type"><Plane size={14} /> Honours research · 2025</p>
+            <p className="portfolio-case-type"><Plane size={14} /> Honours research · First Class · 2025</p>
             <h3>Illuminating the Unknown</h3>
             <p className="portfolio-case-deck">Reconstructing vision for UAV SLAM in low-light environments.</p>
-            <p>My honours thesis tested a deceptively simple idea: if a drone can see a brighter image, will it navigate better? I built a modular ROS pipeline around ORB-SLAM3, integrated five classical and learning-based low-light enhancement methods, and evaluated their effect from raw image consistency through feature matching to trajectory accuracy.</p>
-            <p>The result challenged the initial hypothesis. Brighter images did not reliably improve localisation; frame-to-frame enhancement instability often disrupted the geometric features SLAM depends on. Raw ORB-SLAM3 remained robust until illumination fell below roughly 15–20%.</p>
+            <p>My honours thesis tested a deceptively simple idea: if a drone can see a brighter image, will it navigate better? I built a modular ROS pipeline around ORB-SLAM3, integrated five low-light enhancement methods, and evaluated their effect from raw image consistency through feature matching to trajectory accuracy.</p>
+            <p>The result challenged the hypothesis. Brighter images didn&rsquo;t reliably improve localisation; frame-to-frame enhancement instability often disrupted the geometric features SLAM depends on. Raw ORB-SLAM3 stayed robust until illumination fell below roughly 15–20%.</p>
             <div className="portfolio-tags">{['ROS', 'ORB-SLAM3', 'Python', 'OpenCV', 'OptiTrack', 'UAV systems', 'Computer vision'].map((tag) => <span key={tag}>{tag}</span>)}</div>
             <ReportActions report={REPORTS.thesis} presentation={REPORTS.thesisPresentation} />
           </div>
           <div className="portfolio-thesis-visual">
-            <img src="/portfolio/images/thesis-cover.webp" alt="Cover of Sam Duckworth's honours thesis" />
+            <ThesisPipelineDiagram />
             <div className="portfolio-research-metrics"><span><strong>8</strong> UAV sequences</span><span><strong>5</strong> enhancement methods</span><span><strong>3</strong> evaluation levels</span><span><strong>30 Hz</strong> source pipeline</span></div>
           </div>
-          <figure className="portfolio-wide-figure"><img src="/portfolio/images/thesis-conclusion.webp" alt="Conclusion slide summarising the low-light UAV SLAM research" loading="lazy" /><figcaption>From image-level enhancement to feature stability and trajectory accuracy, a deliberately end-to-end investigation.</figcaption></figure>
+          <div className="portfolio-findings">
+            {FINDINGS.map((f) => (
+              <div key={f.title}><h4>{f.title}</h4><p>{f.body}</p></div>
+            ))}
+          </div>
         </article>
 
-        <article className="portfolio-case tennis-case">
+        <article className="portfolio-case tennis-case" id="vision">
           <div className="portfolio-case-number">02</div>
           <div className="portfolio-case-copy">
-            <p className="portfolio-case-type"><Layers3 size={14} /> AMME5710 major project · Team B</p>
+            <p className="portfolio-case-type"><Layers3 size={14} /> AMME5710 · Computer Vision major project</p>
             <h3>Autonomous Tennis Analysis</h3>
             <p className="portfolio-case-deck">A near-real-time player and ball tracking pipeline from a single broadcast feed.</p>
-            <p>Hawk-Eye-class systems depend on many calibrated high-speed cameras. Our project explored a more accessible route: extracting player position, approximate ball trajectories and match metrics from ordinary 25 FPS television footage using a lightweight, interpretable pipeline.</p>
-            <p>The system classified gameplay frames, localised the court, tracked moving players and the ball, estimated a homography and transformed detections into a live bird&rsquo;s-eye view. Testing spanned all four Grand Slam tournaments to challenge court colours, lighting and camera geometry.</p>
+            <p>Hawk-Eye-class systems depend on many calibrated high-speed cameras. This project explored a more accessible route: extracting player position, approximate ball trajectories and match metrics from ordinary broadcast television using a lightweight, interpretable pipeline.</p>
+            <p>The system classified gameplay frames, localised the court, tracked players and the ball, estimated a homography and transformed detections into a live bird&rsquo;s-eye view. Testing spanned all four Grand Slam tournaments to challenge court colours, lighting and camera geometry.</p>
             <div className="portfolio-tags">{['Classical CV', 'KNN', 'MOG2', 'Homography', 'Object tracking', 'Python', 'OpenCV'].map((tag) => <span key={tag}>{tag}</span>)}</div>
             <ReportActions report={REPORTS.tennis} presentation={REPORTS.tennisPresentation} />
           </div>
-          <figure className="portfolio-tennis-visual"><img src="/portfolio/images/tennis-architecture.webp" alt="System architecture for the autonomous tennis analysis pipeline" loading="lazy" /><figcaption><span><strong>0.963</strong> classification precision</span><span><strong>0.962</strong> classification accuracy</span><span><strong>25 FPS</strong> broadcast input</span></figcaption></figure>
+          <figure className="portfolio-tennis-visual">
+            <img src="/portfolio/images/tennis-architecture.webp" alt="System architecture for the autonomous tennis analysis pipeline" loading="lazy" />
+            <figcaption>Classification → court &amp; corner detection → player/ball tracking → homography → bird&rsquo;s-eye overlay.</figcaption>
+          </figure>
         </article>
 
-        <article className="portfolio-case dashboard-case">
+        <article className="portfolio-case dashboard-case" id="dailyos">
           <div className="portfolio-case-number">03</div>
           <div className="portfolio-case-copy dashboard-copy">
-            <p className="portfolio-case-type"><LockKeyhole size={14} /> Private personal product · Ongoing</p>
+            <p className="portfolio-case-type"><LockKeyhole size={14} /> Private product · Agentic workflows · Ongoing</p>
             <h3>Daily OS</h3>
-            <p className="portfolio-case-deck">A calm command centre for tasks, finance, planning and daily intelligence.</p>
-            <p>I designed and built a private, responsive dashboard that turns scattered personal information into a coherent daily workflow. Natural-language capture routes new entries into tasks, trades or recurring expenses; Supabase-backed data, row-level security and authenticated routes keep the experience personal.</p>
-            <p>The finance workspace reconstructs holdings from transactions, adds live prices, performance, allocation and risk context, then connects those signals with relevant market news. The product also brings together budgeting, briefings, travel, sports and lightweight automation.</p>
-            <div className="portfolio-tags">{['Next.js', 'TypeScript', 'Supabase', 'PostgreSQL', 'React Query', 'Gemini', 'Vercel'].map((tag) => <span key={tag}>{tag}</span>)}</div>
+            <p className="portfolio-case-deck">The private dashboard I actually use every day, with the boring parts run by agents.</p>
+            <p>Tasks, finance, budgeting and a morning briefing, one login instead of six apps. Type a task, a trade or a bill in plain English and Gemini 2.5 Flash sorts out what it is and where it belongs. A scheduled Claude agent reads my inbox each morning and turns emails into tasks on its own, checked against a namespaced memory table that only trusts a sender once it has seen enough consistent evidence.</p>
+            <p>The finance side keeps AI away from the maths: holdings rebuild live from raw transactions, and a separate engine handles the real quant work, RSI, MACD, Bollinger bands, Ledoit-Wolf covariance shrinkage, max-Sharpe and risk-parity optimisation. Gemini is only ever allowed to narrate numbers that engine already computed, never invent its own.</p>
+            <div className="portfolio-tags">{['Next.js', 'TypeScript', 'Supabase', 'PostgreSQL', 'Gemini 2.5', 'Claude agents', 'Quant finance', 'Vercel'].map((tag) => <span key={tag}>{tag}</span>)}</div>
           </div>
           <div className="dashboard-showcase">
             <div className="dashboard-switch"><button className={dashboardView === "tasks" ? "is-active" : ""} onClick={() => setDashboardView("tasks")} type="button">Task workspace</button><button className={dashboardView === "finance" ? "is-active" : ""} onClick={() => setDashboardView("finance")} type="button">Finance workspace</button><span><LockKeyhole size={12} /> Mockup · dummy data</span></div>
@@ -198,14 +307,14 @@ export default function PortfolioPage() {
           </div>
         </article>
 
-        <article className="portfolio-case photography-case">
+        <article className="portfolio-case photography-case" id="photography">
           <div className="portfolio-case-number">04</div>
           <div className="portfolio-case-copy">
-            <p className="portfolio-case-type"><Aperture size={14} /> Photography & digital commerce</p>
+            <p className="portfolio-case-type"><Aperture size={14} /> Photography &amp; digital commerce</p>
             <h3>Sam Duckworth Photography</h3>
             <p className="portfolio-case-deck">A self-directed photographic practice and the platform built around it.</p>
             <p>An evolving archive of aerial, coastal, travel and commissioned photography, designed, photographed and engineered as one system. The site combines a location-led gallery and map with editorial curation, responsive image delivery and an end-to-end fine-art print workflow.</p>
-            <p>Behind the quiet front end sits a purpose-built admin system, structured photo catalogue, secure checkout, pricing controls and optional print fulfilment. It is both a creative outlet and a long-running exercise in product craft.</p>
+            <p>Behind the quiet front end sits a purpose-built admin system, structured photo catalogue, secure checkout and print fulfilment. It&rsquo;s both a creative outlet and a running exercise in product craft.</p>
             <div className="portfolio-tags">{['React', 'Vite', 'Supabase', 'MapLibre', 'Stripe', 'Digital asset workflows'].map((tag) => <span key={tag}>{tag}</span>)}</div>
             <a className="portfolio-primary-link" href="/">Visit samduckworth.com <ArrowUpRight size={15} /></a>
           </div>
@@ -217,24 +326,39 @@ export default function PortfolioPage() {
       </section>
 
       <section className="portfolio-education" id="education">
-        <div className="portfolio-section-heading"><p className="portfolio-kicker">Education / University of Sydney</p><h2>Broad engineering foundations.<br />A specialist eye for intelligent systems.</h2></div>
-        <div className="portfolio-degree"><div><span>2021–2025</span><h3>Bachelor of Engineering in Mechatronic Engineering (Honours)</h3><p>The University of Sydney · School of Aerospace, Mechanical and Mechatronic Engineering</p></div><GraduationCap /></div>
+        <div className="portfolio-section-heading"><p className="portfolio-kicker">Education / University of Sydney</p><h2>Engineering rigour.<br />A commercial eye.</h2></div>
+        <div className="portfolio-degree">
+          <div>
+            <span>2021–2025</span>
+            <h3>Bachelor of Engineering (Mechatronic), First Class Honours &amp; Bachelor of Commerce, Finance</h3>
+            <p>The University of Sydney · School of Aerospace, Mechanical and Mechatronic Engineering</p>
+          </div>
+          <img src="/portfolio/images/usyd-crest.png" alt="University of Sydney crest" className="portfolio-degree-crest" loading="lazy" />
+        </div>
         <div className="portfolio-study-grid">
-          <article><span>01</span><h3>Autonomy & robotics</h3><p>Robot operating systems, localisation, mapping, sensors, control and real-time systems.</p></article>
-          <article><span>02</span><h3>Computer vision</h3><p>Feature extraction, tracking, calibration, geometry, image enhancement and machine learning.</p></article>
-          <article><span>03</span><h3>Mechanical systems</h3><p>Mechatronic design, dynamics, solid mechanics, materials, electronics and embedded integration.</p></article>
-          <article><span>04</span><h3>Computation</h3><p>Python, C/C++, data analysis, simulation, software engineering and numerical methods.</p></article>
-          <article><span>05</span><h3>Finance electives</h3><p>Investment analysis, portfolio thinking, markets and the financial context for technical decisions.</p></article>
-          <article><span>06</span><h3>Engineering practice</h3><p>Team projects, experimental design, technical communication, systems thinking and professional practice.</p></article>
+          <article><span>01</span><h3>Autonomy &amp; robotics</h3><p>ROS, localisation, mapping, sensors, real-time control.</p></article>
+          <article><span>02</span><h3>Computer vision</h3><p>Feature extraction, tracking, calibration, image enhancement.</p></article>
+          <article><span>03</span><h3>Mechanical systems</h3><p>Mechatronic design, dynamics, materials, embedded systems.</p></article>
+          <article><span>04</span><h3>Computation</h3><p>Python, C/C++, simulation, numerical methods.</p></article>
+          <article><span>05</span><h3>Finance &amp; markets</h3><p>Investment analysis, corporate finance, portfolio construction.</p></article>
+          <article><span>06</span><h3>Engineering practice</h3><p>Team projects, technical communication, systems thinking.</p></article>
         </div>
       </section>
 
       <section className="portfolio-about" id="about">
         <div className="portfolio-about-image"><img src="/about-sam.webp" alt="Sam Duckworth" loading="lazy" /></div>
-        <div className="portfolio-about-copy"><p className="portfolio-kicker">About Sam</p><h2>Curious by default.<br />Practical by design.</h2><p>My best work lives where disciplines overlap: an engineer&rsquo;s need to understand the system, a builder&rsquo;s instinct to make it useful, and a photographer&rsquo;s attention to what people actually see.</p><p>I enjoy taking ambiguous problems from first principles to a considered outcome, whether that is diagnosing why a vision pipeline fails, shaping a private software product around real habits, or waiting for the right weather over Sydney&rsquo;s coastline.</p><div className="portfolio-about-details"><span><MapPin size={14} /> Sydney, Australia</span><span><Check size={14} /> Engineering · Product · Photography</span></div></div>
+        <div className="portfolio-about-copy">
+          <p className="portfolio-kicker">About Sam</p>
+          <h2>Curious by default.<br />Practical by design.</h2>
+          <p>I like taking ambiguous problems from first principles to a working answer, whether that&rsquo;s a vision pipeline that won&rsquo;t converge, a dashboard that should just handle itself, or waiting for the right light over Sydney&rsquo;s coastline. Most of what I build ends up a little bit agentic, on purpose.</p>
+          <div className="portfolio-about-details"><span><MapPin size={14} /> Sydney, Australia</span><span><Check size={14} /> Engineering · Product · Photography</span></div>
+        </div>
       </section>
 
-      <footer className="portfolio-footer"><p>Sam Duckworth</p><h2>Engineering the useful.<br />Photographing the memorable.</h2><div><span>Portfolio · 2026</span><a href="/">samduckworth.com <ArrowUpRight size={14} /></a></div></footer>
+      <footer className="portfolio-footer">
+        <p>Sam Duckworth</p>
+        <div><span>Portfolio · 2026</span><a href="/">samduckworth.com <ArrowUpRight size={14} /></a></div>
+      </footer>
     </main>
   );
 }
