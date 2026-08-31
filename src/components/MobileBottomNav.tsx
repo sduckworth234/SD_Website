@@ -35,11 +35,16 @@ export function MobileBottomNav({
       setShowOnHome(true);
       return undefined;
     }
-    const sync = () => setShowOnHome(window.scrollY > 72);
-    sync();
-    window.addEventListener("scroll", sync, { passive: true });
-    return () => window.removeEventListener("scroll", sync);
-  }, [path]);
+    if (showOnHome) return undefined;
+
+    const reveal = () => {
+      if (window.scrollY <= 72) return;
+      setShowOnHome(true);
+    };
+    reveal();
+    window.addEventListener("scroll", reveal, { passive: true });
+    return () => window.removeEventListener("scroll", reveal);
+  }, [path, showOnHome]);
 
   // Tapping the tab you're already on scrolls to top instead of pushing a
   // no-op history entry — the familiar "tap again to jump to top" app pattern.
