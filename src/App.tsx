@@ -965,6 +965,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [activeLocation, setActiveLocation] = useState<ActiveLocation>(() => readLocationParam() ?? allLocations);
   const [activeCollectionId, setActiveCollectionId] = useState<string>(ALL_COLLECTIONS);
   const [favouriteIds, setFavouriteIds] = useState<Set<string>>(() => readFavouriteIds());
+  const [favouritesHintCollapsed, setFavouritesHintCollapsed] = useState(false);
   // Phones can't afford two sticky rails, so they switch between them instead.
   const isPhone = useMediaQuery("(max-width: 760px)");
   const [mobileAxis, setMobileAxis] = useState<"collections" | "places">("collections");
@@ -1025,6 +1026,10 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   useEffect(() => {
     if (isFavourites && !favouritePhotos.length) setActiveCollectionId(ALL_COLLECTIONS);
   }, [isFavourites, favouritePhotos.length]);
+
+  useEffect(() => {
+    if (!isFavourites) setFavouritesHintCollapsed(false);
+  }, [isFavourites]);
 
   function toggleFavourite(photo: Photo) {
     setFavouriteIds((current) => {
@@ -1318,12 +1323,29 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
           onChange={setActiveLocation}
         />
       ) : null}
-      <p className="gallery-favourites-hint" aria-live="polite">
-        <Heart size={13} fill={favouritePhotos.length ? "currentColor" : "none"} aria-hidden="true" />
-        {favouritePhotos.length
-          ? `${favouritePhotos.length} saved to Favourites on this browser`
-          : "Open a photo and tap the heart to save it to Favourites"}
-      </p>
+      {favouritePhotos.length ? (
+        <button
+          aria-label={favouritesHintCollapsed ? "Favourites" : undefined}
+          className={`gallery-favourites-hint is-link${favouritesHintCollapsed ? " is-collapsed" : ""}`}
+          onClick={(event) => {
+            changeCollection(FAVOURITES_COLLECTION);
+            setFavouritesHintCollapsed(true);
+            if (event.detail > 0) {
+              const button = event.currentTarget;
+              requestAnimationFrame(() => button.blur());
+            }
+          }}
+          type="button"
+        >
+          <Heart size={13} fill="currentColor" aria-hidden="true" />
+          {favouritesHintCollapsed ? null : <>Explore your favourites <span aria-hidden="true">→</span></>}
+        </button>
+      ) : (
+        <p className="gallery-favourites-hint" aria-live="polite">
+          <Heart size={13} aria-hidden="true" />
+          Save what you like to favourites for later
+        </p>
+      )}
       <GalleryControls onChange={setView} onViewOnMap={viewOnMap} view={view} />
       {isLoading || !imagesReady ? (
         <GallerySkeleton view={view} />

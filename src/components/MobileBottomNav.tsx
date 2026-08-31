@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Home, Images, Map, Mail, ShoppingBag } from "lucide-react";
 import { SHOP_FEATURE_ENABLED } from "../lib/features";
 
@@ -17,6 +17,9 @@ export function MobileBottomNav({
   showShop?: boolean;
 }) {
   const path = typeof window !== "undefined" ? window.location.pathname : "/";
+  const [showOnHome, setShowOnHome] = useState(
+    () => path !== "/" || (typeof window !== "undefined" && window.scrollY > 72),
+  );
 
   // CSS elsewhere (body-bottom padding, the map's control offset, the home
   // hero's scroll cue) needs to know whether a tab bar is actually occupying
@@ -26,6 +29,17 @@ export function MobileBottomNav({
     document.body.classList.add("has-mobile-tabbar");
     return () => { document.body.classList.remove("has-mobile-tabbar"); };
   }, []);
+
+  useEffect(() => {
+    if (path !== "/") {
+      setShowOnHome(true);
+      return undefined;
+    }
+    const sync = () => setShowOnHome(window.scrollY > 72);
+    sync();
+    window.addEventListener("scroll", sync, { passive: true });
+    return () => window.removeEventListener("scroll", sync);
+  }, [path]);
 
   // Tapping the tab you're already on scrolls to top instead of pushing a
   // no-op history entry — the familiar "tap again to jump to top" app pattern.
@@ -51,7 +65,7 @@ export function MobileBottomNav({
   const isShop = path.startsWith("/shop");
 
   return (
-    <nav className="mobile-tab-bar" aria-label="Primary">
+    <nav className={`mobile-tab-bar${showOnHome ? "" : " is-awaiting-scroll"}`} aria-label="Primary">
       <a
         href="/"
         className={`mtb-item${isHome ? " is-active" : ""}`}
