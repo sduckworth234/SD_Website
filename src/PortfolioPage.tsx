@@ -265,11 +265,11 @@ export default function PortfolioPage() {
   const [dashboardView, setDashboardView] = useState<"tasks" | "finance">("tasks");
   const [photos, setPhotos] = useState<Photo[]>([]);
 
-  useSeo("Sam Duckworth | Data & AI Analyst and Photographer", {
+  useSeo("Sam Duckworth Professional Portfolio", {
     path: "/portfolio",
     image: "/portfolio/og.png",
-    description: "The professional portfolio of Sam Duckworth: mechatronic engineering, computer vision, autonomous systems, agentic software and photography.",
-    type: "profile",
+    description: "Data and AI, mechatronic engineering, computer vision, agentic software and photography by Sam Duckworth.",
+    type: "website",
   });
 
   useEffect(() => {

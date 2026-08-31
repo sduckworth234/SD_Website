@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-PJ829H05BE"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() { dataLayer.push(arguments); }
+      gtag("js", new Date());
+      gtag("config", "G-PJ829H05BE", { send_page_view: false });
+    </script>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#f3eee5" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem("sd-theme");
+          var t = s === "light" || s === "dark" ? s
+            : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          document.documentElement.dataset.theme = t;
+          if (t === "dark") {
+            document.querySelector('meta[name="theme-color"]').content = "#0b0b0c";
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link
+      rel="preload"
+      href="/fonts/archivo-var.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/space-grotesk-var.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/bebas-neue.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <title>Sam Duckworth Professional Portfolio</title>
+    <meta
+      name="description"
+      content="Data and AI, mechatronic engineering, computer vision, agentic software and photography by Sam Duckworth."
+    />
+    <link rel="canonical" href="https://www.samduckworth.com/portfolio" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Sam Duckworth" />
+    <meta property="og:title" content="Sam Duckworth Professional Portfolio" />
+    <meta
+      property="og:description"
+      content="Data and AI, mechatronic engineering, computer vision, agentic software and photography."
+    />
+    <meta property="og:url" content="https://www.samduckworth.com/portfolio" />
+    <meta property="og:image" content="https://www.samduckworth.com/portfolio/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Sam Duckworth professional portfolio" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Sam Duckworth Professional Portfolio" />
+    <meta
+      name="twitter:description"
+      content="Data and AI, mechatronic engineering, computer vision, agentic software and photography."
+    />
+    <meta name="twitter:image" content="https://www.samduckworth.com/portfolio/og.png" />
+    <meta name="twitter:image:alt" content="Sam Duckworth professional portfolio" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "ProfilePage",
+        "name": "Sam Duckworth Professional Portfolio",
+        "url": "https://www.samduckworth.com/portfolio",
+        "mainEntity": {
+          "@type": "Person",
+          "name": "Sam Duckworth",
+          "url": "https://www.samduckworth.com/portfolio",
+          "image": "https://www.samduckworth.com/portfolio/images/sam-portrait.webp",
+          "knowsAbout": [
+            "Data and AI",
+            "Mechatronic engineering",
+            "Computer vision",
+            "Agentic software",
+            "Photography"
+          ]
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
