@@ -123,6 +123,7 @@ import { savePublicContent, usePublicContent, type PublicContent } from "./lib/p
 // Lazy-loaded so MapLibre + the basemap stay out of the main gallery bundle.
 const MapPage = lazy(() => import("./MapPage"));
 const WorkPage = lazy(() => import("./WorkPage"));
+const PortfolioPage = lazy(() => import("./PortfolioPage"));
 // Stripe and the order admin are similarly route-scoped. Gallery visitors
 // should not download payment/admin code unless they actually open that flow.
 const CheckoutPage = lazy(() => import("./components/CheckoutPage").then((module) => ({ default: module.CheckoutPage })));
@@ -422,6 +423,14 @@ function App() {
     return (
       <Suspense fallback={<main className="route-loading"><SDLoader label="Loading professional work" /></main>}>
         <WorkPage onNavigate={navigate} />
+      </Suspense>
+    );
+  }
+
+  if (matches("/portfolio")) {
+    return (
+      <Suspense fallback={<main className="route-loading"><SDLoader label="Loading portfolio" /></main>}>
+        <PortfolioPage />
       </Suspense>
     );
   }
