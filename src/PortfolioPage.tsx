@@ -1,6 +1,6 @@
 import {
-  Aperture, ArrowDown, ArrowUpRight, Check, Clock3, Download,
-  FileText, Layers3, LockKeyhole, MapPin, Plane,
+  Aperture, ArrowDown, ArrowUpRight, Clock3, Download,
+  FileText, Layers3, LockKeyhole, Mail, MapPin, Plane,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ThemeToggle } from "./components/Header";
@@ -28,7 +28,7 @@ const FINDINGS = [
     body: "Captured a controlled UAV dataset in the Bennett Lab, eight synchronised sequences with OptiTrack ground truth, to expand the open sequences available for low-light SLAM research.",
   },
   {
-    title: "Fused LLIE with live SLAM",
+    title: "Combined image enhancement with live navigation",
     body: "Wired five enhancement models into a modular ROS pipeline around ORB-SLAM3, swappable in real time so raw and enhanced footage could be compared under identical conditions.",
   },
   {
@@ -40,9 +40,11 @@ const FINDINGS = [
 function ReportActions({ report, presentation }: { report: string; presentation: string }) {
   return (
     <div className="portfolio-report-actions">
-      <a href={report} target="_blank" rel="noopener noreferrer"><FileText size={15} /> Read report</a>
-      <a href={report} download><Download size={15} /> Download PDF</a>
-      <a href={presentation} target="_blank" rel="noopener noreferrer">View presentation <ArrowUpRight size={14} /></a>
+      <div className="portfolio-report-buttons">
+        <a href={report} target="_blank" rel="noopener noreferrer"><FileText size={15} /> Read report</a>
+        <a href={report} download><Download size={15} /> Download PDF</a>
+      </div>
+      <a className="portfolio-report-link" href={presentation} target="_blank" rel="noopener noreferrer">View presentation <ArrowUpRight size={14} /></a>
     </div>
   );
 }
@@ -122,8 +124,8 @@ function ThesisPipelineDiagram() {
 
 function DailyOSArchitectureDiagram() {
   return (
-    <svg className="pipeline-diagram" viewBox="0 0 1100 420" role="img" aria-labelledby="daily-os-title">
-      <title id="daily-os-title">Daily OS architecture: input capture, AI routing, Supabase, deterministic finance engine, daily surfaces</title>
+    <svg className="pipeline-diagram" viewBox="0 0 1000 260" role="img" aria-labelledby="daily-os-title">
+      <title id="daily-os-title">Daily OS: how a task, email or trade turns into something useful on screen</title>
       <defs>
         <marker id="do-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M0,0 L8,4 L0,8 Z" className="pd-arrowhead" />
@@ -131,71 +133,51 @@ function DailyOSArchitectureDiagram() {
       </defs>
 
       <g className="pd-box">
-        <rect x="16" y="145" width="150" height="100" rx="6" />
-        <text x="91" y="131" className="pd-label">Entry points</text>
-        <text x="91" y="185" className="pd-line">Chat &amp; quick-add</text>
-        <text x="91" y="209" className="pd-line pd-muted">Gmail</text>
+        <rect x="16" y="65" width="170" height="130" rx="6" />
+        <text x="101" y="51" className="pd-label">You type, or an email arrives</text>
+        <text x="101" y="122" className="pd-line">Chat &amp; quick-add</text>
+        <text x="101" y="146" className="pd-line pd-muted">Gmail</text>
       </g>
 
-      <path d="M166,175 C195,175 195,102 220,102" className="pd-edge" markerEnd="url(#do-arrow)" />
-      <path d="M166,215 C195,215 195,280 220,280" className="pd-edge" markerEnd="url(#do-arrow)" />
+      <path d="M186,130 H244" className="pd-edge" markerEnd="url(#do-arrow)" />
 
       <g className="pd-box">
-        <rect x="220" y="30" width="190" height="145" rx="6" />
-        <text x="315" y="16" className="pd-label">Gemini 2.5 Flash</text>
-        {["add_task", "add_transaction", "add_subscription"].map((m, i) => (
+        <rect x="244" y="40" width="230" height="180" rx="6" />
+        <text x="359" y="26" className="pd-label">AI sorts it out</text>
+        <g>
+          <rect x="260" y="60" width="198" height="66" rx="4" className="pd-chip" />
+          <text x="359" y="86" className="pd-chip-text pd-chip-title">Gemini 2.5 Flash</text>
+          <text x="359" y="108" className="pd-chip-text pd-muted">Reads what you typed</text>
+        </g>
+        <g>
+          <rect x="260" y="136" width="198" height="66" rx="4" className="pd-chip" />
+          <text x="359" y="162" className="pd-chip-text pd-chip-title">Claude agent</text>
+          <text x="359" y="184" className="pd-chip-text pd-muted">Reads the inbox, daily</text>
+        </g>
+      </g>
+
+      <path d="M474,130 H532" className="pd-edge" markerEnd="url(#do-arrow)" />
+
+      <g className="pd-box">
+        <rect x="532" y="55" width="200" height="150" rx="6" />
+        <text x="632" y="41" className="pd-label">Saved, privately</text>
+        <text x="632" y="90" className="pd-line">Supabase</text>
+        <text x="632" y="114" className="pd-line pd-muted">Locked to my account only</text>
+        <g>
+          <rect x="550" y="136" width="164" height="30" rx="4" className="pd-chip" />
+          <text x="632" y="156" className="pd-chip-text">tasks · trades · memory</text>
+        </g>
+      </g>
+
+      <path d="M732,130 H790" className="pd-edge" markerEnd="url(#do-arrow)" />
+
+      <g className="pd-box">
+        <rect x="790" y="40" width="194" height="180" rx="6" />
+        <text x="887" y="26" className="pd-label">Shows up as</text>
+        {["Task list", "Finance dashboard", "Morning briefing"].map((m, i) => (
           <g key={m}>
-            <rect x="238" y={48 + i * 38} width="154" height="30" rx="4" className="pd-chip" />
-            <text x="315" y={48 + i * 38 + 20} className="pd-chip-text">{m}</text>
-          </g>
-        ))}
-      </g>
-
-      <g className="pd-box">
-        <rect x="220" y="225" width="190" height="110" rx="6" />
-        <text x="315" y="211" className="pd-label">Claude agent</text>
-        <text x="315" y="257" className="pd-line">Gmail → tasks, daily</text>
-        <text x="315" y="281" className="pd-line pd-muted">evidence-gated memory</text>
-      </g>
-
-      <path d="M410,102 C445,102 445,140 470,140" className="pd-edge" markerEnd="url(#do-arrow)" />
-      <path d="M410,280 C445,280 445,220 470,220" className="pd-edge" markerEnd="url(#do-arrow)" />
-
-      <g className="pd-box">
-        <rect x="470" y="90" width="210" height="175" rx="6" />
-        <text x="575" y="76" className="pd-label">Supabase Postgres</text>
-        <text x="575" y="112" className="pd-line pd-muted">Row-level security · every table</text>
-        {["tasks", "transactions", "agent_memories"].map((m, i) => (
-          <g key={m}>
-            <rect x="488" y={128 + i * 36} width="174" height="28" rx="4" className="pd-chip" />
-            <text x="575" y={128 + i * 36 + 19} className="pd-chip-text">{m}</text>
-          </g>
-        ))}
-      </g>
-
-      <path d="M575,265 V310" className="pd-edge" markerEnd="url(#do-arrow)" />
-      <text x="700" y="285" className="pd-tag">pg_cron</text>
-
-      <g className="pd-box">
-        <rect x="470" y="310" width="210" height="80" rx="6" className="pd-output" />
-        <text x="575" y="342" className="pd-line pd-output-text">RSI · MACD · Bollinger</text>
-        <text x="575" y="366" className="pd-line pd-output-text pd-muted-light">Ledoit-Wolf · max-Sharpe · VaR</text>
-      </g>
-      <text x="575" y="296" className="pd-label" textAnchor="middle">portfolio-agent</text>
-
-      <path d="M480,310 H430 V175 H380" className="pd-edge pd-dashed" markerEnd="url(#do-arrow)" />
-      <text x="430" y="252" className="pd-tag" transform="rotate(-90 430 252)">narrate only</text>
-
-      <path d="M680,177 H760" className="pd-edge" markerEnd="url(#do-arrow)" />
-      <path d="M680,350 C720,350 720,129 760,129" className="pd-edge pd-loop" markerEnd="url(#do-arrow)" />
-
-      <g className="pd-box">
-        <rect x="760" y="50" width="210" height="170" rx="6" />
-        <text x="865" y="36" className="pd-label">Daily surfaces</text>
-        {["Task list", "Finance dashboard", "Morning briefing (Slack)"].map((m, i) => (
-          <g key={m}>
-            <rect x="778" y={68 + i * 44} width="174" height="34" rx="4" className="pd-chip" />
-            <text x="865" y={68 + i * 44 + 21} className="pd-chip-text">{m}</text>
+            <rect x="806" y={58 + i * 44} width="162" height="34" rx="4" className="pd-chip" />
+            <text x="887" y={58 + i * 44 + 21} className="pd-chip-text">{m}</text>
           </g>
         ))}
       </g>
@@ -347,7 +329,7 @@ export default function PortfolioPage() {
             <ReportActions report={REPORTS.thesis} presentation={REPORTS.thesisPresentation} />
           </div>
           <div className="portfolio-thesis-visual">
-            <ThesisPipelineDiagram />
+            <div className="pipeline-diagram-scroll"><ThesisPipelineDiagram /></div>
             <div className="portfolio-research-metrics"><span><strong>8</strong> UAV sequences</span><span><strong>5</strong> enhancement methods</span><span><strong>3</strong> evaluation levels</span><span><strong>30 Hz</strong> source pipeline</span></div>
           </div>
           <div className="portfolio-findings">
@@ -363,7 +345,7 @@ export default function PortfolioPage() {
             <p className="portfolio-case-type"><LockKeyhole size={14} /> Private product · Agentic workflows · Ongoing</p>
             <h3>Daily OS</h3>
             <p className="portfolio-case-deck">The private dashboard I actually use every day, with the boring parts run by agents.</p>
-            <p>Tasks, finance, budgeting and a morning briefing, one login instead of six apps. Type a task, a trade or a bill in plain English and Gemini 2.5 Flash sorts out what it is and where it belongs. A scheduled Claude agent reads my inbox each morning and turns emails into tasks on its own, checked against a namespaced memory table that only trusts a sender once it has seen enough consistent evidence.</p>
+            <p>Tasks, finance, budgeting and a morning briefing, one login instead of six apps. Type a task, a trade or a bill in plain English and Gemini 2.5 Flash sorts out what it is and where it belongs. A scheduled Claude agent reads my inbox each morning and turns emails into tasks on its own, staying cautious around senders it hasn&rsquo;t seen enough of before.</p>
             <p>On the finance side it tracks my stock positions and portfolio performance, and surfaces the metrics and market updates that actually matter, no spreadsheet required.</p>
             <div className="portfolio-tags">{['Next.js', 'TypeScript', 'Supabase', 'PostgreSQL', 'Gemini 2.5', 'Claude agents', 'Portfolio tracking', 'Vercel'].map((tag) => <span key={tag}>{tag}</span>)}</div>
           </div>
@@ -372,7 +354,7 @@ export default function PortfolioPage() {
             {dashboardView === "tasks" ? <TaskDashboardMockup /> : <FinanceDashboardMockup />}
           </div>
           <div className="portfolio-architecture">
-            <DailyOSArchitectureDiagram />
+            <div className="pipeline-diagram-scroll"><DailyOSArchitectureDiagram /></div>
           </div>
         </article>
 
@@ -434,10 +416,13 @@ export default function PortfolioPage() {
       <section className="portfolio-about" id="about">
         <div className="portfolio-about-image"><img src="/about-sam.webp" alt="Sam Duckworth" loading="lazy" /></div>
         <div className="portfolio-about-copy">
-          <p className="portfolio-kicker">About Sam</p>
-          <h2>Still take things apart to see how they work.</h2>
-          <p>These days it&rsquo;s drones, dashboards and code instead of whatever was lying around the house growing up, but the instinct hasn&rsquo;t changed: pull it apart, figure out why it&rsquo;s broken, put it back together better. Photography&rsquo;s the one hobby that has nothing to do with debugging anything, which is probably why I like it. Based in Sydney, usually got something on the side.</p>
-          <div className="portfolio-about-details"><span><MapPin size={14} /> Sydney, Australia</span><span><Check size={14} /> Engineering · Data &amp; AI · Photography</span></div>
+          <p className="portfolio-kicker">Get in touch</p>
+          <h2>Thanks for reading.</h2>
+          <p>If any of this is relevant to what you&rsquo;re working on, or you&rsquo;d just like to talk shop, I&rsquo;d like to hear from you.</p>
+          <div className="portfolio-about-details">
+            <a href="mailto:samduckworthphoto@gmail.com"><Mail size={14} /> samduckworthphoto@gmail.com</a>
+            <span><MapPin size={14} /> Sydney, Australia</span>
+          </div>
         </div>
       </section>
 
