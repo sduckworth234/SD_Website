@@ -964,6 +964,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   const { publicPhotos, locations, visibleCollections, flags, isAdmin, isLoading, loadGallery } = useSiteData();
   const [activeLocation, setActiveLocation] = useState<ActiveLocation>(() => readLocationParam() ?? allLocations);
   const [activeCollectionId, setActiveCollectionId] = useState<string>(ALL_COLLECTIONS);
+  const [favouriteIds, setFavouriteIds] = useState<Set<string>>(() => readFavouriteIds());
   // Phones can't afford two sticky rails, so they switch between them instead.
   const isPhone = useMediaQuery("(max-width: 760px)");
   const [mobileAxis, setMobileAxis] = useState<"collections" | "places">("collections");
@@ -995,9 +996,44 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [imagesReady, setImagesReady] = useState(false);
 
+  const isFavourites = activeCollectionId === FAVOURITES_COLLECTION;
+  const favouritePhotos = useMemo(
+    () => publicPhotos.filter((photo) => favouriteIds.has(photo.id)),
+    [publicPhotos, favouriteIds],
+  );
   const activeCollection = activeCollectionId === ALL_COLLECTIONS
     ? null
     : visibleCollections.find((c) => c.id === activeCollectionId) ?? null;
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(FAVOURITES_STORAGE_KEY, JSON.stringify([...favouriteIds]));
+    } catch {
+      // Storage can be unavailable in strict/private browsing modes. The
+      // in-memory favourites still work for the current visit.
+    }
+  }, [favouriteIds]);
+
+  useEffect(() => {
+    const syncFavourites = (event: StorageEvent) => {
+      if (event.key === FAVOURITES_STORAGE_KEY) setFavouriteIds(readFavouriteIds());
+    };
+    window.addEventListener("storage", syncFavourites);
+    return () => window.removeEventListener("storage", syncFavourites);
+  }, []);
+
+  useEffect(() => {
+    if (isFavourites && !favouritePhotos.length) setActiveCollectionId(ALL_COLLECTIONS);
+  }, [isFavourites, favouritePhotos.length]);
+
+  function toggleFavourite(photo: Photo) {
+    setFavouriteIds((current) => {
+      const next = new Set(current);
+      if (next.has(photo.id)) next.delete(photo.id);
+      else next.add(photo.id);
+      return next;
+    });
+  }
 
   // Resolve ?collection=slug once the collections have loaded.
   const collectionParamApplied = useRef(false);
@@ -1012,9 +1048,10 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
 
   // Photos inside the active collection — the pool everything else derives from.
   const scopedPhotos = useMemo(() => {
+    if (isFavourites) return favouritePhotos;
     if (!activeCollection) return publicPhotos;
     return publicPhotos.filter((p) => (p.collectionIds ?? []).includes(activeCollection.id));
-  }, [publicPhotos, activeCollection]);
+  }, [publicPhotos, activeCollection, favouritePhotos, isFavourites]);
 
   // The places rail is rebuilt from the scoped pool, so choosing "2022 Europe"
   // leaves only Italy/Monaco/Greece — the whole point of the collections axis.
@@ -1072,12 +1109,12 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
     if (scopedLocationNames.includes(activeLocation)) return;
     // Outside a collection, keep the old behaviour: a dead deep link lands
     // somewhere real instead of showing nothing.
-    if (!activeCollection) {
+    if (!activeCollection && !isFavourites) {
       setActiveLocation(pickLandingLocation(scopedLocationNames));
       return;
     }
     setActiveLocation(allLocations);
-  }, [activeLocation, activeCollection, scopedLocationNames]);
+  }, [activeLocation, activeCollection, isFavourites, scopedLocationNames]);
 
   const filteredPhotos = useMemo(() => {
     if (activeLocation === allLocations) return scopedPhotos;
@@ -1107,9 +1144,11 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
 
   function changeCollection(id: string) {
     setActiveCollectionId(id);
+    if (id === FAVOURITES_COLLECTION) setActiveLocation(allLocations);
     // Drilling into a trip on a phone should land you on its places, not leave
     // you staring at the rail you just used.
-    if (isPhone && id !== ALL_COLLECTIONS) setMobileAxis("places");
+    if (isPhone && id !== ALL_COLLECTIONS && id !== FAVOURITES_COLLECTION) setMobileAxis("places");
+    if (isPhone && id === FAVOURITES_COLLECTION) setMobileAxis("collections");
   }
 
   useEffect(() => {
@@ -1189,7 +1228,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   const seoLoc = activeLocation === allLocations ? null : activeLocation;
   const collectionLabel = activeCollection ? collectionTitle(activeCollection) : null;
   // "Italy · 2024 Europe" beats a bare "Italy" now that Italy spans three trips.
-  const pageHeading = seoLoc ?? collectionLabel ?? "All work";
+  const pageHeading = isFavourites ? "Favourites" : seoLoc ?? collectionLabel ?? "All work";
   const seoTitle = [seoLoc, collectionLabel].filter(Boolean).join(" · ");
   useSeo(
     seoTitle ? `${seoTitle} — Sam Duckworth Photography` : "Gallery — Sam Duckworth Photography",
@@ -1257,6 +1296,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
           activeId={activeCollectionId}
           collections={visibleCollections}
           counts={collectionCounts}
+          favouriteCount={favouritePhotos.length}
           onChange={changeCollection}
         />
       ) : null}
@@ -1314,6 +1354,8 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
           photo={selectedPhoto}
           origin={origin}
           onClose={closePhoto}
+          isFavourite={favouriteIds.has(selectedPhoto.id)}
+          onToggleFavourite={toggleFavourite}
           onViewOnMap={viewPhotoOnMap}
           onOrderPrint={(isAdmin || (SHOP_FEATURE_ENABLED && flags.print_configurator === true)) && selectedPhoto.inShop ? (p) => {
             trackProductLinkClicked({ item_id: p.id, item_name: p.title, source: "gallery" });
@@ -2997,24 +3039,54 @@ function Hero2026Feature({ heading, photos, onOpen }: { heading: string; photos:
 // two-line chip (period over name — "2026" / "EUROPE") so a trip reads at a
 // glance without extra copy. "All work" leads and clears the filter.
 const ALL_COLLECTIONS = "__all__";
+const FAVOURITES_COLLECTION = "__favourites__";
+const FAVOURITES_STORAGE_KEY = "sd-gallery-favourites-v1";
+
+function readFavouriteIds(): Set<string> {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(FAVOURITES_STORAGE_KEY) ?? "[]");
+    return new Set(Array.isArray(stored) ? stored.filter((id): id is string => typeof id === "string") : []);
+  } catch {
+    return new Set();
+  }
+}
 
 function CollectionRail({
   activeId,
   collections,
   counts,
+  favouriteCount,
   onChange,
 }: {
   activeId: string;
   collections: Collection[];
   counts: Map<string, number>;
+  favouriteCount: number;
   onChange: (id: string) => void;
 }) {
   return (
     // Reuses .location-rail for the scrolling flex row, then overrides it to sit
-    // static (only the places rail sticks) with taller two-line tabs. The "view
-    // everything" tab sits LAST, not first — same destination-at-the-end
-    // pattern as the home page's location rows (see CollectionCurtain).
+    // static (only the places rail sticks) with taller two-line tabs. "All"
+    // leads so the unfiltered state is visible before the dated collections.
     <section className="location-rail collection-rail" aria-label="Filter gallery by collection">
+      <button
+        className={activeId === ALL_COLLECTIONS ? "active" : ""}
+        onClick={() => onChange(ALL_COLLECTIONS)}
+        type="button"
+      >
+        <span className="rail-period">All</span>
+        <span className="rail-name">View the whole gallery</span>
+      </button>
+      {favouriteCount > 0 ? (
+        <button
+          className={activeId === FAVOURITES_COLLECTION ? "active" : ""}
+          onClick={() => onChange(FAVOURITES_COLLECTION)}
+          type="button"
+        >
+          <span className="rail-period">Favourites</span>
+          <span className="rail-name">{favouriteCount} saved</span>
+        </button>
+      ) : null}
       {collections.map((collection) => {
         const count = counts.get(collection.id) ?? 0;
         return (
@@ -3033,14 +3105,6 @@ function CollectionRail({
           </button>
         );
       })}
-      <button
-        className={activeId === ALL_COLLECTIONS ? "active" : ""}
-        onClick={() => onChange(ALL_COLLECTIONS)}
-        type="button"
-      >
-        <span className="rail-period">All</span>
-        <span className="rail-name">View the whole gallery</span>
-      </button>
     </section>
   );
 }

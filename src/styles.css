@@ -2412,27 +2412,16 @@ body:has(.contact-overlay) {
   width: calc(100% - clamp(28px, 7vw, 112px));
   max-width: 1240px;
   margin: 0 auto clamp(20px, 4vw, 52px);
-  padding: clamp(26px, 4.5vw, 58px) 0 clamp(22px, 3.6vw, 44px);
-  border: 1px solid var(--line);
-  border-radius: clamp(12px, 1.5vw, 20px);
-  background:
-    radial-gradient(circle at 84% 6%, rgba(var(--ink-rgb), 0.055), transparent 30%),
-    linear-gradient(145deg, rgba(var(--foam-rgb), 0.98), rgba(var(--paper-deep-rgb), 0.82));
+  padding: clamp(24px, 3.5vw, 42px) 0 clamp(20px, 2.8vw, 32px);
+  border: 0;
+  border-radius: 14px;
+  background: var(--paper-deep);
   color: var(--ink);
-  box-shadow: 0 18px 55px rgba(var(--shade-rgb), 0.11);
+  box-shadow: none;
   scroll-margin-top: 88px;
   --reveal-distance: 14px;
   --reveal-scale: 0.997;
   transition: color 260ms ease, background-color 260ms ease, border-color 260ms ease;
-}
-
-.home-print-promo::before {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  content: "";
-  opacity: 0.32;
-  background-image: repeating-linear-gradient(102deg, rgba(var(--ink-rgb), 0.025) 0 1px, transparent 1px 7px);
 }
 
 .home-print-heading {
@@ -2442,7 +2431,7 @@ body:has(.contact-overlay) {
   align-items: flex-end;
   justify-content: space-between;
   gap: clamp(22px, 4vw, 70px);
-  padding: 0 clamp(22px, 5vw, 68px) clamp(24px, 3vw, 38px);
+  padding: 0 clamp(22px, 4vw, 52px) clamp(20px, 2.4vw, 28px);
 }
 
 .home-print-heading .eyebrow {
@@ -2454,7 +2443,7 @@ body:has(.contact-overlay) {
   margin: 0;
   color: var(--ink);
   font-family: var(--font-sans);
-  font-size: clamp(2rem, 4.8vw, 4rem);
+  font-size: clamp(2rem, 4.2vw, 3.5rem);
   font-weight: var(--head-weight);
   letter-spacing: var(--head-track);
   line-height: 0.94;
@@ -2512,9 +2501,9 @@ body:has(.contact-overlay) {
 }
 
 .home-print-item {
-  flex: 0 0 clamp(220px, 24vw, 302px);
+  flex: 0 0 clamp(210px, 22vw, 276px);
   display: grid;
-  grid-template-rows: clamp(190px, 23vw, 270px) auto;
+  grid-template-rows: clamp(176px, 20vw, 236px) auto;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -2529,7 +2518,7 @@ body:has(.contact-overlay) {
   align-items: center;
   justify-content: center;
   min-width: 0;
-  padding: clamp(20px, 3vw, 36px);
+  padding: clamp(18px, 2.5vw, 30px);
   background:
     linear-gradient(155deg, rgba(var(--foam-rgb), 0.92), rgba(var(--paper-deep-rgb), 0.58)),
     rgb(var(--paper-deep-rgb));
@@ -2556,7 +2545,7 @@ body:has(.contact-overlay) {
 .home-print-note {
   position: relative;
   z-index: 1;
-  margin: 14px clamp(22px, 5vw, 68px) 0;
+  margin: 12px clamp(22px, 4vw, 52px) 0;
   color: var(--muted);
   font-size: 0.66rem;
   line-height: 1.45;
@@ -2582,7 +2571,7 @@ body:has(.contact-overlay) {
   .home-print-promo {
     width: calc(100% - 20px);
     margin-bottom: 24px;
-    padding: 22px 0 20px;
+    padding: 20px 0 18px;
     border-radius: 12px;
   }
   .home-print-heading {
@@ -2634,7 +2623,7 @@ body:has(.contact-overlay) {
   .home-print-sequence { gap: 12px; padding-right: 12px; }
   .home-print-item {
     flex-basis: min(76vw, 270px);
-    grid-template-rows: clamp(190px, 61vw, 224px) auto;
+    grid-template-rows: clamp(174px, 55vw, 205px) auto;
     scroll-snap-align: center;
     touch-action: manipulation;
   }
@@ -4660,6 +4649,18 @@ body:has(.contact-overlay) {
 .map-link-button:hover {
   border-color: var(--ink);
   background: var(--ink);
+  color: var(--foam);
+}
+
+.favourite-button.is-favourite {
+  border-color: var(--sea);
+  background: rgba(var(--sea-rgb), 0.1);
+  color: var(--sea);
+}
+
+.favourite-button.is-favourite:hover {
+  border-color: var(--sea);
+  background: var(--sea);
   color: var(--foam);
 }
 

@@ -1,4 +1,4 @@
-import { ArrowUpFromLine, Frame, Globe, Images, MapPin, X } from "lucide-react";
+import { ArrowUpFromLine, Frame, Globe, Heart, Images, MapPin, X } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getTransformedPublicUrl, photoBucket } from "../lib/supabase";
@@ -37,6 +37,8 @@ export function PhotoLightbox({
   photo,
   origin,
   onClose,
+  isFavourite,
+  onToggleFavourite,
   onViewOnMap,
   onViewGallery,
   onOrderPrint,
@@ -44,6 +46,8 @@ export function PhotoLightbox({
   photo: Photo;
   origin?: { x: number; y: number } | null;
   onClose: () => void;
+  isFavourite?: boolean;
+  onToggleFavourite?: (photo: Photo) => void;
   onViewOnMap?: (photo: Photo) => void;
   onViewGallery?: (photo: Photo) => void;
   onOrderPrint?: (photo: Photo) => void;
@@ -90,6 +94,7 @@ export function PhotoLightbox({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [dismiss]);
 
+  const canFavourite = Boolean(onToggleFavourite);
   const canViewMap = Boolean(onViewOnMap && photo.latitude != null && photo.longitude != null);
   const canViewGallery = Boolean(onViewGallery && photo.location && photo.location !== "Unsorted");
   const canOrderPrint = Boolean(onOrderPrint);
@@ -115,8 +120,19 @@ export function PhotoLightbox({
           <span className="lightbox-location"><MapPin size={13} aria-hidden="true" />{photo.location}</span>
           <h2>{photo.title}</h2>
           {photo.year ? <small>{photo.year}</small> : null}
-          {canViewMap || canViewGallery || canOrderPrint ? (
+          {canFavourite || canViewMap || canViewGallery || canOrderPrint ? (
             <div className="lightbox-actions">
+              {canFavourite ? (
+                <button
+                  aria-pressed={Boolean(isFavourite)}
+                  className={`map-link-button favourite-button${isFavourite ? " is-favourite" : ""}`}
+                  onClick={() => onToggleFavourite!(photo)}
+                  type="button"
+                >
+                  <Heart size={14} fill={isFavourite ? "currentColor" : "none"} aria-hidden="true" />
+                  {isFavourite ? "Saved to favourites" : "Add to favourites"}
+                </button>
+              ) : null}
               {canOrderPrint ? <button className="map-link-button order-print-button" onClick={() => onOrderPrint!(photo)} type="button"><Frame size={14} aria-hidden="true" />Order a print</button> : null}
               {canViewGallery ? <button className="map-link-button" onClick={() => onViewGallery!(photo)} type="button"><Images size={14} aria-hidden="true" />View gallery</button> : null}
               {canViewMap ? <button className="map-link-button" onClick={() => onViewOnMap!(photo)} type="button"><Globe size={14} aria-hidden="true" />View on map</button> : null}
