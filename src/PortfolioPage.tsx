@@ -91,7 +91,7 @@ function FinanceDashboardMockup() {
           </div>
           <div className="finance-holdings">
             <div><b>Holdings</b><small>Allocation</small></div>
-            {[['Global equity', '46%', '+8.2%'], ['Australian equity', '31%', '+5.4%'], ['Fixed income', '15%', '+1.8%'], ['Cash', '8%', '—']].map((row) => (
+            {[['Global equity', '46%', '+8.2%'], ['Australian equity', '31%', '+5.4%'], ['Fixed income', '15%', '+1.8%'], ['Cash', '8%', 'N/A']].map((row) => (
               <p key={row[0]}><span><b>{row[0]}</b><small>{row[1]}</small></span><em>{row[2]}</em></p>
             ))}
           </div>
@@ -105,7 +105,7 @@ export default function PortfolioPage() {
   const [dashboardView, setDashboardView] = useState<"tasks" | "finance">("tasks");
   const [photos, setPhotos] = useState<Photo[]>([]);
 
-  useSeo("Sam Duckworth — Engineer, Builder & Photographer", {
+  useSeo("Sam Duckworth | Engineer, Builder & Photographer", {
     path: "/portfolio",
     image: "/portfolio/og.png",
     description: "The professional portfolio of Sam Duckworth: mechatronic engineering, computer vision, autonomous systems, software products and photography.",
@@ -130,7 +130,7 @@ export default function PortfolioPage() {
         <div className="portfolio-hero-copy">
           <p className="portfolio-kicker">Mechatronics / Computer vision / Digital products</p>
           <h1 id="portfolio-title">I build systems that make complex things feel clear.</h1>
-          <p className="portfolio-intro">I&rsquo;m Sam Duckworth — a mechatronic engineering honours graduate, software builder and photographer working across autonomous systems, intelligent tools and visual storytelling.</p>
+          <p className="portfolio-intro">I&rsquo;m Sam Duckworth, a mechatronic engineering honours graduate, software builder and photographer working across autonomous systems, intelligent tools and visual storytelling.</p>
           <a className="portfolio-scroll" href="#work">Explore selected work <ArrowDown size={15} /></a>
         </div>
         <div className="portfolio-hero-index">
@@ -148,7 +148,7 @@ export default function PortfolioPage() {
       </section>
 
       <section className="portfolio-work" id="work">
-        <div className="portfolio-section-heading"><p className="portfolio-kicker">Selected work / 01—04</p><h2>Research, products and practice.</h2></div>
+        <div className="portfolio-section-heading"><p className="portfolio-kicker">Selected work / 01–04</p><h2>Research, products and practice.</h2></div>
 
         <article className="portfolio-case thesis-case">
           <div className="portfolio-case-number">01</div>
@@ -165,7 +165,7 @@ export default function PortfolioPage() {
             <img src="/portfolio/images/thesis-cover.webp" alt="Cover of Sam Duckworth's honours thesis" />
             <div className="portfolio-research-metrics"><span><strong>8</strong> UAV sequences</span><span><strong>5</strong> enhancement methods</span><span><strong>3</strong> evaluation levels</span><span><strong>30 Hz</strong> source pipeline</span></div>
           </div>
-          <figure className="portfolio-wide-figure"><img src="/portfolio/images/thesis-conclusion.webp" alt="Conclusion slide summarising the low-light UAV SLAM research" loading="lazy" /><figcaption>From image-level enhancement to feature stability and trajectory accuracy — a deliberately end-to-end investigation.</figcaption></figure>
+          <figure className="portfolio-wide-figure"><img src="/portfolio/images/thesis-conclusion.webp" alt="Conclusion slide summarising the low-light UAV SLAM research" loading="lazy" /><figcaption>From image-level enhancement to feature stability and trajectory accuracy, a deliberately end-to-end investigation.</figcaption></figure>
         </article>
 
         <article className="portfolio-case tennis-case">
@@ -204,7 +204,7 @@ export default function PortfolioPage() {
             <p className="portfolio-case-type"><Aperture size={14} /> Photography & digital commerce</p>
             <h3>Sam Duckworth Photography</h3>
             <p className="portfolio-case-deck">A self-directed photographic practice and the platform built around it.</p>
-            <p>An evolving archive of aerial, coastal, travel and commissioned photography — designed, photographed and engineered as one system. The site combines a location-led gallery and map with editorial curation, responsive image delivery and an end-to-end fine-art print workflow.</p>
+            <p>An evolving archive of aerial, coastal, travel and commissioned photography, designed, photographed and engineered as one system. The site combines a location-led gallery and map with editorial curation, responsive image delivery and an end-to-end fine-art print workflow.</p>
             <p>Behind the quiet front end sits a purpose-built admin system, structured photo catalogue, secure checkout, pricing controls and optional print fulfilment. It is both a creative outlet and a long-running exercise in product craft.</p>
             <div className="portfolio-tags">{['React', 'Vite', 'Supabase', 'MapLibre', 'Stripe', 'Digital asset workflows'].map((tag) => <span key={tag}>{tag}</span>)}</div>
             <a className="portfolio-primary-link" href="/">Visit samduckworth.com <ArrowUpRight size={15} /></a>
@@ -218,7 +218,7 @@ export default function PortfolioPage() {
 
       <section className="portfolio-education" id="education">
         <div className="portfolio-section-heading"><p className="portfolio-kicker">Education / University of Sydney</p><h2>Broad engineering foundations.<br />A specialist eye for intelligent systems.</h2></div>
-        <div className="portfolio-degree"><div><span>2021—2025</span><h3>Bachelor of Engineering in Mechatronic Engineering (Honours)</h3><p>The University of Sydney · School of Aerospace, Mechanical and Mechatronic Engineering</p></div><GraduationCap /></div>
+        <div className="portfolio-degree"><div><span>2021–2025</span><h3>Bachelor of Engineering in Mechatronic Engineering (Honours)</h3><p>The University of Sydney · School of Aerospace, Mechanical and Mechatronic Engineering</p></div><GraduationCap /></div>
         <div className="portfolio-study-grid">
           <article><span>01</span><h3>Autonomy & robotics</h3><p>Robot operating systems, localisation, mapping, sensors, control and real-time systems.</p></article>
           <article><span>02</span><h3>Computer vision</h3><p>Feature extraction, tracking, calibration, geometry, image enhancement and machine learning.</p></article>
@@ -231,7 +231,7 @@ export default function PortfolioPage() {
 
       <section className="portfolio-about" id="about">
         <div className="portfolio-about-image"><img src="/about-sam.webp" alt="Sam Duckworth" loading="lazy" /></div>
-        <div className="portfolio-about-copy"><p className="portfolio-kicker">About Sam</p><h2>Curious by default.<br />Practical by design.</h2><p>My best work lives where disciplines overlap: an engineer&rsquo;s need to understand the system, a builder&rsquo;s instinct to make it useful, and a photographer&rsquo;s attention to what people actually see.</p><p>I enjoy taking ambiguous problems from first principles to a considered outcome — whether that is diagnosing why a vision pipeline fails, shaping a private software product around real habits, or waiting for the right weather over Sydney&rsquo;s coastline.</p><div className="portfolio-about-details"><span><MapPin size={14} /> Sydney, Australia</span><span><Check size={14} /> Engineering · Product · Photography</span></div></div>
+        <div className="portfolio-about-copy"><p className="portfolio-kicker">About Sam</p><h2>Curious by default.<br />Practical by design.</h2><p>My best work lives where disciplines overlap: an engineer&rsquo;s need to understand the system, a builder&rsquo;s instinct to make it useful, and a photographer&rsquo;s attention to what people actually see.</p><p>I enjoy taking ambiguous problems from first principles to a considered outcome, whether that is diagnosing why a vision pipeline fails, shaping a private software product around real habits, or waiting for the right weather over Sydney&rsquo;s coastline.</p><div className="portfolio-about-details"><span><MapPin size={14} /> Sydney, Australia</span><span><Check size={14} /> Engineering · Product · Photography</span></div></div>
       </section>
 
       <footer className="portfolio-footer"><p>Sam Duckworth</p><h2>Engineering the useful.<br />Photographing the memorable.</h2><div><span>Portfolio · 2026</span><a href="/">samduckworth.com <ArrowUpRight size={14} /></a></div></footer>
