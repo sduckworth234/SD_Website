@@ -1460,6 +1460,33 @@ h1 {
   opacity: 0.7;
 }
 
+/* The gallery keeps its monochrome editorial base, with the sea colour used
+   only for the visitor's current filter and the small favourites cue. */
+.gallery-page .collection-rail button.active,
+.gallery-page .location-rail button.active {
+  border-color: var(--sea);
+  background: var(--sea);
+  color: var(--shade);
+}
+
+.gallery-favourites-hint {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 9px clamp(18px, 4vw, 56px) 8px;
+  border-bottom: 1px solid rgba(var(--sea-rgb), 0.16);
+  background: linear-gradient(90deg, rgba(var(--sea-rgb), 0.08), transparent 42%);
+  color: var(--sea);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.gallery-favourites-hint svg { flex: 0 0 auto; }
+
 /* Names exactly what's on screen, so "Italy" can't be mistaken for the same
    place in another trip. Desktop only — phones get it in the page title. */
 .collection-scope {
@@ -1826,8 +1853,11 @@ body:has(.contact-overlay) {
 .lightbox-image {
   position: relative;
   display: grid;
+  box-sizing: border-box;
+  height: 100%;
   max-height: calc(100dvh - 212px);
   min-height: 0;
+  overflow: hidden;
   place-items: center;
   background: transparent;
   padding: clamp(10px, 1.5vw, 18px);
@@ -1840,8 +1870,10 @@ body:has(.contact-overlay) {
   width: auto;
   height: auto;
   aspect-ratio: var(--shot-ratio, auto);
+  min-width: 0;
+  min-height: 0;
   max-width: 100%;
-  max-height: calc(100dvh - 248px);
+  max-height: 100%;
   object-fit: contain;
 }
 
@@ -1894,7 +1926,7 @@ body:has(.contact-overlay) {
 }
 .lightbox-panel.is-portrait .lightbox-image img {
   max-width: min(52vw, 500px);
-  max-height: calc(100dvh - 120px);
+  max-height: 100%;
 }
 .lightbox-panel.is-portrait .lightbox-copy {
   border-top: 0;
@@ -4216,7 +4248,7 @@ body:has(.contact-overlay) {
   }
 
   .lightbox-image img {
-    max-height: calc(100dvh - 254px);
+    max-height: 100%;
   }
 
   .lightbox-copy {
@@ -4237,7 +4269,7 @@ body:has(.contact-overlay) {
   }
   .lightbox-panel.is-portrait .lightbox-image img {
     max-width: 100%;
-    max-height: calc(100dvh - 254px);
+    max-height: 100%;
   }
   .lightbox-panel.is-portrait .lightbox-copy {
     border-left: 0;
@@ -4357,7 +4389,7 @@ body:has(.contact-overlay) {
   }
 
   .lightbox-image img {
-    max-height: calc(100dvh - 230px);
+    max-height: 100%;
   }
 
   .lightbox-copy {

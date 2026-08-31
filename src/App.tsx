@@ -1318,6 +1318,12 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
           onChange={setActiveLocation}
         />
       ) : null}
+      <p className="gallery-favourites-hint" aria-live="polite">
+        <Heart size={13} fill={favouritePhotos.length ? "currentColor" : "none"} aria-hidden="true" />
+        {favouritePhotos.length
+          ? `${favouritePhotos.length} saved to Favourites on this browser`
+          : "Open a photo and tap the heart to save it to Favourites"}
+      </p>
       <GalleryControls onChange={setView} onViewOnMap={viewOnMap} view={view} />
       {isLoading || !imagesReady ? (
         <GallerySkeleton view={view} />
