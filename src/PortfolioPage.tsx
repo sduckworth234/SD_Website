@@ -17,23 +17,23 @@ const REPORTS = {
 
 const JUMP_LINKS = [
   { n: "01", when: "2025", title: "Honours thesis", note: "First Class · UAV vision", href: "#thesis" },
-  { n: "02", when: "Ongoing", title: "Daily OS", note: "AI-run personal dashboard", href: "#dailyos" },
+  { n: "02", when: "Ongoing", title: "Daily OS", note: "Agentic personal dashboard", href: "#dailyos" },
   { n: "03", when: "2024", title: "Computer vision", note: "AMME5710 major project", href: "#vision" },
-  { n: "04", when: "2021 –", title: "Photography", note: "samduckworth.com", href: "#photography" },
+  { n: "04", when: "2021–present", title: "Photography", note: "samduckworth.com", href: "#photography" },
 ];
 
 const FINDINGS = [
   {
-    title: "Built a real low-light dataset",
-    body: "Captured a controlled UAV dataset in the Bennett Lab, eight synchronised sequences with OptiTrack ground truth, to expand the open sequences available for low-light SLAM research.",
+    title: "Created a benchmark dataset",
+    body: "Captured eight synchronised low-light UAV sequences with OptiTrack ground truth in the Bennett Lab.",
   },
   {
-    title: "Combined image enhancement with live navigation",
-    body: "Wired five enhancement models into a modular ROS pipeline around ORB-SLAM3, swappable in real time so raw and enhanced footage could be compared under identical conditions.",
+    title: "Built a modular test pipeline",
+    body: "Integrated five enhancement methods with ROS and ORB-SLAM3 for controlled, repeatable comparison.",
   },
   {
-    title: "Found where it actually breaks",
-    body: "Enhancement lifts perceived visibility, but ORB-SLAM3 stays remarkably resilient in the dark. The real result was mapping the illumination threshold where it starts to fail.",
+    title: "Measured failure thresholds",
+    body: "Established the illumination range where localisation degrades and identified temporal enhancement artefacts that reduce feature stability.",
   },
 ];
 
@@ -125,7 +125,7 @@ function ThesisPipelineDiagram() {
 function DailyOSArchitectureDiagram() {
   return (
     <svg className="pipeline-diagram" viewBox="0 0 1000 260" role="img" aria-labelledby="daily-os-title">
-      <title id="daily-os-title">Daily OS: how a task, email or trade turns into something useful on screen</title>
+      <title id="daily-os-title">Daily OS input, AI classification, secure persistence and product outputs</title>
       <defs>
         <marker id="do-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M0,0 L8,4 L0,8 Z" className="pd-arrowhead" />
@@ -134,25 +134,25 @@ function DailyOSArchitectureDiagram() {
 
       <g className="pd-box">
         <rect x="16" y="65" width="170" height="130" rx="6" />
-        <text x="101" y="51" className="pd-label">You type, or an email arrives</text>
-        <text x="101" y="122" className="pd-line">Chat &amp; quick-add</text>
-        <text x="101" y="146" className="pd-line pd-muted">Gmail</text>
+        <text x="101" y="51" className="pd-label">Input</text>
+        <text x="101" y="122" className="pd-line">Natural language</text>
+        <text x="101" y="146" className="pd-line pd-muted">Quick-add · Gmail</text>
       </g>
 
       <path d="M186,130 H244" className="pd-edge" markerEnd="url(#do-arrow)" />
 
       <g className="pd-box">
         <rect x="244" y="40" width="230" height="180" rx="6" />
-        <text x="359" y="26" className="pd-label">AI sorts it out</text>
+        <text x="359" y="26" className="pd-label">AI classification</text>
         <g>
           <rect x="260" y="60" width="198" height="66" rx="4" className="pd-chip" />
           <text x="359" y="86" className="pd-chip-text pd-chip-title">Gemini 2.5 Flash</text>
-          <text x="359" y="108" className="pd-chip-text pd-muted">Reads what you typed</text>
+          <text x="359" y="108" className="pd-chip-text pd-muted">Classifies user input</text>
         </g>
         <g>
           <rect x="260" y="136" width="198" height="66" rx="4" className="pd-chip" />
           <text x="359" y="162" className="pd-chip-text pd-chip-title">Claude agent</text>
-          <text x="359" y="184" className="pd-chip-text pd-muted">Reads the inbox, daily</text>
+          <text x="359" y="184" className="pd-chip-text pd-muted">Processes selected email</text>
         </g>
       </g>
 
@@ -160,9 +160,9 @@ function DailyOSArchitectureDiagram() {
 
       <g className="pd-box">
         <rect x="532" y="55" width="200" height="150" rx="6" />
-        <text x="632" y="41" className="pd-label">Saved, privately</text>
+        <text x="632" y="41" className="pd-label">Secure persistence</text>
         <text x="632" y="90" className="pd-line">Supabase</text>
-        <text x="632" y="114" className="pd-line pd-muted">Locked to my account only</text>
+        <text x="632" y="114" className="pd-line pd-muted">Postgres · row-level security</text>
         <g>
           <rect x="550" y="136" width="164" height="30" rx="4" className="pd-chip" />
           <text x="632" y="156" className="pd-chip-text">tasks · trades · memory</text>
@@ -173,7 +173,7 @@ function DailyOSArchitectureDiagram() {
 
       <g className="pd-box">
         <rect x="790" y="40" width="194" height="180" rx="6" />
-        <text x="887" y="26" className="pd-label">Shows up as</text>
+        <text x="887" y="26" className="pd-label">Product surfaces</text>
         {["Task list", "Finance dashboard", "Morning briefing"].map((m, i) => (
           <g key={m}>
             <rect x="806" y={58 + i * 44} width="162" height="34" rx="4" className="pd-chip" />
@@ -216,9 +216,9 @@ function TaskDashboardMockup() {
             ))}
           </div>
           <aside className="dashboard-side-card">
-            <small>This week</small><b>Designed around action.</b>
+            <small>This week</small><b>Weekly overview</b>
             <div className="mini-week"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span></div>
-            <p>Tasks, follow-ups and the daily brief stay visible without turning the day into noise.</p>
+            <p>Tasks, deadlines and follow-ups in one view.</p>
           </aside>
         </div>
       </div>
@@ -293,8 +293,8 @@ export default function PortfolioPage() {
         <div className="portfolio-hero-copy">
           <p className="portfolio-kicker">Mechatronic Engineering &amp; Commerce · Sydney, Australia</p>
           <h1 id="portfolio-title">Sam Duckworth</h1>
-          <p className="portfolio-hero-role">Graduate Data &amp; AI Analyst at Quantium, photographer on the side.</p>
-          <p className="portfolio-intro">I&rsquo;m a First Class Honours engineering graduate who likes building things that think a little for themselves: drones that see in the dark, a dashboard that writes its own to-do list. Somewhere between an engineering degree and a finance one I got hooked on AI and agentic systems, and that thread runs through most of what&rsquo;s below.</p>
+          <p className="portfolio-hero-role">Graduate Data &amp; AI Analyst at Quantium · Engineer · Photographer</p>
+          <p className="portfolio-intro">I build applied AI products, computer vision systems and full-stack tools. My work spans autonomous navigation research, agentic workflow automation, portfolio analytics and a production photography platform.</p>
           <div className="portfolio-hero-meta">
             <span>BE (Mechatronic) &amp; BCom, Finance</span>
             <span>First Class Honours</span>
@@ -315,7 +315,7 @@ export default function PortfolioPage() {
       </nav>
 
       <section className="portfolio-work" id="work">
-        <div className="portfolio-section-heading"><p className="portfolio-kicker">Selected work / 01–04</p><h2>Research, products and practice.</h2></div>
+        <div className="portfolio-section-heading"><p className="portfolio-kicker">Selected work / 01–04</p><h2>Selected projects.</h2></div>
 
         <article className="portfolio-case thesis-case" id="thesis">
           <div className="portfolio-case-number">01</div>
@@ -323,8 +323,8 @@ export default function PortfolioPage() {
             <p className="portfolio-case-type"><Plane size={14} /> Honours research · First Class · 2025</p>
             <h3>Illuminating the Unknown</h3>
             <p className="portfolio-case-deck">Reconstructing vision for UAV SLAM in low-light environments.</p>
-            <p>My honours thesis tested a deceptively simple idea: if a drone can see a brighter image, will it navigate better? I built a modular ROS pipeline around ORB-SLAM3, integrated five low-light enhancement methods, and evaluated their effect from raw image consistency through feature matching to trajectory accuracy.</p>
-            <p>The result challenged the hypothesis. Brighter images didn&rsquo;t reliably improve localisation; frame-to-frame enhancement instability often disrupted the geometric features SLAM depends on. Raw ORB-SLAM3 stayed robust until illumination fell below roughly 15–20%.</p>
+            <p>Designed and executed an end-to-end evaluation of whether low-light image enhancement improves UAV localisation. I built a modular ROS and ORB-SLAM3 pipeline, integrated five enhancement methods and measured performance from image consistency through feature matching to trajectory accuracy.</p>
+            <p>Key finding: brighter imagery did not reliably improve navigation. Temporal enhancement artefacts reduced feature stability, while raw ORB-SLAM3 remained robust until illumination fell below approximately 15 to 20%.</p>
             <div className="portfolio-tags">{['ROS', 'ORB-SLAM3', 'Python', 'OpenCV', 'OptiTrack', 'UAV systems', 'Computer vision'].map((tag) => <span key={tag}>{tag}</span>)}</div>
             <ReportActions report={REPORTS.thesis} presentation={REPORTS.thesisPresentation} />
           </div>
@@ -344,9 +344,9 @@ export default function PortfolioPage() {
           <div className="portfolio-case-copy dashboard-copy">
             <p className="portfolio-case-type"><LockKeyhole size={14} /> Private product · Agentic workflows · Ongoing</p>
             <h3>Daily OS</h3>
-            <p className="portfolio-case-deck">The private dashboard I actually use every day, with the boring parts run by agents.</p>
-            <p>Tasks, finance, budgeting and a morning briefing, one login instead of six apps. Type a task, a trade or a bill in plain English and Gemini 2.5 Flash sorts out what it is and where it belongs. A scheduled Claude agent reads my inbox each morning and turns emails into tasks on its own, staying cautious around senders it hasn&rsquo;t seen enough of before.</p>
-            <p>On the finance side it tracks my stock positions and portfolio performance, and surfaces the metrics and market updates that actually matter, no spreadsheet required.</p>
+            <p className="portfolio-case-deck">A private AI-enabled workspace for tasks, finance, budgeting and daily briefings.</p>
+            <p>Built with Next.js, TypeScript and Supabase. Gemini 2.5 Flash classifies natural-language inputs into tasks, trades and recurring expenses. A scheduled Claude agent converts selected emails into tasks using confidence rules and sender history.</p>
+            <p>The finance module reconstructs holdings from transactions, tracks performance and allocation, and surfaces relevant market context. Authentication and row-level security protect all personal data.</p>
             <div className="portfolio-tags">{['Next.js', 'TypeScript', 'Supabase', 'PostgreSQL', 'Gemini 2.5', 'Claude agents', 'Portfolio tracking', 'Vercel'].map((tag) => <span key={tag}>{tag}</span>)}</div>
           </div>
           <div className="dashboard-showcase">
@@ -364,8 +364,8 @@ export default function PortfolioPage() {
             <p className="portfolio-case-type"><Layers3 size={14} /> AMME5710 · Computer Vision major project</p>
             <h3>Autonomous Tennis Analysis</h3>
             <p className="portfolio-case-deck">A near-real-time player and ball tracking pipeline from a single broadcast feed.</p>
-            <p>Hawk-Eye-class systems depend on many calibrated high-speed cameras. This project explored a more accessible route: extracting player position, approximate ball trajectories and match metrics from ordinary broadcast television using a lightweight, interpretable pipeline.</p>
-            <p>The system classified gameplay frames, localised the court, tracked players and the ball, estimated a homography and transformed detections into a live bird&rsquo;s-eye view. Testing spanned all four Grand Slam tournaments to challenge court colours, lighting and camera geometry.</p>
+            <p>Built a single-camera computer vision pipeline to classify gameplay frames, detect court geometry and track players and the ball from 25 FPS broadcast footage.</p>
+            <p>Used homography to project detections into a live bird&rsquo;s-eye view and tested the pipeline across all four Grand Slam tournaments. The gameplay classifier achieved 0.963 precision and 0.962 accuracy.</p>
             <div className="portfolio-tags">{['Classical CV', 'KNN', 'MOG2', 'Homography', 'Object tracking', 'Python', 'OpenCV'].map((tag) => <span key={tag}>{tag}</span>)}</div>
             <ReportActions report={REPORTS.tennis} presentation={REPORTS.tennisPresentation} />
           </div>
@@ -380,9 +380,9 @@ export default function PortfolioPage() {
           <div className="portfolio-case-copy">
             <p className="portfolio-case-type"><Aperture size={14} /> Photography &amp; digital commerce</p>
             <h3>Sam Duckworth Photography</h3>
-            <p className="portfolio-case-deck">A self-directed photographic practice and the platform built around it.</p>
-            <p>An evolving archive of aerial, coastal, travel and commissioned photography, designed, photographed and engineered as one system. The site combines a location-led gallery and map with editorial curation, responsive image delivery and an end-to-end fine-art print workflow.</p>
-            <p>Behind the quiet front end sits a purpose-built admin system, structured photo catalogue, secure checkout and print fulfilment. It&rsquo;s both a creative outlet and a running exercise in product craft.</p>
+            <p className="portfolio-case-deck">A photography portfolio and commerce platform designed and built end to end.</p>
+            <p>Built the public gallery, map-based discovery, responsive image delivery, admin CMS and structured photo catalogue for aerial, coastal, travel and commissioned work.</p>
+            <p>Integrated secure checkout, configurable print pricing and fulfilment workflows using Stripe and Supabase.</p>
             <div className="portfolio-tags">{['React', 'Vite', 'Supabase', 'MapLibre', 'Stripe', 'Digital asset workflows'].map((tag) => <span key={tag}>{tag}</span>)}</div>
             <a className="portfolio-primary-link" href="/">Visit samduckworth.com <ArrowUpRight size={15} /></a>
           </div>
@@ -416,9 +416,9 @@ export default function PortfolioPage() {
       <section className="portfolio-about" id="about">
         <div className="portfolio-about-image"><img src="/about-sam.webp" alt="Sam Duckworth" loading="lazy" /></div>
         <div className="portfolio-about-copy">
-          <p className="portfolio-kicker">Get in touch</p>
-          <h2>Thanks for reading.</h2>
-          <p>If any of this is relevant to what you&rsquo;re working on, or you&rsquo;d just like to talk shop, I&rsquo;d like to hear from you.</p>
+          <p className="portfolio-kicker">Contact</p>
+          <h2>Let&rsquo;s connect.</h2>
+          <p>Open to conversations about data, applied AI, automation, computer vision and digital products.</p>
           <div className="portfolio-about-details">
             <a href="mailto:samduckworthphoto@gmail.com"><Mail size={14} /> samduckworthphoto@gmail.com</a>
             <span><MapPin size={14} /> Sydney, Australia</span>
