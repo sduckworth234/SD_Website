@@ -118,9 +118,26 @@ export type InstagramPost = {
   sortOrder: number;
 };
 
+// The rail's small line. Names are unique now ("Europe 2026", not three rows
+// all called "Europe"), so the year lives in the name as well as in `period` —
+// strip the repeat rather than printing "2026 / EUROPE 2026".
+export function collectionDisplayName(collection: Collection): string {
+  const name = (collection.name ?? "").trim();
+  const period = (collection.period ?? "").trim();
+  if (!period) return name;
+  const escaped = period.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const stripped = name.replace(new RegExp(`(^${escaped}\\s+|\\s+${escaped}$)`, "i"), "").trim();
+  return stripped || name;
+}
+
 // "2026 Europe" — the rail's big+small lines joined, and the gallery page title.
+// When the name already carries the period ("Europe 2026") it stands alone.
 export function collectionTitle(collection: Collection): string {
-  return [collection.period, collection.name].filter(Boolean).join(" ");
+  const name = (collection.name ?? "").trim();
+  const period = (collection.period ?? "").trim();
+  if (!period) return name;
+  if (collectionDisplayName(collection) !== name) return name;
+  return [period, name].filter(Boolean).join(" ");
 }
 
 // A row from public.site_settings: visibility flags + small key/value settings

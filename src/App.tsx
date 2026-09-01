@@ -91,7 +91,8 @@ import {
   uploadRealPrintAsset,
 } from "./lib/supabase";
 import type { Collection, GalleryLocation, InstagramPost, LocationBucket, Photo, RealPrintPhoto, SiteSetting } from "./types";
-import { collectionTitle } from "./types";
+import { collectionDisplayName, collectionTitle } from "./types";
+import { REGION_ORDER, sortRegions } from "./lib/regions";
 import { compressToWebp, extractPhotoMetadata } from "./lib/ingest";
 import { prewarmPhoto } from "./lib/viewTransition";
 import { PhotoLightbox } from "./components/PhotoLightbox";
@@ -131,6 +132,8 @@ const AdminOrders = lazy(() => import("./components/AdminOrders").then((module) 
 
 const allLocations = "All work";
 type ActiveLocation = LocationBucket | typeof allLocations;
+// "no region chosen" — the places rail then behaves exactly as it always did.
+const allRegions = "__all_regions__";
 
 type GalleryView = "flow" | "box";
 const GALLERY_PAGE_SIZE_DESKTOP = 36;
@@ -158,6 +161,12 @@ function readLocationParam(): string | null {
 // open the gallery scoped to one collection.
 function readCollectionParam(): string | null {
   try { return new URLSearchParams(window.location.search).get("collection"); } catch { return null; }
+}
+
+// /galleries?region=Europe — the places filter's first level. A ?location=
+// deep link still works on its own; the region is inferred from the place.
+function readRegionParam(): string | null {
+  try { return new URLSearchParams(window.location.search).get("region"); } catch { return null; }
 }
 
 // Tracks a media query. Drives the galleries filter's one real breakpoint:
@@ -964,6 +973,9 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
 function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) {
   const { publicPhotos, locations, visibleCollections, flags, isAdmin, isLoading, loadGallery } = useSiteData();
   const [activeLocation, setActiveLocation] = useState<ActiveLocation>(() => readLocationParam() ?? allLocations);
+  // The places filter's first level. Twenty-eight place pills in one row don't
+  // scale; five regions that open onto their own places do.
+  const [activeRegion, setActiveRegion] = useState<string>(() => readRegionParam()?.trim() || allRegions);
   const [activeCollectionId, setActiveCollectionId] = useState<string>(ALL_COLLECTIONS);
   const [favouriteIds, setFavouriteIds] = useState<Set<string>>(() => readFavouriteIds());
   const [favouritesHintCollapsed, setFavouritesHintCollapsed] = useState(false);
@@ -1069,6 +1081,28 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
     return [...seen];
   }, [scopedPhotos]);
 
+  // Region → place, both read straight off the DB `region` column. A place whose
+  // row is missing a region is treated as its own region rather than vanishing.
+  const regionByLocation = useMemo(
+    () => new Map(locations.map((l) => [l.name, (l.region ?? "").trim()])),
+    [locations],
+  );
+  const regionOf = (locationName: string) => regionByLocation.get(locationName) || "";
+  const scopedRegions = useMemo(
+    () => sortRegions(scopedLocationNames.map(regionOf).filter(Boolean)),
+    // regionOf is derived from regionByLocation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [scopedLocationNames, regionByLocation],
+  );
+  // One region in scope (e.g. inside "Europe 2024") makes the region rail noise:
+  // the places rail goes straight back to being the only filter.
+  const showRegionRail = scopedRegions.length > 1;
+  const regionPhotos = useMemo(() => {
+    if (!showRegionRail || activeRegion === allRegions) return scopedPhotos;
+    return scopedPhotos.filter((p) => regionOf(p.location) === activeRegion);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopedPhotos, activeRegion, regionByLocation, showRegionRail]);
+
   const collectionCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const photo of publicPhotos) {
@@ -1122,10 +1156,25 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
     setActiveLocation(allLocations);
   }, [activeLocation, activeCollection, isFavourites, scopedLocationNames]);
 
+  // Keep the two levels agreed. A chosen place always wins — that's what a
+  // ?location= deep link (and every map pin) carries — so the region follows it.
+  // A region that has fallen out of scope (you switched collection) clears.
+  useEffect(() => {
+    if (activeLocation !== allLocations) {
+      const region = regionOf(activeLocation);
+      if (region && region !== activeRegion) setActiveRegion(region);
+      return;
+    }
+    if (activeRegion !== allRegions && scopedRegions.length && !scopedRegions.includes(activeRegion)) {
+      setActiveRegion(allRegions);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLocation, activeRegion, scopedRegions, regionByLocation]);
+
   const filteredPhotos = useMemo(() => {
-    if (activeLocation === allLocations) return scopedPhotos;
-    return scopedPhotos.filter((p) => p.location === activeLocation);
-  }, [activeLocation, scopedPhotos]);
+    if (activeLocation === allLocations) return regionPhotos;
+    return regionPhotos.filter((p) => p.location === activeLocation);
+  }, [activeLocation, regionPhotos]);
   const visiblePhotos = useMemo(
     () => filteredPhotos.slice(0, visibleCount),
     [filteredPhotos, visibleCount],
@@ -1133,23 +1182,40 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
 
   useEffect(() => {
     setVisibleCount(pageSize);
-  }, [activeCollectionId, activeLocation, pageSize, view]);
+  }, [activeCollectionId, activeRegion, activeLocation, pageSize, view]);
 
-  // Keep the URL shareable: ?collection=slug&location=Name, both optional.
+  // Keep the URL shareable: ?collection=slug&region=Region&location=Name, all
+  // optional. `region` is dropped once a place narrows it further — the place
+  // already implies its region, and short links age better.
   useEffect(() => {
     if (isLoading) return;
     const params = new URLSearchParams();
     if (activeCollection) params.set("collection", activeCollection.slug);
+    if (activeLocation === allLocations && activeRegion !== allRegions) params.set("region", activeRegion);
     if (activeLocation !== allLocations) params.set("location", activeLocation);
     const query = params.toString();
     const next = `/galleries${query ? `?${query}` : ""}`;
     if (window.location.pathname + window.location.search !== next) {
       window.history.replaceState({}, "", next);
     }
-  }, [activeCollection, activeLocation, isLoading]);
+  }, [activeCollection, activeRegion, activeLocation, isLoading]);
+
+  function changeRegion(region: string) {
+    setActiveRegion(region);
+    // A region is a wider view than any place inside it, so it clears the place
+    // rather than showing "Europe" while the grid still holds only Italy.
+    setActiveLocation(allLocations);
+  }
+
+  function clearScope() {
+    setActiveCollectionId(ALL_COLLECTIONS);
+    setActiveRegion(allRegions);
+    setActiveLocation(allLocations);
+  }
 
   function changeCollection(id: string) {
     setActiveCollectionId(id);
+    setActiveRegion(allRegions);
     if (id === FAVOURITES_COLLECTION) setActiveLocation(allLocations);
     // Drilling into a trip on a phone should land you on its places, not leave
     // you staring at the rail you just used.
@@ -1234,7 +1300,8 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   const seoLoc = activeLocation === allLocations ? null : activeLocation;
   const collectionLabel = activeCollection ? collectionTitle(activeCollection) : null;
   // "Italy · 2024 Europe" beats a bare "Italy" now that Italy spans three trips.
-  const pageHeading = isFavourites ? "Favourites" : seoLoc ?? collectionLabel ?? "All work";
+  const regionLabel = activeRegion === allRegions ? null : activeRegion;
+  const pageHeading = isFavourites ? "Favourites" : seoLoc ?? collectionLabel ?? regionLabel ?? "All work";
   const seoTitle = [seoLoc, collectionLabel].filter(Boolean).join(" · ");
   useSeo(
     seoTitle ? `${seoTitle} — Sam Duckworth Photography` : "Gallery — Sam Duckworth Photography",
@@ -1254,8 +1321,22 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   const showCollections = visibleCollections.length > 0;
   // Desktop shows both rails; a phone shows one at a time behind the switch.
   const showCollectionRail = showCollections && (!isPhone || mobileAxis === "collections");
-  // A one-place collection has nothing left to filter, so its rail is noise.
-  const showPlaceRail = scopedLocationNames.length > 1 && (!isPhone || !showCollections || mobileAxis === "places");
+  // Both levels of the places filter live on the phone's "Places" axis.
+  const onPlacesAxis = !isPhone || !showCollections || mobileAxis === "places";
+  // Places within the chosen region — the second level. Not shown until a
+  // region is picked (when there is more than one), which is what keeps the
+  // rail short as the archive grows.
+  const railPlaceNames = useMemo(() => {
+    const seen = new Set<string>();
+    for (const photo of regionPhotos) {
+      if (photo.location && photo.location !== "Unsorted") seen.add(photo.location);
+    }
+    return [...seen];
+  }, [regionPhotos]);
+  const showRegionRailNow = showRegionRail && onPlacesAxis;
+  // A one-place region (or collection) has nothing left to filter.
+  const showPlaceRail =
+    railPlaceNames.length > 1 && onPlacesAxis && (!showRegionRail || activeRegion !== allRegions);
 
   return (
     <main className="gallery-page">
@@ -1292,9 +1373,11 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
           <span className="axis-note">
             {mobileAxis === "collections"
               ? "Every trip"
-              : activeCollection
-                ? `Places in ${collectionLabel}`
-                : "Places across all work"}
+              : regionLabel
+                ? `Places in ${regionLabel}`
+                : activeCollection
+                  ? `Places in ${collectionLabel}`
+                  : "Places across all work"}
           </span>
         </div>
       ) : null}
@@ -1311,17 +1394,25 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
         <CollectionScope
           collection={activeCollection}
           count={filteredPhotos.length}
-          onClear={() => { setActiveCollectionId(ALL_COLLECTIONS); setActiveLocation(allLocations); }}
+          onClear={clearScope}
           place={activeLocation === allLocations ? null : activeLocation}
+          region={showRegionRail && activeRegion !== allRegions ? activeRegion : null}
+        />
+      ) : null}
+      {showRegionRailNow ? (
+        <RegionRail
+          activeRegion={activeRegion}
+          onChange={changeRegion}
+          regions={scopedRegions}
         />
       ) : null}
       {showPlaceRail ? (
         <LocationRail
           activeLocation={activeLocation}
-          allLabel="All places"
+          allLabel={showRegionRail && activeRegion !== allRegions ? `All ${activeRegion}` : "All places"}
           excludeUnsorted
           locations={locations}
-          photos={scopedPhotos}
+          photos={regionPhotos}
           onChange={setActiveLocation}
         />
       ) : null}
@@ -3134,7 +3225,7 @@ function CollectionRail({
           >
             <span className="rail-period">{collection.period || collection.name}</span>
             <span className="rail-name">
-              {collection.period ? collection.name : "Collection"}
+              {collection.period ? collectionDisplayName(collection) : "Collection"}
               {count === 0 ? " · empty" : ""}
             </span>
           </button>
@@ -3150,28 +3241,71 @@ function CollectionRail({
 function CollectionScope({
   collection,
   place,
+  region,
   count,
   onClear,
 }: {
   collection: Collection;
   place: string | null;
+  // The region level of the places filter, when one is chosen and the crumb
+  // wouldn't just repeat the place ("Europe › Italy" is useful, "Italy › Italy"
+  // is not — a place is only ever shown inside its own region).
+  region?: string | null;
   count: number;
   onClear: () => void;
 }) {
+  const crumbs = [region, place].filter((crumb): crumb is string => Boolean(crumb));
   return (
     <div className="collection-scope">
       <span className="scope-text">
         <b>{collectionTitle(collection)}</b>
-        {place ? (
-          <>
+        {crumbs.map((crumb) => (
+          <Fragment key={crumb}>
             <span className="scope-sep" aria-hidden="true">›</span>
-            <b>{place}</b>
-          </>
-        ) : null}
+            <b>{crumb}</b>
+          </Fragment>
+        ))}
       </span>
       <span className="scope-count">{count === 1 ? "1 photo" : `${count} photos`}</span>
       <button className="scope-clear" onClick={onClear} type="button">Clear selection <span aria-hidden="true">×</span></button>
     </div>
+  );
+}
+
+// The first level of the places filter: Northern Beaches · Sydney · New South
+// Wales · Australia · Europe. Same pill language as the places rail below it —
+// it IS the places rail, one level up — so the two read as one control.
+// Every region comes from the DB `locations.region` column; nothing here knows
+// what places exist.
+function RegionRail({
+  activeRegion,
+  regions,
+  onChange,
+}: {
+  activeRegion: string;
+  regions: string[];
+  onChange: (region: string) => void;
+}) {
+  return (
+    <section className="location-rail region-rail" aria-label="Filter gallery by region">
+      <button
+        className={activeRegion === allRegions ? "active" : ""}
+        onClick={() => onChange(allRegions)}
+        type="button"
+      >
+        All places
+      </button>
+      {regions.map((region) => (
+        <button
+          className={activeRegion === region ? "active" : ""}
+          key={region}
+          onClick={() => onChange(region)}
+          type="button"
+        >
+          {region}
+        </button>
+      ))}
+    </section>
   );
 }
 
@@ -3975,6 +4109,14 @@ function PlacesOrderAdmin({
   const [curatingLocation, setCuratingLocation] = useState<GalleryLocation | null>(null);
   const [newPlace, setNewPlace] = useState({ name: "", region: "Northern Beaches" });
 
+  // The fixed region set, plus whatever the DB already holds so an older value
+  // is never silently rewritten by opening the editor. The public places filter
+  // groups by exactly this column, so a typo there splits a region in two.
+  const regionOptions = useMemo(
+    () => sortRegions([...REGION_ORDER, ...locations.map((l) => l.region ?? "")]),
+    [locations],
+  );
+
   // Adopt the server's order whenever it genuinely changes. A reload elsewhere
   // in the dashboard will discard unsaved moves — the server is the truth, and
   // the "Unsaved changes" note makes it obvious there was something to save.
@@ -4073,7 +4215,11 @@ function PlacesOrderAdmin({
       </p>
       <div className="place-new">
         <label>New location<input placeholder="Location name" value={newPlace.name} onChange={(event) => setNewPlace((current) => ({ ...current, name: event.target.value }))} /></label>
-        <label>Region<input placeholder="Region" value={newPlace.region} onChange={(event) => setNewPlace((current) => ({ ...current, region: event.target.value }))} /></label>
+        <label>Region
+          <select value={newPlace.region} onChange={(event) => setNewPlace((current) => ({ ...current, region: event.target.value }))}>
+            {regionOptions.map((region) => <option key={region} value={region}>{region}</option>)}
+          </select>
+        </label>
         <button className="solid-button" disabled={busy || !newPlace.name.trim() || !newPlace.region.trim()} onClick={addPlace} type="button"><Plus size={13} aria-hidden="true" /> Add location</button>
       </div>
 
@@ -4119,7 +4265,13 @@ function PlacesOrderAdmin({
             {editingLocationId === location.id ? (
               <div className="place-edit-panel">
                 <label>Name<input value={locationDraft.name} onChange={(event) => setLocationDraft((current) => ({ ...current, name: event.target.value }))} /></label>
-                <label>Region<input value={locationDraft.region} onChange={(event) => setLocationDraft((current) => ({ ...current, region: event.target.value }))} /></label>
+                <label>Region
+                  <select value={locationDraft.region} onChange={(event) => setLocationDraft((current) => ({ ...current, region: event.target.value }))}>
+                    {sortRegions([...regionOptions, locationDraft.region]).map((region) => (
+                      <option key={region} value={region}>{region}</option>
+                    ))}
+                  </select>
+                </label>
                 <label className="place-edit-description">Public description<textarea rows={3} value={locationDraft.description} onChange={(event) => setLocationDraft((current) => ({ ...current, description: event.target.value }))} /></label>
                 <p>The existing URL slug stays unchanged when the display name changes, protecting shared links.</p>
                 <div><button className="solid-button" disabled={busy || !locationDraft.name.trim() || !locationDraft.region.trim()} onClick={saveLocationDetails} type="button">Save location</button><button className="text-button" disabled={busy} onClick={() => setEditingLocationId(null)} type="button">Cancel</button></div>
