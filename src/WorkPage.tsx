@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, Building2, Instagram, Mail, MapPin, PartyPopper, Phone, Sparkles } from "lucide-react";
-import { getProfessionalWorkPhotos } from "./lib/supabase";
+import { getProfessionalWorkPhotos, getSiteSettings } from "./lib/supabase";
 import { usePublicContent } from "./lib/publicContent";
 import { useSeo } from "./lib/seo";
 import { Header } from "./components/Header";
@@ -20,6 +20,42 @@ const WORK_GRID_SIZES = "(max-width: 700px) 45vw, (max-width: 1180px) 30vw, 340p
 const FALLBACK_HERO_URL =
   "https://krixuiimabosiorzxzju.supabase.co/storage/v1/render/image/public/photos/approved/2024/travels/wharf22-e2abcad2364a.webp?width=1800&resize=cover&quality=78";
 
+// How a job actually runs, said once. Deliberately three steps — anything
+// longer reads like a process document rather than an answer to "what happens
+// if I email you".
+const PROCESS = [
+  { step: "01", title: "Enquire", body: "Tell me the address or the date and what you need. I come back within 24 hours with availability and a price." },
+  { step: "02", title: "Shoot", body: "Usually an hour or two on site. Drone and ground, timed for the light where it matters." },
+  { step: "03", title: "Delivery", body: "Edited photos back within 48 hours, sized for listings, socials and print." },
+];
+
+// The three package shapes. Prices are deliberately NOT in the code: each one
+// reads a site_settings row and stays hidden until Sam sets it, so the page
+// never quotes a number he hasn't agreed to.
+const PACKAGES = [
+  {
+    id: "property",
+    priceKey: "work_price_property",
+    title: "Property listing",
+    body: "For agents and owners putting a place to market.",
+    scope: ["Aerial and ground stills", "Interiors and exteriors", "Sunrise or golden-hour timing", "Edited gallery within 48 hours"],
+  },
+  {
+    id: "event",
+    priceKey: "work_price_event",
+    title: "Event",
+    body: "Pubs, clubs, launches and outdoor gigs.",
+    scope: ["Coverage across the run of the event", "Drone where the site allows it", "Crowd, venue and detail frames", "Edited gallery within 48 hours"],
+  },
+  {
+    id: "brand",
+    priceKey: "work_price_brand",
+    title: "Brand & content",
+    body: "Photos and short video for a site, a campaign or a feed.",
+    scope: ["Half or full day on location", "Stills plus short-form video", "Framed for web and social crops", "Licensed for your own channels"],
+  },
+];
+
 const SERVICES = [
   {
     icon: Building2,
@@ -38,11 +74,24 @@ const SERVICES = [
   },
 ];
 
+// "350" / "$350" / "350 + GST" all render sensibly; anything blank stays
+// hidden and the package falls back to the quote line.
+function formatFrom(value?: string | null) {
+  const raw = (value ?? "").trim();
+  if (!raw) return null;
+  return /^\d/.test(raw) ? `$${raw}` : raw;
+}
+
 export default function WorkPage({ onNavigate }: { onNavigate: (route: string) => void }) {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Photo | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
+  const [contactContext, setContactContext] = useState<{ context: string; intro: string } | null>(null);
+  // Prices, the licence line and the client list are all admin-set rows. None
+  // of them are claims this code makes on Sam's behalf: each stays invisible
+  // until he fills it in.
+  const [settings, setSettings] = useState<Record<string, string | null>>({});
   const content = usePublicContent();
 
   useEffect(() => {
@@ -50,8 +99,25 @@ export default function WorkPage({ onNavigate }: { onNavigate: (route: string) =
     getProfessionalWorkPhotos().then((data) => {
       if (active) { setPhotos(data); setLoading(false); }
     });
+    getSiteSettings().then((rows) => {
+      if (!active) return;
+      const map: Record<string, string | null> = {};
+      for (const row of rows) map[row.key] = row.value;
+      setSettings(map);
+    }).catch(() => undefined);
     return () => { active = false; };
   }, []);
+
+  const licenceLine = (settings.work_licence_line ?? "").trim();
+  const clients = (settings.work_clients ?? "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
+
+  function openEnquiry(context: string, intro: string) {
+    setContactContext({ context, intro });
+    setContactOpen(true);
+  }
 
   const heroPhoto = photos[0] ?? null;
 
@@ -106,6 +172,76 @@ export default function WorkPage({ onNavigate }: { onNavigate: (route: string) =
             <p>{body}</p>
           </article>
         ))}
+      </section>
+
+      <section className="work-process" aria-label="How it works">
+        <div className="work-section-head">
+          <p className="eyebrow">How it works</p>
+          <h2>Three steps, no fuss.</h2>
+        </div>
+        <ol className="work-process-list">
+          {PROCESS.map(({ step, title, body }) => (
+            <li key={step}>
+              <span className="work-process-step">{step}</span>
+              <h3>{title}</h3>
+              <p>{body}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="work-packages" aria-label="Packages">
+        <div className="work-section-head">
+          <p className="eyebrow">Packages</p>
+          <h2>What a job usually looks like.</h2>
+          <p>Every place and every event is different, so treat these as starting points — I&rsquo;ll price the actual job when you tell me about it.</p>
+        </div>
+        <div className="work-package-grid">
+          {PACKAGES.map((pack) => {
+            const from = formatFrom(settings[pack.priceKey]);
+            return (
+              <article className="work-package" key={pack.id}>
+                <h3>{pack.title}</h3>
+                <p className="work-package-body">{pack.body}</p>
+                <ul className="work-package-scope">
+                  {pack.scope.map((line) => <li key={line}>{line}</li>)}
+                </ul>
+                <p className="work-package-price">{from ? <>From <strong>{from}</strong></> : "Quote within 24 hours"}</p>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => openEnquiry(`${pack.title} enquiry`, `Tell me about the ${pack.title.toLowerCase()} — where, when, and what you need — and I'll come back with availability and a price.`)}
+                >
+                  Enquire <ArrowRight size={14} aria-hidden="true" />
+                </button>
+              </article>
+            );
+          })}
+        </div>
+        {/* A commission is the one service that starts from the print side of
+            the site rather than the hire side, so it sits under the packages
+            as its own line rather than pretending to be a fourth package. */}
+        <div className="work-commission">
+          <p>
+            <strong>Commission a print of your home, boat or business.</strong>{" "}
+            I&rsquo;ll fly it, choose the light, and hand back a framed photograph made for one wall.
+          </p>
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={() => openEnquiry("Commission enquiry", "Tell me what you'd like photographed and roughly where it is, and I'll come back with what's possible and a price.")}
+          >
+            Commission enquiry <ArrowRight size={14} aria-hidden="true" />
+          </button>
+        </div>
+        {licenceLine || clients.length ? (
+          <div className="work-credentials">
+            {licenceLine ? <p>{licenceLine}</p> : null}
+            {clients.length ? (
+              <p className="work-clients"><span>Worked with</span>{clients.join(" · ")}</p>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       <section className="work-gallery" aria-label="Recent professional work">
@@ -165,9 +301,9 @@ export default function WorkPage({ onNavigate }: { onNavigate: (route: string) =
       {selected ? <PhotoLightbox photo={selected} onClose={() => setSelected(null)} /> : null}
       {contactOpen ? (
         <ContactOverlay
-          context="Professional work enquiry"
-          intro="Tell me a bit about your listing, event or brand shoot and I'll get back to you with availability and a quote."
-          onClose={() => setContactOpen(false)}
+          context={contactContext?.context ?? "Professional work enquiry"}
+          intro={contactContext?.intro ?? "Tell me a bit about your listing, event or brand shoot and I'll get back to you with availability and a quote."}
+          onClose={() => { setContactOpen(false); setContactContext(null); }}
         />
       ) : null}
     </main>

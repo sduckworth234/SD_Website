@@ -4731,6 +4731,17 @@ const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
   { key: "instagram_feed", label: "Home — Instagram feed", hint: "The live strip of your latest Instagram posts, above the footer." },
 ];
 
+// The /work page's admin-set text. Every one of these is blank until Sam sets
+// it, and the page renders nothing where a value is missing — so the site never
+// quotes a price or claims a credential on his behalf.
+const HIRE_SETTING_FIELDS: { key: string; label: string; placeholder: string }[] = [
+  { key: "work_price_property", label: "Property listing — from", placeholder: "e.g. 350 (blank = “Quote within 24 hours”)" },
+  { key: "work_price_event", label: "Event — from", placeholder: "e.g. 450 (blank = “Quote within 24 hours”)" },
+  { key: "work_price_brand", label: "Brand & content — from", placeholder: "e.g. 650 (blank = “Quote within 24 hours”)" },
+  { key: "work_licence_line", label: "Licence / insurance line", placeholder: "e.g. CASA-licensed remote pilot, publicly insured" },
+  { key: "work_clients", label: "Clients (comma separated)", placeholder: "e.g. Flare, Manly Wharf Hotel" },
+];
+
 // Flags that default OFF with no site_settings row (vs. every other flag,
 // which defaults ON) — "not ready to launch yet", not "hide this section".
 // Matched here so the toggle itself shows the true state on a fresh install,
@@ -4935,6 +4946,26 @@ function VisibilityAdmin({ photos, locations }: { photos: Photo[]; locations: Ga
           <option value="__none__">The full gallery (no collection)</option>
         </select>
       </label>
+      <div className="admin-sec-head vis-banner-head"><Images size={16} aria-hidden="true" /><h2>Hire page (/work)</h2></div>
+      <p className="admin-sec-hint">
+        Every field here is empty by default and simply doesn&rsquo;t render until you fill it in. A package with
+        no price shows &ldquo;Quote within 24 hours&rdquo; instead of a number.
+      </p>
+      {HIRE_SETTING_FIELDS.map((field) => (
+        <label className="hero2026-target" key={field.key}>
+          <span>{field.label}</span>
+          <input
+            defaultValue={value[field.key] ?? ""}
+            disabled={busy}
+            onBlur={(e) => {
+              const next = e.target.value.trim();
+              if (next === (value[field.key] ?? "")) return;
+              run(() => setSiteSetting(field.key, next || null));
+            }}
+            placeholder={field.placeholder}
+          />
+        </label>
+      ))}
       {curatingHero2026 ? (
         <OrderedPhotoPicker
           title="2026 Europe hero"

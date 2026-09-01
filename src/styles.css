@@ -7137,6 +7137,188 @@ body:has(.contact-overlay) {
   line-height: 1.5;
 }
 
+/* How it works: three numbered steps on plain paper, separated by a hairline
+   rather than boxed — the services above are already carded, and two card
+   grids in a row would read as a pricing page. */
+.work-process {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(20px, 3vw, 36px) clamp(18px, 4vw, 40px);
+}
+
+.work-process-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: clamp(18px, 3vw, 40px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.work-process-list li {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.work-process-step {
+  display: block;
+  color: var(--timber);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+}
+
+.work-process-list h3 {
+  margin: 10px 0 6px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.work-process-list p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+/* Packages. Same restrained card language as the services above, with the
+   price line pinned to the bottom so the three read across evenly whether or
+   not a price has been set. */
+.work-packages {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(20px, 3vw, 36px) clamp(18px, 4vw, 40px);
+}
+
+.work-package-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: clamp(16px, 2.4vw, 28px);
+}
+
+.work-package {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: clamp(20px, 2.2vw, 28px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--foam);
+}
+
+.work-package h3 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.work-package-body {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.work-package-scope {
+  display: grid;
+  gap: 7px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.work-package-scope li {
+  padding-left: 15px;
+  text-indent: -15px;
+}
+
+.work-package-scope li::before {
+  content: "—";
+  margin-right: 7px;
+  color: var(--timber);
+}
+
+.work-package-price {
+  margin: auto 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+
+.work-package-price strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.work-package .ghost-button {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* The commission line: one sentence and one way in, on the page's own paper. */
+.work-commission {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+  margin-top: clamp(20px, 3vw, 34px);
+  padding-top: clamp(18px, 2.4vw, 26px);
+  border-top: 1px solid var(--line);
+}
+
+.work-commission p {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.work-commission strong { color: var(--ink); font-weight: 600; }
+
+.work-commission .ghost-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+/* Licence line and client list — both admin-set, both absent until they are. */
+.work-credentials {
+  display: grid;
+  gap: 8px;
+  margin-top: clamp(18px, 2.4vw, 26px);
+  padding-top: clamp(14px, 2vw, 20px);
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.work-credentials p { margin: 0; }
+
+.work-clients span {
+  display: block;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
 .work-section-head {
   max-width: 640px;
   margin: 0 auto clamp(20px, 3vw, 32px);
