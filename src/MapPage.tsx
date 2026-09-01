@@ -13,10 +13,27 @@ import type { Photo } from "./types";
 // after load to harmonise with the paper palette.
 const STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 
-// Locations where no photo carried GPS get a hand-set fallback so they still pin.
+// Locations where no photo carried GPS get a hand-set fallback so they still
+// pin. Without one the place is missing from the map entirely — and its photos
+// silently drop out of the count under the heading. Every published location
+// with zero GPS across all its photos needs an entry here.
 const LOCATION_FALLBACK_COORDS: Record<string, [number, number]> = {
   "North Head": [151.296, -33.824], // [lon, lat]
+  Denmark: [12.5683, 55.6761], // Copenhagen
+  Monaco: [7.4246, 43.7384],
 };
+
+// Photos falling back to their location's coord would otherwise stack into one
+// unsplittable pin. Nudge each by a stable few hundred metres (derived from its
+// id, so the map is identical on every load) to spread them at close zoom.
+const FALLBACK_SPREAD = 0.006; // degrees, ~600m
+function fallbackOffset(id: string): [number, number] {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  const angle = ((hash >>> 0) % 360) * (Math.PI / 180);
+  const radius = (((hash >>> 9) % 100) / 100) * FALLBACK_SPREAD;
+  return [Math.cos(angle) * radius, Math.sin(angle) * radius];
+}
 
 const TEAL = "#496d70"; // --sea
 const INK = "#201d19"; // --ink
@@ -66,15 +83,30 @@ function buildLocationFeatures(photos: Photo[]): GeoJSON.Feature<GeoJSON.Point, 
   return features;
 }
 
-// One GeoJSON point per photo (exact coords), for the close-up pins.
+// One GeoJSON point per photo, for the close-up pins. Exact EXIF coords where
+// we have them; for a location whose photos carry NO GPS at all (WebP export
+// stripped it, or the camera never recorded it) the hand-set location coord
+// above stands in, so the place is browsable rather than absent.
 function buildPhotoFeatures(photos: Photo[]): GeoJSON.Feature<GeoJSON.Point, PhotoProps>[] {
+  const locatedLocations = new Set(
+    photos.filter((p) => p.latitude != null && p.longitude != null).map((p) => p.location),
+  );
   const features: GeoJSON.Feature<GeoJSON.Point, PhotoProps>[] = [];
   for (const p of photos) {
     if (!p.location || p.location === "Unsorted") continue;
-    if (p.latitude == null || p.longitude == null) continue;
+    let coordinates: [number, number];
+    if (p.latitude != null && p.longitude != null) {
+      coordinates = [p.longitude, p.latitude];
+    } else if (!locatedLocations.has(p.location) && LOCATION_FALLBACK_COORDS[p.location]) {
+      const [lon, lat] = LOCATION_FALLBACK_COORDS[p.location];
+      const [dLon, dLat] = fallbackOffset(p.id);
+      coordinates = [lon + dLon, lat + dLat];
+    } else {
+      continue;
+    }
     features.push({
       type: "Feature",
-      geometry: { type: "Point", coordinates: [p.longitude, p.latitude] },
+      geometry: { type: "Point", coordinates },
       properties: { id: p.id, location: p.location, title: p.title, imageUrl: p.imageUrl },
     });
   }
@@ -118,10 +150,11 @@ export default function MapPage({ onNavigate, showShop = false }: { onNavigate: 
       const locationFeatures = buildLocationFeatures(data.photos);
       const photoFeatures = buildPhotoFeatures(data.photos);
       const photoById = new Map(data.photos.map((photo) => [photo.id, photo]));
-      setStats({
-        places: locationFeatures.length,
-        photos: locationFeatures.reduce((s, f) => s + f.properties.count, 0),
-      });
+      // Count what is actually ON the map, not what belongs to a mapped place.
+      // The old sum counted every photo in a located group, including the ones
+      // with no coordinates that never got a pin — so the heading claimed more
+      // than the map showed, and disagreed with the gallery's own total.
+      setStats({ places: locationFeatures.length, photos: photoFeatures.length });
 
       map = new maplibregl.Map({
         container: containerRef.current,
@@ -338,7 +371,7 @@ export default function MapPage({ onNavigate, showShop = false }: { onNavigate: 
           {stats.places ? (
             <h1>
               {stats.places} place{stats.places === 1 ? "" : "s"} · {stats.photos} photo
-              {stats.photos === 1 ? "" : "s"}
+              {stats.photos === 1 ? "" : "s"} mapped
             </h1>
           ) : null}
           <p className="map-hint">Scroll to zoom · drag to pan · zoom in to a place, then open any photo</p>

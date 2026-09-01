@@ -1460,6 +1460,22 @@ h1 {
   opacity: 0.7;
 }
 
+/* --- Places, level one: regions ---------------------------------------------
+   Same pills as the places rail beneath it, one level up. It scrolls away with
+   the page so the PLACES rail stays the single sticky band — two stacked
+   sticky rails would fill a phone before any photo appeared. */
+.region-rail {
+  position: relative;
+  top: auto;
+  background: var(--paper);
+  border-bottom: 0;
+  padding-block: 11px;
+}
+
+.region-rail button {
+  letter-spacing: 0.1em;
+}
+
 /* The gallery keeps its monochrome editorial base, with the sea colour used
    only for the visitor's current filter and the small favourites cue. */
 .gallery-page .collection-rail button.active,
@@ -5026,7 +5042,7 @@ body:has(.contact-overlay) {
 /* ================= Admin: place order ================= */
 .place-new { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(160px, .7fr) auto; align-items: end; gap: 8px; margin-top: 14px; padding: 12px; border: 1px solid var(--line); background: var(--paper-deep); }
 .place-new label { display: grid; gap: 5px; color: var(--muted); font: 600 8px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
-.place-new input { min-height: 40px; box-sizing: border-box; border: 1px solid var(--line); background: var(--foam); color: var(--ink); padding: 8px 10px; }
+.place-new input, .place-new select { min-height: 40px; box-sizing: border-box; border: 1px solid var(--line); background: var(--foam); color: var(--ink); padding: 8px 10px; }
 .place-order {
   display: grid;
   gap: 6px;
@@ -5086,7 +5102,7 @@ body:has(.contact-overlay) {
 }
 .place-edit-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: -3px 0 7px; padding: 14px; border: 1px solid var(--ink); background: var(--foam); }
 .place-edit-panel label { display: grid; gap: 5px; color: var(--muted); font: 600 8px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
-.place-edit-panel input, .place-edit-panel textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--line); background: var(--paper); color: var(--ink); padding: 9px; font: 400 11px/1.45 var(--font-sans); letter-spacing: 0; text-transform: none; }
+.place-edit-panel input, .place-edit-panel select, .place-edit-panel textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--line); background: var(--paper); color: var(--ink); padding: 9px; font: 400 11px/1.45 var(--font-sans); letter-spacing: 0; text-transform: none; }
 .place-edit-panel .place-edit-description, .place-edit-panel > p, .place-edit-panel > div { grid-column: 1 / -1; }
 .place-edit-panel > p { margin: 0; color: var(--muted); font-size: 9px; }
 .place-edit-panel > div { display: flex; align-items: center; gap: 10px; }
