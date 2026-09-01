@@ -922,10 +922,9 @@ nav a:hover,
   text-shadow: 0 2px 44px rgba(0, 0, 0, 0.36);
 }
 
-/* Anchor the wordmark: lift the ticker AND the positioning line out of the
-   centred flow and hang them just below it, so long lines wrap + spill
-   DOWNWARD instead of growing the centred block and pushing "Sam Duckworth"
-   upwards. */
+/* Anchor the wordmark: lift the rotating ticker out of the centred flow and
+   hang it just below the copy, so long location lines wrap + spill DOWNWARD
+   instead of growing the centred block and pushing "Sam Duckworth" upwards. */
 .landing-under {
   position: absolute;
   top: 100%;

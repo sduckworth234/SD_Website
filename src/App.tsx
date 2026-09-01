@@ -3087,12 +3087,13 @@ function Hero({ photo, locations, isAdmin, positioning, rotate, onPickHero }: { 
       <div className="landing-copy scroll-reveal is-visible">
         <p className="eyebrow">{content.heroEyebrow}</p>
         <h1>Sam Duckworth</h1>
-        {/* The ticker and the positioning line hang together beneath the
-            wordmark (see .landing-under), so neither can push the centred
-            wordmark off-centre as it wraps. */}
+        {/* The positioning line is a fixed sentence, so it sits in the centred
+            flow with the wordmark. The rotating ticker still hangs below it
+            (see .landing-under) — its length changes every few seconds and
+            would otherwise shunt the wordmark up and down. */}
+        {positioning ? <p className="hero-positioning">{positioning}</p> : null}
         <div className="landing-under">
           <RotatingLocations locations={locations} />
-          {positioning ? <p className="hero-positioning">{positioning}</p> : null}
         </div>
       </div>
       {photo ? (
