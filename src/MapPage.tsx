@@ -332,6 +332,7 @@ export default function MapPage({ onNavigate, showShop = false }: { onNavigate: 
   return (
     <main className="map-shell">
       <Header isScrolled onNavigate={onNavigate} showShop={showShop} />
+      <div id="main-content" className="section-anchor" tabIndex={-1} />
       <section className="map-stage" aria-label="Map of photo locations">
         <div className="map-intro">
           <p className="eyebrow">Where I have shot</p>

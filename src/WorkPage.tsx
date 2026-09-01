@@ -79,6 +79,7 @@ export default function WorkPage({ onNavigate }: { onNavigate: (route: string) =
   return (
     <main className="work-page">
       <Header isScrolled onNavigate={onNavigate} showShop={false} onOpenContact={() => setContactOpen(true)} />
+      <div id="main-content" className="section-anchor" tabIndex={-1} />
 
       <section className="work-hero">
         <img

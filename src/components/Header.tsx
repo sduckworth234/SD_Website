@@ -147,6 +147,7 @@ export function Header({
 
   return (
     <>
+    <a className="skip-link" href="#main-content">Skip to content</a>
     <header className={`site-header${isScrolled ? " is-visible" : ""}${autoHidden ? " is-auto-hidden" : ""}`}>
       {isHome ? (
         <a className="brand" href="#top" aria-label="SD Gallery home">SD</a>

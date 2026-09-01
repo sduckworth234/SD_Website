@@ -825,6 +825,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
         onOpenContact={() => setIsContactOpen(true)}
         showShop={isAdmin}
       />
+      <div id="main-content" className="section-anchor" tabIndex={-1} />
       <Hero photo={heroPhoto} locations={locationNames} isAdmin={isAdmin} rotate={heroRotate} onPickHero={() => setHeroPicking(true)} />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
       {isLoading ? (
@@ -1259,6 +1260,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   return (
     <main className="gallery-page">
       <Header isScrolled onNavigate={onNavigate} showShop={isAdmin} />
+      <div id="main-content" className="section-anchor" tabIndex={-1} />
       <section className="gallery-page-head">
         <h1 className="gallery-page-title">
           {pageHeading}
@@ -1967,6 +1969,8 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   }
 
   const ShopNav = (
+    <>
+    <a className="skip-link" href="#shop-main-content">Skip to content</a>
     <header className={`shop-nav${shopMenuOpen ? " menu-open" : ""}${shopAutoHidden ? " is-auto-hidden" : ""}`}>
       <button className="shop-logo" onClick={goShopTop} type="button" aria-label="Framed Editions shop home">FRAMED EDITIONS</button>
       <nav className="shop-nav-primary" aria-label="Primary navigation">
@@ -2005,12 +2009,14 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
         {shopLive ? <button type="button" onClick={() => { setShopMenuOpen(false); setCartOpen(true); }}>Cart <span>{cartCount}</span></button> : null}
       </nav>
     </header>
+    </>
   );
 
   if (isLoading) {
     return (
       <main className="shop">
         {ShopNav}
+        <div id="shop-main-content" className="section-anchor" tabIndex={-1} />
         <section className="shop-data-loading">
           <SDLoader label="Preparing framed editions" />
         </section>
@@ -2022,6 +2028,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   return (
     <main className="shop">
       {ShopNav}
+      <div id="shop-main-content" className="section-anchor" tabIndex={-1} />
       {isAdmin && !publicShopLive ? (
         <div className="shop-admin-note"><EyeOff size={13} aria-hidden="true" /> Admin shop — you can browse and test the full sales flow. The public still sees the shop as offline.</div>
       ) : null}
@@ -3054,7 +3061,7 @@ function Hero2026Feature({ heading, photos, onOpen }: { heading: string; photos:
         <SmartImage alt="" priority sizes="(max-width: 760px) calc(100vw - 28px), calc(100vw - 112px)" src={photo.imageUrl} srcSet={srcSetFor(photo)} />
         <div className="europe-feature-shade" aria-hidden="true" />
         <div className="europe-feature-copy">
-          <p className="europe-feature-title">{heading}</p>
+          <h2 className="europe-feature-title">{heading}</h2>
           {photo.location ? <p className="europe-feature-location">{photo.location}</p> : null}
         </div>
         <button className="europe-feature-cta" type="button" onClick={onOpen}>View the gallery <ArrowRight size={13} aria-hidden="true" /></button>
@@ -3324,7 +3331,7 @@ function MapPromo({
     <div className="map-promo">
       <span className="map-promo-text">
         <span className="eyebrow">On the map</span>
-        <strong>See where these were shot</strong>
+        <h2>See where these were shot</h2>
         <span className="map-promo-rotator">{typed}</span>
       </span>
       <button className="map-promo-mini" onClick={onOpen} type="button" aria-label="Open the map of photo locations">
@@ -7533,7 +7540,7 @@ function NotFound({ onNavigate }: { onNavigate: (route: string) => void }) {
   return (
     <main className="error-screen">
       <Header isScrolled onNavigate={onNavigate} />
-      <div className="error-body">
+      <div id="main-content" className="error-body">
         <p className="eyebrow">404</p>
         <h1>Page not found.</h1>
         <p>That page doesn&rsquo;t exist or has moved.</p>
