@@ -110,9 +110,10 @@ export function CartDrawer({
               <div className="row total"><span>Estimated total</span><span>{money(cart.subtotal + cart.shipping)}</span></div>
             </div>
           ) : null}
-          <p className="pc-au-note">Shipping within Australia only. Exact cost is confirmed at checkout.</p>
+          <p className="pc-au-note">Shipping within Australia only. Exact cost is confirmed at checkout, where you can also choose free collection on the Northern Beaches.</p>
           <button className="pc-checkout-btn" disabled={!cart.items.length} type="button" onClick={checkout}>Secure checkout</button>
-          <p className="pc-checkout-note">Promotion codes are applied securely at checkout.</p>
+          <p className="pc-checkout-note">Promotion codes and gift vouchers are applied securely at checkout.</p>
+          <p className="pc-checkout-note"><a href="/shop/gift-voucher" onClick={(event) => { event.preventDefault(); onClose(); window.history.pushState({}, "", "/shop/gift-voucher"); onNavigate("/shop/gift-voucher"); }}>Buy a gift voucher</a></p>
           <LegalNav className="pc-cart-policies" />
         </div>
       </aside>

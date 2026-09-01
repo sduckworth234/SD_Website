@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { fetchPricing, normaliseCart } from "../server/shop/catalogue.mjs";
+import { shippingOptionsFor } from "../server/shop/delivery.mjs";
 import { checkoutEnabled, paidInvoicesEnabled } from "../server/shop/features.mjs";
 import { json, methodAllowed, publicOrigin, readJson, safeError } from "../server/shop/http.mjs";
 import { sizeIsSellable } from "../server/shop/printSizing.mjs";
@@ -30,6 +31,31 @@ function customerFrom(body) {
   };
   if (!customer.name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) throw new Error("Enter a valid name and email address.");
   return customer;
+}
+
+// A promotion code carrying restrictions.first_time_transaction can only be
+// evaluated by Stripe against a Customer's payment history, so every checkout
+// resolves (or creates) the Customer for the supplied email. Without this the
+// "First print" code would silently apply to everybody. Failure is never fatal
+// — we fall back to customer_email and the session still goes through.
+async function resolveCustomerId(customer) {
+  try {
+    const found = await stripe.customers.list({ email: customer.email, limit: 1 });
+    if (found.data[0]) return found.data[0].id;
+    const created = await stripe.customers.create({ email: customer.email, name: customer.name });
+    return created.id;
+  } catch (error) {
+    console.error("stripe customer lookup:", safeError(error));
+    return null;
+  }
+}
+
+// Stripe enforces first_time_transaction itself, but its rejection surfaces as
+// a generic invalid-request error at session creation. Checking here lets the
+// customer read a sentence that explains what happened.
+async function firstTimeCustomer(customerId) {
+  const intents = await stripe.paymentIntents.list({ customer: customerId, limit: 20 });
+  return !intents.data.some((intent) => intent.status === "succeeded");
 }
 
 export default async function handler(req, res) {
@@ -69,12 +95,16 @@ export default async function handler(req, res) {
     // Manual mode makes no Prodigi request even if a stale API key remains in
     // the deployment. Checkout stays live using the verified catalogue rate.
     const shipping = await quoteShippingCents(cart, { useProdigi: provider === "prodigi" });
+    const customerId = await resolveCustomerId(customer);
     const promoText = clean(body.promotionCode, 64).toUpperCase();
     let promotion = null;
     if (promoText) {
       const result = await stripe.promotionCodes.list({ code: promoText, active: true, limit: 1 });
       promotion = result.data[0] ?? null;
       if (!promotion) throw new Error("That promotion code is not valid.");
+      if (promotion.restrictions?.first_time_transaction && customerId && !(await firstTimeCustomer(customerId))) {
+        throw new Error("That promotion code is valid on a first order only.");
+      }
     }
     // Stripe coupons discount line-item subtotal, not Checkout's shipping
     // option. A deliberately tagged promotion can additionally waive delivery;
@@ -100,6 +130,10 @@ export default async function handler(req, res) {
     });
 
     const metadata = {
+      // The webhook branches on this. Print orders predate the tag, so it
+      // treats "anything that is not a gift voucher" as a print order and this
+      // is simply the explicit half of that pair.
+      kind: "print_order",
       cart_count: String(cart.length),
       quote_source: freeShippingPromotion ? `${shipping.source}+promotion-free-shipping` : shipping.source,
       promotion_code: promoText,
@@ -120,20 +154,12 @@ export default async function handler(req, res) {
     const session = await stripe.checkout.sessions.create({
       ui_mode: "elements",
       mode: "payment",
-      customer_email: customer.email,
+      ...(customerId ? { customer: customerId } : { customer_email: customer.email }),
       line_items: lineItems,
+      // Collected for both methods: a pickup order still needs a contact
+      // address on file, and Stripe requires one before a rate can be chosen.
       shipping_address_collection: { allowed_countries: ["AU"] },
-      shipping_options: [{
-        shipping_rate_data: {
-          type: "fixed_amount",
-          fixed_amount: { amount: chargedShippingCents, currency: "aud" },
-          display_name: "Tracked delivery within Australia",
-          delivery_estimate: {
-            minimum: { unit: "business_day", value: 3 },
-            maximum: { unit: "business_day", value: 8 },
-          },
-        },
-      }],
+      shipping_options: shippingOptionsFor(chargedShippingCents),
       discounts: promotion ? [{ promotion_code: promotion.id }] : undefined,
       payment_intent_data: {
         receipt_email: customer.email,
@@ -161,7 +187,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     const message = safeError(error);
-    const status = /not valid|Enter |Cart |no longer available|unsupported|between 1|isn't available as a/i.test(message) ? 400 : 500;
+    const status = /not valid|first order only|Enter |Cart |no longer available|unsupported|between 1|isn't available as a/i.test(message) ? 400 : 500;
     if (status === 500) console.error("create checkout session:", message);
     json(res, status, { error: status === 500 ? "Checkout could not be started. Please try again." : message });
   }

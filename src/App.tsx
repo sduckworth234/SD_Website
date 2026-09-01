@@ -127,6 +127,7 @@ const PortfolioPage = lazy(() => import("./PortfolioPage"));
 // should not download payment/admin code unless they actually open that flow.
 const CheckoutPage = lazy(() => import("./components/CheckoutPage").then((module) => ({ default: module.CheckoutPage })));
 const CheckoutSuccessPage = lazy(() => import("./components/CheckoutPage").then((module) => ({ default: module.CheckoutSuccessPage })));
+const GiftVoucherPage = lazy(() => import("./components/GiftVoucherPage").then((module) => ({ default: module.GiftVoucherPage })));
 const AdminOrders = lazy(() => import("./components/AdminOrders").then((module) => ({ default: module.AdminOrders })));
 
 const allLocations = "All work";
@@ -399,6 +400,15 @@ function App() {
 
   if (matches("/checkout/success")) {
     return <Suspense fallback={<main className="route-loading is-dark"><SDLoader label="Confirming your order" /></main>}><CheckoutSuccessPage onNavigate={navigate} /></Suspense>;
+  }
+
+  // Must precede the /shop/<slug> product route below, or "gift-voucher"
+  // would be looked up as a photograph slug.
+  if (matches("/shop/gift-voucher")) {
+    if (!SHOP_FEATURE_ENABLED && !shopAccess.checked) return <ShopAccessLoading />;
+    return SHOP_FEATURE_ENABLED || shopAccess.isAdmin
+      ? <Suspense fallback={<main className="route-loading"><SDLoader label="Loading gift vouchers" /></main>}><GiftVoucherPage onNavigate={navigate} /></Suspense>
+      : <ShopUnavailable onNavigate={navigate} />;
   }
 
   const policyMatch = path.match(/^\/shop\/policies\/(shipping|returns|privacy|terms)\/?$/);
@@ -1797,6 +1807,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
   const [cart, setCart] = useState(0);
   const realCart = useCart();
   const [cartOpen, setCartOpen] = useState(false);
+  const [commissionOpen, setCommissionOpen] = useState(false);
   const [shopMenuOpen, setShopMenuOpen] = useState(false);
   const shopAutoHidden = useAutoHideOnScroll();
   const [filter, setFilter] = useState("All");
@@ -2185,6 +2196,10 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
               Browse the full galleries
             </a>
           </div>
+          <p className="shop-local-line">
+            Prefer to see it first? Prints can be collected on the Northern Beaches, and I can{" "}
+            <button type="button" onClick={() => setCommissionOpen(true)}>quote a commission of your own place</button>.
+          </p>
           </section>
         </>
       ) : (
@@ -2224,6 +2239,13 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
 
       <ShopLegalFooter />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onNavigate={onNavigate} />
+      {commissionOpen ? (
+        <ContactOverlay
+          context="Commission enquiry"
+          intro="Tell me the place you have in mind — a home, a stretch of coast, a property — and I’ll come back with what a commissioned shoot and print would involve."
+          onClose={() => setCommissionOpen(false)}
+        />
+      ) : null}
       {realPrintGalleryOpen && realPrints.length ? (
         <div className="real-print-overlay" role="dialog" aria-modal="true" aria-labelledby="real-print-gallery-title">
           <button className="lightbox-backdrop" type="button" onClick={() => setRealPrintGalleryOpen(false)} aria-label="Close real print gallery" />

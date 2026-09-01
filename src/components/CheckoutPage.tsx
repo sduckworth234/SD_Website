@@ -50,6 +50,7 @@ type CheckoutTotals = {
   discount: number;
   total: number;
   promotionCode: string | null;
+  shippingLabel: string | null;
 };
 
 function totalsFromStripe(session: StripeCheckoutSession): CheckoutTotals {
@@ -61,6 +62,7 @@ function totalsFromStripe(session: StripeCheckoutSession): CheckoutTotals {
     discount: session.total.discount.minorUnitsAmount / divisor,
     total: session.total.total.minorUnitsAmount / divisor,
     promotionCode: promotion?.promotionCode ?? null,
+    shippingLabel: session.shipping?.shippingOption.displayName ?? null,
   };
 }
 
@@ -83,11 +85,14 @@ function PolicyLinks() {
   );
 }
 
+const PICKUP_LABEL = "Collect from the Northern Beaches (free)";
+
 function PaymentStep({ onBack, onRetry }: { onBack: () => void; onRetry: () => void }) {
   const cart = useCart();
   const checkoutState = useCheckoutElements();
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [switchingDelivery, setSwitchingDelivery] = useState(false);
   const [loadTimedOut, setLoadTimedOut] = useState(false);
 
   useEffect(() => {
@@ -117,6 +122,19 @@ function PaymentStep({ onBack, onRetry }: { onBack: () => void; onRetry: () => v
   );
   if (checkoutState.type === "error") return <p className="co-error">{checkoutState.error.message}</p>;
   const { checkout } = checkoutState;
+  // Stripe owns the shipping options and the arithmetic; this is only the
+  // picker. The chosen rate comes back on the paid session, so the server
+  // never has to trust anything the browser says about delivery.
+  const selectedShipping = checkout.shipping?.shippingOption ?? null;
+  const pickupSelected = selectedShipping?.displayName === PICKUP_LABEL;
+
+  async function chooseShipping(optionId: string) {
+    setSwitchingDelivery(true);
+    setMessage("");
+    const result = await checkout.updateShippingOption(optionId);
+    if (result.type === "error") setMessage(result.error.message || "That delivery option could not be selected.");
+    setSwitchingDelivery(false);
+  }
 
   async function pay(event: React.FormEvent) {
     event.preventDefault();
@@ -125,7 +143,7 @@ function PaymentStep({ onBack, onRetry }: { onBack: () => void; onRetry: () => v
     trackAddShippingInfo({
       currency: "AUD",
       value: cart.subtotal + cart.shipping,
-      shipping_tier: "Tracked Australia-wide delivery",
+      shipping_tier: selectedShipping?.displayName ?? "Tracked Australia-wide delivery",
       items: cart.items.map((item) => ({
         item_id: item.photoId,
         item_name: item.title,
@@ -150,6 +168,27 @@ function PaymentStep({ onBack, onRetry }: { onBack: () => void; onRetry: () => v
         <div className="co-stripe-block-head"><p>Delivery address</p><small>Start typing your street and select the matching Australian address.</small></div>
         <ShippingAddressElement />
       </div>
+      {checkout.shippingOptions.length > 1 ? (
+        <div className="co-stripe-block">
+          <div className="co-stripe-block-head"><p>Delivery method</p><small>Have it couriered, or collect it in person.</small></div>
+          <div className="co-delivery-options" role="radiogroup" aria-label="Delivery method">
+            {checkout.shippingOptions.map((option) => (
+              <label className={`co-delivery-option${selectedShipping?.id === option.id ? " is-selected" : ""}`} key={option.id}>
+                <input
+                  checked={selectedShipping?.id === option.id}
+                  disabled={switchingDelivery || submitting}
+                  name="co-delivery-method"
+                  onChange={() => chooseShipping(option.id)}
+                  type="radio"
+                />
+                <span>{option.displayName}</span>
+                <em>{option.amount}</em>
+              </label>
+            ))}
+          </div>
+          {pickupSelected ? <p className="co-delivery-note">I’ll email you the pickup location once your print is framed and ready.</p> : null}
+        </div>
+      ) : null}
       <div className="co-stripe-block">
         <div className="co-stripe-block-head"><p>Payment details</p><small>Securely processed by Stripe.</small></div>
         <PaymentElement options={{ layout: "accordion" }} />
@@ -188,7 +227,7 @@ function OrderSummary({ cart, totals }: { cart: CartState; totals?: CheckoutTota
         <div className="co-summary-lines">
           <p><span>Subtotal</span><span>{money(totals?.subtotal ?? cart.subtotal)}</span></p>
           {totals?.discount ? <p className="discount"><span>{totals.promotionCode ? `Promotion (${totals.promotionCode})` : "Promotion discount"}</span><span>−{money(totals.discount)}</span></p> : null}
-          <p><span>{totals ? "Delivery" : "Estimated delivery"}</span><span>{money(totals?.shipping ?? cart.shipping)}</span></p>
+          <p><span>{totals ? (totals.shippingLabel === PICKUP_LABEL ? "Collection" : "Delivery") : "Estimated delivery"}</span><span>{money(totals?.shipping ?? cart.shipping)}</span></p>
           <p className="total"><span>{totals ? "Total" : "Estimated total"}</span><span>{money(totals?.total ?? cart.subtotal + cart.shipping)}</span></p>
         </div>
         <div className="co-hold"><Check size={15} /><p><b>45-minute change window</b><span>Need to change something? Contact us within 45 minutes of purchase and we’ll pause fulfilment.</span></p></div>
