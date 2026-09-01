@@ -26,6 +26,7 @@ export function ShopLegalFooter({ className = "" }: { className?: string }) {
     <footer className={`shop-legal-footer ${className}`.trim()}>
       <a className="shop-photography-link" href="/galleries">Explore the photography galleries →</a>
       <LegalNav />
+      <p><a href="/shop/gift-voucher">Gift vouchers</a></p>
       <p>
         Questions? Email <a href={`mailto:${content.publicEmail}`}>{content.publicEmail}</a>.
       </p>
@@ -97,6 +98,14 @@ function ShippingPolicy() {
           Tracked Australia-wide delivery is calculated at checkout. Additional prints ship
           from $5 when they can be packed together. The total shown before payment is the
           delivery price for your order.
+        </p>
+      </section>
+      <section>
+        <h2>Local collection</h2>
+        <p>
+          If you’re nearby, choose “Collect from the Northern Beaches (free)” at checkout instead of
+          tracked delivery. There’s no delivery charge, and the pickup location is shared by email
+          once your print is ready, so we can agree a time that suits us both.
         </p>
       </section>
       <section>

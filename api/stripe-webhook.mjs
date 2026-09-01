@@ -1,5 +1,7 @@
 import Stripe from "stripe";
+import { deliveryMethodFromSession } from "../server/shop/delivery.mjs";
 import { sendNewOrderAlert, sendOrderConfirmation } from "../server/shop/email.mjs";
+import { fulfilVoucherSession, isVoucherSession } from "../server/shop/vouchers.mjs";
 import { safeError } from "../server/shop/http.mjs";
 import { getOrderBySession, insertPaidOrder, supabaseRest } from "../server/shop/supabase.mjs";
 
@@ -16,7 +18,9 @@ async function fulfilSession(sessionId) {
   const existing = await getOrderBySession(sessionId);
   if (existing) return existing;
 
-  const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ["payment_intent.latest_charge", "discounts", "invoice"] });
+  const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    expand: ["payment_intent.latest_charge", "discounts", "invoice", "shipping_cost.shipping_rate"],
+  });
   if (!(["paid", "no_payment_required"].includes(session.payment_status))) return null;
   const count = Number(session.metadata?.cart_count ?? 0);
   if (!Number.isInteger(count) || count < 1 || count > 20) throw new Error("Checkout Session has invalid cart metadata.");
@@ -75,6 +79,9 @@ async function fulfilSession(sessionId) {
     country: shipping.address.country,
     phone: session.customer_details?.phone ?? intent?.shipping?.phone ?? session.metadata?.customer_phone ?? "",
   };
+  // A collected order must never be handed to a drop-shipper: Prodigi would
+  // post it to the address instead. Pickup is always fulfilled by hand.
+  const deliveryMethod = deliveryMethodFromSession(session);
   const order = await insertPaidOrder({
     stripe_checkout_session_id: session.id,
     stripe_payment_intent_id: intent?.id ?? null,
@@ -88,7 +95,11 @@ async function fulfilSession(sessionId) {
     discount_cents: session.total_details?.amount_discount ?? 0,
     discount_code: promotionCode || session.metadata?.promotion_code || null,
     total_cents: session.amount_total ?? 0,
-    fulfilment_provider: session.metadata?.fulfilment_provider === "prodigi" ? "prodigi" : "manual",
+    fulfilment_provider: deliveryMethod === "pickup" || session.metadata?.fulfilment_provider !== "prodigi" ? "manual" : "prodigi",
+    // Harmless extra key until the delivery_method migration is applied:
+    // create_paid_order reads named keys out of the jsonb payload, so the old
+    // function simply ignores it and the order still commits.
+    delivery_method: deliveryMethod,
     stripe_receipt_url: charge?.receipt_url ?? null,
     stripe_invoice_id: invoice?.id ?? null,
     stripe_invoice_url: invoice?.hosted_invoice_url ?? null,
@@ -118,7 +129,12 @@ export default {
       if (!signature) return Response.json({ error: "missing_signature" }, { status: 400 });
       const event = stripe.webhooks.constructEvent(await request.text(), signature, process.env.STRIPE_WEBHOOK_SECRET);
       if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
-        await fulfilSession(event.data.object.id);
+        // Gift vouchers and print orders both arrive as completed Checkout
+        // Sessions. They are told apart by the metadata tag written when the
+        // session was created — a voucher session has no cart, no shipping and
+        // no order row, so it must never reach the print-order path.
+        if (isVoucherSession(event.data.object)) await fulfilVoucherSession(stripe, event.data.object.id);
+        else await fulfilSession(event.data.object.id);
       }
       return Response.json({ received: true });
     } catch (error) {

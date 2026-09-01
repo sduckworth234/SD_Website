@@ -27,6 +27,9 @@ type Order = {
   total_cents: number;
   created_at: string;
   submit_after: string;
+  // Absent until the delivery_method migration is applied — treated as a
+  // courier delivery, which is what every order before it was.
+  delivery_method?: string | null;
   fulfilment_provider: string;
   prodigi_order_id: string | null;
   tracking_carrier: string | null;
@@ -217,6 +220,7 @@ export function AdminOrders({ session }: { session: Session }) {
           const manual = order.fulfilment_provider !== "prodigi";
           const closed = ["refunded", "cancelled"].includes(order.status);
           const shipped = order.status === "shipped";
+          const pickup = order.delivery_method === "pickup";
           const draft = tracking[order.id] ?? { carrier: "", number: "", url: "" };
           return (
             <article className="admin-order" key={order.id}>
@@ -228,6 +232,7 @@ export function AdminOrders({ session }: { session: Session }) {
                 <div className="admin-order-status">
                   <span className={`status ${order.status}`}>{order.status.replace(/_/g, " ")}</span>
                   <span className={`provider ${manual ? "manual" : "prodigi"}`}>{manual ? "Manual fulfilment" : "Prodigi"}</span>
+                  <span className={`delivery ${pickup ? "pickup" : "courier"}`}>{pickup ? "Collecting in person" : "Tracked delivery"}</span>
                   <code>{order.id.slice(0, 8).toUpperCase()}</code>
                   {order.prodigi_order_id ? <code>{order.prodigi_order_id}</code> : null}
                 </div>
@@ -247,7 +252,12 @@ export function AdminOrders({ session }: { session: Session }) {
               </div>
 
               <div className="admin-order-col admin-order-actions">
-                {manual && !closed ? (
+                {manual && !closed && pickup ? (
+                  <div className="manual-fulfilment">
+                    <p>This order is being collected in person. Marking it ready emails the customer that the print is finished and asks them to arrange a time — no tracking details are needed.</p>
+                  </div>
+                ) : null}
+                {manual && !closed && !pickup ? (
                   <div className="manual-fulfilment">
                     <div>
                       <label>Carrier<input onChange={(event) => setTrackingField(order.id, "carrier", event.target.value)} placeholder="e.g. Australia Post" value={draft.carrier} /></label>
@@ -262,7 +272,7 @@ export function AdminOrders({ session }: { session: Session }) {
                   {manual ? (
                     <>
                       <button className="text-button" disabled={Boolean(working) || closed || shipped || order.status === "in_production"} onClick={() => action(order.id, "mark_processing")} title="Set this manual order to in production. No email is sent." type="button">Start fulfilment</button>
-                      <button className="solid-button" disabled={Boolean(working) || closed || shipped} onClick={() => action(order.id, "mark_shipped")} title="Save tracking, close fulfilment and email the customer." type="button">Mark shipped</button>
+                      <button className="solid-button" disabled={Boolean(working) || closed || shipped} onClick={() => action(order.id, "mark_shipped")} title={pickup ? "Close fulfilment and email the customer that their print is ready to collect." : "Save tracking, close fulfilment and email the customer."} type="button">{pickup ? "Mark ready to collect" : "Mark shipped"}</button>
                     </>
                   ) : (
                     <button className="solid-button" disabled={features.fulfilmentProvider !== "prodigi" || !features.prodigiConfigured || Boolean(working) || ["submitted", "in_production", "shipped", "refunded", "cancelled"].includes(order.status)} onClick={() => action(order.id, "submit_now")} title={features.fulfilmentProvider === "prodigi" ? undefined : "Prodigi mode is disabled"} type="button">Submit to Prodigi</button>
