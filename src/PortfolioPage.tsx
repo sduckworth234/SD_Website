@@ -420,7 +420,7 @@ export default function PortfolioPage() {
           <h2>Let&rsquo;s connect.</h2>
           <p>Open to conversations about data, applied AI, automation, computer vision and digital products.</p>
           <div className="portfolio-about-details">
-            <a href="mailto:samduckworthphoto@gmail.com"><Mail size={14} /> samduckworthphoto@gmail.com</a>
+            <a href="mailto:hello@samduckworth.com"><Mail size={14} /> hello@samduckworth.com</a>
             <span><MapPin size={14} /> Sydney, Australia</span>
           </div>
         </div>

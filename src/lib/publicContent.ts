@@ -24,7 +24,7 @@ export type PublicContent = {
 
 export const DEFAULT_PUBLIC_CONTENT: PublicContent = {
   siteName: "Sam Duckworth Photography",
-  publicEmail: "samduckworthphoto@gmail.com",
+  publicEmail: "hello@samduckworth.com",
   publicPhone: "0423 638 403",
   publicLocation: "Sydney, Australia",
   instagramHandle: "sam.duckworth",

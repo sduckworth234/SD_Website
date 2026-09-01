@@ -958,20 +958,36 @@ nav a:hover,
   text-shadow: 0 2px 44px rgba(0, 0, 0, 0.36);
 }
 
-.landing-stage.cinematic .hero-locations {
-  color: rgba(var(--on-photo-rgb), 0.9);
-  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.4);
-  /* Anchor the wordmark: lift the ticker out of the centred flow and hang it just
-     below the wordmark, so long location lines wrap + spill DOWNWARD instead of
-     growing the centred block and pushing "Sam Duckworth" upwards. */
+/* Anchor the wordmark: lift the rotating ticker out of the centred flow and
+   hang it just below the copy, so long location lines wrap + spill DOWNWARD
+   instead of growing the centred block and pushing "Sam Duckworth" upwards. */
+.landing-under {
   position: absolute;
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
   width: 92vw;
+}
+
+.landing-stage.cinematic .hero-locations {
+  color: rgba(var(--on-photo-rgb), 0.9);
+  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.4);
   max-width: 92vw;
   margin-top: clamp(10px, 1.8vw, 18px);
   white-space: normal;
+}
+
+/* One sentence of positioning under the ticker: what the work is, and where it
+   gets made. Deliberately quiet — the photograph behind it is the argument. */
+.hero-positioning,
+.landing-stage.cinematic .landing-copy p.hero-positioning {
+  max-width: 34rem;
+  margin: clamp(10px, 1.4vw, 16px) auto 0;
+  color: rgba(var(--on-photo-rgb), 0.82);
+  font-size: clamp(0.78rem, 1vw, 0.92rem);
+  line-height: 1.6;
+  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.45);
+  text-wrap: balance;
 }
 
 .landing-stage.cinematic .loc-dot {
@@ -1833,6 +1849,52 @@ h1 {
   opacity: 0.85;
 }
 
+/* The gallery tile's print affordance. Same pill language as the altitude
+   badge, pinned to the opposite (top-left) corner so the two never collide,
+   and ALWAYS visible — a hover-only treatment would be invisible on the phones
+   most of this gallery is read on. Links straight to /shop/<slug>. */
+.tile-print {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px 4px 7px;
+  border-radius: 999px;
+  background: rgba(var(--scrim-rgb), 0.42);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: var(--on-photo);
+  font-size: 0.52rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.tile-print svg {
+  width: 10px;
+  height: 10px;
+  opacity: 0.9;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tile-print:hover {
+    background: var(--timber);
+    color: #171310;
+  }
+}
+
+.tile-print:focus-visible {
+  outline: 2px solid var(--on-photo);
+  outline-offset: 2px;
+}
+
 /* A touch more presence in the lightbox, sat just inside the image padding. */
 .lightbox-image .alt-badge {
   right: clamp(16px, 2.4vw, 26px);
@@ -2371,6 +2433,54 @@ body:has(.contact-overlay) {
 
 .ig-tile:focus-visible { outline: 2px solid var(--sea); outline-offset: 3px; }
 
+/* ================= Home: first print offer =================
+   One line, on the page's own paper — a hairline rule above and below rather
+   than a coloured banner, so it reads as a note rather than an ad. Wraps to
+   two lines on a phone instead of shrinking. */
+.first-print-offer {
+  border-bottom: 1px solid var(--line);
+  padding: clamp(11px, 1.6vw, 15px) clamp(16px, 4vw, 56px);
+  text-align: center;
+}
+
+.first-print-offer p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px 14px;
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(0.72rem, 1.1vw, 0.82rem);
+  letter-spacing: 0.02em;
+}
+
+.first-print-code {
+  border: 1px solid var(--line);
+  padding: 3px 8px;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.first-print-offer a {
+  color: var(--ink);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 2px;
+  transition: border-color 200ms ease, color 200ms ease;
+}
+
+.first-print-offer a:hover,
+.first-print-offer a:focus-visible {
+  border-color: var(--ink);
+}
+
 /* ================= Home: scrolling promo banner ================= */
 /* A continuous marquee — the track holds two copies of the item list and
    scrolls exactly one copy's width (translateX(-50%)), so the loop point is
@@ -2556,6 +2666,19 @@ body:has(.contact-overlay) {
   line-height: 1.55;
 }
 
+/* The shop bridge's actions: one filled primary into the shop, with the whole
+   sellable archive offered underneath it as the quieter second path. */
+.home-print-actions {
+  flex: 0 0 auto;
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+.home-print-actions .solid-button {
+  white-space: nowrap;
+}
+
 .home-print-shop-link {
   flex: 0 0 auto;
   display: inline-flex;
@@ -2686,6 +2809,14 @@ body:has(.contact-overlay) {
   .home-print-heading p:last-child {
     max-width: 34ch;
     margin-top: 10px;
+  }
+  .home-print-actions {
+    justify-items: stretch;
+    justify-self: stretch;
+  }
+  .home-print-actions .solid-button {
+    justify-content: center;
+    white-space: normal;
   }
   .home-print-shop-link {
     justify-self: stretch;
@@ -4773,6 +4904,32 @@ body:has(.contact-overlay) {
   border-color: var(--timber);
   background: var(--timber);
   color: #171310;
+}
+
+/* Promoted to the primary action, above the neutral row: filled, full width of
+   the copy column, and carrying the real starting price. */
+.order-print-button.is-primary {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 8px;
+  border-color: var(--timber);
+  background: var(--timber);
+  color: #171310;
+  font-weight: 600;
+}
+
+.order-print-button.is-primary:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--foam);
+}
+
+.order-print-from {
+  opacity: 0.72;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
 }
 
 .site-header nav .nav-link.is-active {
@@ -7061,6 +7218,188 @@ body:has(.contact-overlay) {
   color: var(--muted);
   font-size: 0.86rem;
   line-height: 1.5;
+}
+
+/* How it works: three numbered steps on plain paper, separated by a hairline
+   rather than boxed — the services above are already carded, and two card
+   grids in a row would read as a pricing page. */
+.work-process {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(20px, 3vw, 36px) clamp(18px, 4vw, 40px);
+}
+
+.work-process-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: clamp(18px, 3vw, 40px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.work-process-list li {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.work-process-step {
+  display: block;
+  color: var(--timber);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+}
+
+.work-process-list h3 {
+  margin: 10px 0 6px;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.work-process-list p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+/* Packages. Same restrained card language as the services above, with the
+   price line pinned to the bottom so the three read across evenly whether or
+   not a price has been set. */
+.work-packages {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(20px, 3vw, 36px) clamp(18px, 4vw, 40px);
+}
+
+.work-package-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: clamp(16px, 2.4vw, 28px);
+}
+
+.work-package {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: clamp(20px, 2.2vw, 28px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--foam);
+}
+
+.work-package h3 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.work-package-body {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.work-package-scope {
+  display: grid;
+  gap: 7px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.work-package-scope li {
+  padding-left: 15px;
+  text-indent: -15px;
+}
+
+.work-package-scope li::before {
+  content: "—";
+  margin-right: 7px;
+  color: var(--timber);
+}
+
+.work-package-price {
+  margin: auto 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+
+.work-package-price strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.work-package .ghost-button {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* The commission line: one sentence and one way in, on the page's own paper. */
+.work-commission {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+  margin-top: clamp(20px, 3vw, 34px);
+  padding-top: clamp(18px, 2.4vw, 26px);
+  border-top: 1px solid var(--line);
+}
+
+.work-commission p {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.work-commission strong { color: var(--ink); font-weight: 600; }
+
+.work-commission .ghost-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+/* Licence line and client list — both admin-set, both absent until they are. */
+.work-credentials {
+  display: grid;
+  gap: 8px;
+  margin-top: clamp(18px, 2.4vw, 26px);
+  padding-top: clamp(14px, 2vw, 20px);
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.work-credentials p { margin: 0; }
+
+.work-clients span {
+  display: block;
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
 }
 
 .work-section-head {

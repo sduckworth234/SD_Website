@@ -654,6 +654,36 @@ function AdminHideable({ visible, isAdmin, label, children }: { visible: boolean
   );
 }
 
+// The one positioning line under the wordmark — what this is and where it's
+// made, said once. Overridable without a deploy through the `hero_positioning`
+// site_settings row (Admin → Homepage); a site_content column would have needed
+// a migration for a single sentence.
+const HERO_POSITIONING_DEFAULT =
+  "Aerial photography of Sydney's Northern Beaches and beyond, printed and framed in Australia.";
+
+// First-order incentive. Wording and code both live in site_settings, so the
+// promotion can be reworded, repriced or retired from the admin; the strip
+// itself sits behind the `first_print_offer` visibility flag.
+const FIRST_PRINT_OFFER_DEFAULT = "10% off your first print with code";
+const FIRST_PRINT_CODE_DEFAULT = "FIRSTPRINT";
+
+// One quiet line under the hero rather than a promo bar: one sentence, one
+// code, one way into the shop, on the same hairline rhythm as the ticker band.
+function FirstPrintOffer({ text, code, onOpenShop }: { text: string; code: string; onOpenShop: () => void }) {
+  if (!text.trim()) return null;
+  return (
+    <section className="first-print-offer" aria-label="First print offer">
+      <p>
+        <span>{text}</span>
+        {code ? <span className="first-print-code">{code}</span> : null}
+        <a href="/shop" onClick={(event) => { event.preventDefault(); onOpenShop(); }}>
+          Shop prints <span aria-hidden="true">→</span>
+        </a>
+      </p>
+    </section>
+  );
+}
+
 // The landing page: hero, recent work, the map teaser, location collection cards,
 // and (admin-only for now) the Framed Editions shop banner.
 function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
@@ -790,6 +820,22 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
     && flags.print_configurator === true
   );
 
+  // How many photographs are actually buyable, and the cheapest way in — both
+  // read straight off the live catalogue, so the home page can never quote a
+  // count or a price the shop won't honour.
+  const printCatalogueSummary = useMemo(() => {
+    let count = 0;
+    let from: number | null = null;
+    for (const photo of publicPhotos) {
+      if (!photo.inShop) continue;
+      const price = lowestPrintPrice(photo);
+      if (price == null) continue;
+      count += 1;
+      if (from == null || price < from) from = price;
+    }
+    return { count, from };
+  }, [publicPhotos]);
+
   // The section is data-driven and does not exist during the initial skeleton,
   // so a fresh /#home-print-promo load needs one post-load anchor pass.
   useEffect(() => {
@@ -845,7 +891,14 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
         showShop={isAdmin}
       />
       <div id="main-content" className="section-anchor" tabIndex={-1} />
-      <Hero photo={heroPhoto} locations={locationNames} isAdmin={isAdmin} rotate={heroRotate} onPickHero={() => setHeroPicking(true)} />
+      <Hero
+        photo={heroPhoto}
+        locations={locationNames}
+        isAdmin={isAdmin}
+        positioning={settingValue.hero_positioning ?? HERO_POSITIONING_DEFAULT}
+        rotate={heroRotate}
+        onPickHero={() => setHeroPicking(true)}
+      />
       <div id="galleries" className="section-anchor" aria-hidden="true" />
       {isLoading ? (
         <>
@@ -854,15 +907,33 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
         </>
       ) : (
         <>
-          {hero2026Photos.length ? (
-            <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "hero_2026")} label="2026 Europe hero">
-              <Hero2026Feature
-                heading={settingValue.hero_2026_title || "Europe 2026"}
-                onOpen={() => goToGalleries(hero2026Target)}
-                photos={hero2026Photos}
+          {/* Running order, top to bottom: the two things that earn a living —
+              prints, then hire — come first, and the editorial work (Recent
+              Work, the trip feature, the map, the places) follows. */}
+          {homePrintPromoAvailable ? (
+            <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "first_print_offer")} label="First print offer">
+              <FirstPrintOffer
+                text={settingValue.first_print_offer_text || FIRST_PRINT_OFFER_DEFAULT}
+                code={settingValue.first_print_offer_code || FIRST_PRINT_CODE_DEFAULT}
+                onOpenShop={goToShop}
               />
             </AdminHideable>
           ) : null}
+          {homePrintPromoAvailable && homePrintPhotos.length >= 3 ? (
+            <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "home_print_carousel")} label="Homepage print carousel">
+              <HomePrintPromo
+                photos={homePrintPhotos}
+                availableCount={printCatalogueSummary.count}
+                fromPrice={printCatalogueSummary.from}
+                onOpenPhoto={goToShopPhoto}
+                onOpenShop={goToShop}
+                onOpenGalleries={() => goToGalleries()}
+              />
+            </AdminHideable>
+          ) : null}
+          <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "contact_prompt")} label="Professional work banner">
+            <ProfessionalWorkPromo photo={professionalHeroPhoto} onOpen={goToWork} />
+          </AdminHideable>
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "ticker_banner")} label="Scrolling banner">
             <TickerBanner items={TICKER_ITEMS} onOpen={goToShop} />
           </AdminHideable>
@@ -878,9 +949,13 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
               />
             </AdminHideable>
           ) : null}
-          {homePrintPromoAvailable && homePrintPhotos.length >= 3 ? (
-            <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "home_print_carousel")} label="Homepage print carousel">
-              <HomePrintPromo photos={homePrintPhotos} onOpenPhoto={goToShopPhoto} onOpenShop={goToShop} />
+          {hero2026Photos.length ? (
+            <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "hero_2026")} label="2026 Europe hero">
+              <Hero2026Feature
+                heading={settingValue.hero_2026_title || "Europe 2026"}
+                onOpen={() => goToGalleries(hero2026Target)}
+                photos={hero2026Photos}
+              />
             </AdminHideable>
           ) : null}
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "map_promo")} label="Map promo">
@@ -888,9 +963,6 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
           </AdminHideable>
           <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "collection_cards")} label="Collections">
             <CollectionCards photos={publicPhotos} locations={locations} onOpen={openLocation} onOpenAll={() => goToGalleries()} isAdmin={isAdmin} onEdit={setEditingCollection} />
-          </AdminHideable>
-          <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "contact_prompt")} label="Professional work banner">
-            <ProfessionalWorkPromo photo={professionalHeroPhoto} onOpen={goToWork} />
           </AdminHideable>
           {instagramPosts.length ? (
             <AdminHideable isAdmin={isAdmin} visible={flagOn(flags, "instagram_feed")} label="Instagram feed">
@@ -912,6 +984,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
             window.history.pushState({}, "", `/shop/${p.slug}`);
             onNavigate(`/shop/${p.slug}`);
           } : undefined}
+          printFromPrice={lowestPrintPrice(selectedPhoto)}
         />
       ) : null}
       {editingPhoto ? (
@@ -994,6 +1067,15 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   const [mobileAxis, setMobileAxis] = useState<"collections" | "places">("collections");
   const [view, setView] = useState<GalleryView>("flow");
   const pageSize = isPhone ? GALLERY_PAGE_SIZE_MOBILE : GALLERY_PAGE_SIZE_DESKTOP;
+  // The gallery is where most people meet the work, so the route into the
+  // print product page is shared by the tiles and the lightbox rather than
+  // living only inside the lightbox.
+  const printLinksOn = isAdmin || (SHOP_FEATURE_ENABLED && flags.print_configurator === true);
+  const openPrint = (photo: Photo) => {
+    trackProductLinkClicked({ item_id: photo.id, item_name: photo.title, source: "gallery" });
+    window.history.pushState({}, "", `/shop/${photo.slug}`);
+    onNavigate(`/shop/${photo.slug}`);
+  };
   const [visibleCount, setVisibleCount] = useState(GALLERY_PAGE_SIZE_DESKTOP);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
@@ -1458,6 +1540,7 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
           onEditPhoto={setEditingPhoto}
           onSelectPhoto={openPhoto}
           onWarm={warmPhoto}
+          onOrderPrint={printLinksOn ? openPrint : undefined}
           onSendToTop={sendToTop}
           onToggleMapFeature={toggleMapFeature}
           onUnpublish={unpublishPhoto}
@@ -1488,11 +1571,8 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
           isFavourite={favouriteIds.has(selectedPhoto.id)}
           onToggleFavourite={toggleFavourite}
           onViewOnMap={viewPhotoOnMap}
-          onOrderPrint={(isAdmin || (SHOP_FEATURE_ENABLED && flags.print_configurator === true)) && selectedPhoto.inShop ? (p) => {
-            trackProductLinkClicked({ item_id: p.id, item_name: p.title, source: "gallery" });
-            window.history.pushState({}, "", `/shop/${p.slug}`);
-            onNavigate(`/shop/${p.slug}`);
-          } : undefined}
+          onOrderPrint={printLinksOn && selectedPhoto.inShop ? openPrint : undefined}
+          printFromPrice={lowestPrintPrice(selectedPhoto)}
         />
       ) : null}
       {editingPhoto ? (
@@ -2284,6 +2364,10 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
               <button type="button" onClick={() => scrollEditions(1)} aria-label="Next selected editions"><ChevronRight size={17} aria-hidden="true" /></button>
             </div>
           ) : null}
+          {/* The curated fifteen are an edit, not the catalogue. Rather than
+              rebuild the archive here, name how much of it is for sale and
+              hand people to the gallery, where every sellable photograph now
+              carries its own print link. */}
           <div className="shop-gallery-cta">
             <p>Looking for a particular place or photograph?</p>
             <a
@@ -2291,7 +2375,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
               href="/galleries"
               onClick={(event) => { event.preventDefault(); goGalleries(); }}
             >
-              Browse the full galleries
+              {shopPhotos.length ? `Browse all ${shopPhotos.length} photographs available as prints` : "Browse the full galleries"}
             </a>
           </div>
           <p className="shop-local-line">
@@ -2576,12 +2660,18 @@ function lowestPrintPrice(photo: Photo): number | null {
 
 function HomePrintPromo({
   photos,
+  availableCount,
+  fromPrice,
   onOpenPhoto,
   onOpenShop,
+  onOpenGalleries,
 }: {
   photos: Photo[];
+  availableCount?: number;
+  fromPrice?: number | null;
   onOpenPhoto: (photo: Photo) => void;
   onOpenShop: () => void;
+  onOpenGalleries?: () => void;
 }) {
   const renderSequence = (duplicate = false) => (
     <div className="home-print-sequence" aria-hidden={duplicate || undefined}>
@@ -2620,15 +2710,29 @@ function HomePrintPromo({
         <div>
           <p className="eyebrow">Framed Editions</p>
           <h2 id="home-print-title">Take the view home.</h2>
-          <p>A few of my favourites, framed and ready to hang — the rest of the collection is in the shop.</p>
+          <p>
+            A few of my favourites, framed and ready to hang
+            {fromPrice != null ? <> — prints from {money(fromPrice)}, framed and delivered in Australia</> : null}.
+          </p>
         </div>
-        <a
-          className="home-print-shop-link"
-          href="/shop"
-          onClick={(event) => { event.preventDefault(); onOpenShop(); }}
-        >
-          View all prints <span aria-hidden="true">→</span>
-        </a>
+        <div className="home-print-actions">
+          <a
+            className="solid-button"
+            href="/shop"
+            onClick={(event) => { event.preventDefault(); onOpenShop(); }}
+          >
+            Shop prints <ArrowRight size={15} aria-hidden="true" />
+          </a>
+          {onOpenGalleries && availableCount ? (
+            <a
+              className="home-print-shop-link"
+              href="/galleries"
+              onClick={(event) => { event.preventDefault(); onOpenGalleries(); }}
+            >
+              Browse all {availableCount} photographs available as prints <span aria-hidden="true">→</span>
+            </a>
+          ) : null}
+        </div>
       </div>
       <div className="home-print-rail" aria-label="Selected framed prints">
         <div className="home-print-track">
@@ -3090,7 +3194,7 @@ function HeroPicker({
 // by the existing fade-from-black, with the wordmark over it and the photo's
 // place set small in the bottom-left corner. On mobile the photo fills
 // the screen (portrait) when flagged portrait-worthy, else letterboxes.
-function Hero({ photo, locations, isAdmin, rotate, onPickHero }: { photo?: Photo; locations: string[]; isAdmin: boolean; rotate: string; onPickHero: () => void }) {
+function Hero({ photo, locations, isAdmin, positioning, rotate, onPickHero }: { photo?: Photo; locations: string[]; isAdmin: boolean; positioning?: string; rotate: string; onPickHero: () => void }) {
   const content = usePublicContent();
   const rotClass = rotate === "90" ? " rotate-90" : rotate === "270" ? " rotate-270" : "";
   return (
@@ -3103,7 +3207,14 @@ function Hero({ photo, locations, isAdmin, rotate, onPickHero }: { photo?: Photo
       <div className="landing-copy scroll-reveal is-visible">
         <p className="eyebrow">{content.heroEyebrow}</p>
         <h1>Sam Duckworth</h1>
-        <RotatingLocations locations={locations} />
+        {/* The positioning line is a fixed sentence, so it sits in the centred
+            flow with the wordmark. The rotating ticker still hangs below it
+            (see .landing-under) — its length changes every few seconds and
+            would otherwise shunt the wordmark up and down. */}
+        {positioning ? <p className="hero-positioning">{positioning}</p> : null}
+        <div className="landing-under">
+          <RotatingLocations locations={locations} />
+        </div>
       </div>
       {photo ? (
         <figcaption className="hero-caption">
@@ -3811,6 +3922,7 @@ function Gallery({
   onEditPhoto,
   onSelectPhoto,
   onWarm,
+  onOrderPrint,
   onSendToTop,
   onToggleMapFeature,
   onUnpublish,
@@ -3821,6 +3933,7 @@ function Gallery({
   onEditPhoto: (photo: Photo) => void;
   onSelectPhoto: (photo: Photo, from?: HTMLElement) => void;
   onWarm?: (photo: Photo) => void;
+  onOrderPrint?: (photo: Photo) => void;
   onSendToTop: (photo: Photo) => void;
   onToggleMapFeature: (photo: Photo) => void;
   onUnpublish: (photo: Photo) => void;
@@ -3829,7 +3942,12 @@ function Gallery({
 }) {
   return (
     <section className={`gallery view-${view}`} aria-label="Photography gallery">
-      {photos.map((photo, index) => (
+      {photos.map((photo, index) => {
+        // The tile's own quiet sale affordance: a photograph you can buy says
+        // so in the corner, at its real starting price, without a hover state
+        // (which doesn't exist on a phone) and without a second tap.
+        const printFrom = onOrderPrint && photo.inShop ? lowestPrintPrice(photo) : null;
+        return (
         <div
           className={`photo-tile ${photo.aspect} scroll-reveal${isAdmin ? " is-admin" : ""}`}
           key={photo.id}
@@ -3873,6 +3991,23 @@ function Gallery({
             {photo.year ? <small>{photo.year}</small> : null}
           </div>
           <AltitudeBadge photo={photo} />
+          {printFrom != null ? (
+            <a
+              className="tile-print"
+              href={`/shop/${photo.slug}`}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onOrderPrint?.(photo);
+              }}
+              onPointerDown={(event) => event.stopPropagation()}
+              onKeyDown={(event) => event.stopPropagation()}
+              aria-label={`Order a print of ${photo.title}, from ${money(printFrom)}`}
+            >
+              <Frame size={10} aria-hidden="true" />
+              Print from {money(printFrom)}
+            </a>
+          ) : null}
           {isAdmin ? (
             <div className="tile-admin-actions">
               <button
@@ -3923,7 +4058,8 @@ function Gallery({
             </div>
           ) : null}
         </div>
-      ))}
+        );
+      })}
     </section>
   );
 }
@@ -4767,13 +4903,25 @@ function CollectionsAdmin({ photos }: { photos: Photo[] }) {
 // the DB) so the panel reads well even if a seed row is missing.
 const VISIBILITY_FLAGS: { key: string; label: string; hint: string }[] = [
   { key: "hero_2026", label: "Home — 2026 Europe hero", hint: "The static editorial trip feature near the top of the home page." },
-  { key: "ticker_banner", label: "Home — Scrolling banner", hint: "The horizontal scrolling promo strip between the Europe hero and Recent Work." },
+  { key: "first_print_offer", label: "Home — First print offer", hint: "The single discount-code line directly beneath the hero." },
+  { key: "ticker_banner", label: "Home — Scrolling banner", hint: "The horizontal scrolling promo strip between the professional-work banner and Recent Work." },
   { key: "recent_work", label: "Home — Recent Work mosaic", hint: "The editorial photo mosaic near the top of the home page." },
-  { key: "home_print_carousel", label: "Home — Available prints carousel", hint: "The light framed-print card directly below Recent Work." },
+  { key: "home_print_carousel", label: "Home — Available prints carousel", hint: "The framed-print bridge into the shop, directly below the hero." },
   { key: "map_promo", label: "Home — Map promo", hint: "The interactive-map teaser on the home page." },
   { key: "collection_cards", label: "Home — Collection cards", hint: "The scroll-highlighted list of places on the home page." },
   { key: "contact_prompt", label: "Home — Professional work banner", hint: "The real estate/events/brand promo card linking to /work." },
   { key: "instagram_feed", label: "Home — Instagram feed", hint: "The live strip of your latest Instagram posts, above the footer." },
+];
+
+// The /work page's admin-set text. Every one of these is blank until Sam sets
+// it, and the page renders nothing where a value is missing — so the site never
+// quotes a price or claims a credential on his behalf.
+const HIRE_SETTING_FIELDS: { key: string; label: string; placeholder: string }[] = [
+  { key: "work_price_property", label: "Property listing — from", placeholder: "e.g. 350 (blank = “Quote within 24 hours”)" },
+  { key: "work_price_event", label: "Event — from", placeholder: "e.g. 450 (blank = “Quote within 24 hours”)" },
+  { key: "work_price_brand", label: "Brand & content — from", placeholder: "e.g. 650 (blank = “Quote within 24 hours”)" },
+  { key: "work_licence_line", label: "Licence / insurance line", placeholder: "e.g. CASA-licensed remote pilot, publicly insured" },
+  { key: "work_clients", label: "Clients (comma separated)", placeholder: "e.g. Flare, Manly Wharf Hotel" },
 ];
 
 // Flags that default OFF with no site_settings row (vs. every other flag,
@@ -4882,6 +5030,50 @@ function VisibilityAdmin({ photos, locations }: { photos: Photo[]; locations: Ga
           );
         })}
       </div>
+      <div className="admin-sec-head vis-banner-head"><Images size={16} aria-hidden="true" /><h2>Hero &amp; first print offer</h2></div>
+      <p className="admin-sec-hint">
+        The line under your name on the home page, and the discount line beneath it. Leave the offer text
+        empty (or switch “First print offer” off above) to remove the offer entirely.
+      </p>
+      <label className="hero2026-target">
+        <span>Line under the name</span>
+        <input
+          defaultValue={value.hero_positioning ?? HERO_POSITIONING_DEFAULT}
+          disabled={busy}
+          onBlur={(e) => {
+            const next = e.target.value.trim();
+            if (next === (value.hero_positioning ?? HERO_POSITIONING_DEFAULT)) return;
+            run(() => setSiteSetting("hero_positioning", next || null));
+          }}
+          placeholder={HERO_POSITIONING_DEFAULT}
+        />
+      </label>
+      <label className="hero2026-target">
+        <span>Offer line</span>
+        <input
+          defaultValue={value.first_print_offer_text ?? FIRST_PRINT_OFFER_DEFAULT}
+          disabled={busy}
+          onBlur={(e) => {
+            const next = e.target.value.trim();
+            if (next === (value.first_print_offer_text ?? FIRST_PRINT_OFFER_DEFAULT)) return;
+            run(() => setSiteSetting("first_print_offer_text", next || null));
+          }}
+          placeholder={FIRST_PRINT_OFFER_DEFAULT}
+        />
+      </label>
+      <label className="hero2026-target">
+        <span>Discount code</span>
+        <input
+          defaultValue={value.first_print_offer_code ?? FIRST_PRINT_CODE_DEFAULT}
+          disabled={busy}
+          onBlur={(e) => {
+            const next = e.target.value.trim().toUpperCase();
+            if (next === (value.first_print_offer_code ?? FIRST_PRINT_CODE_DEFAULT)) return;
+            run(() => setSiteSetting("first_print_offer_code", next || null));
+          }}
+          placeholder={FIRST_PRINT_CODE_DEFAULT}
+        />
+      </label>
       <div className="admin-sec-head vis-banner-head"><Images size={16} aria-hidden="true" /><h2>2026 Europe hero</h2></div>
       <p className="admin-sec-hint">
         Choose the single cover photo for the static Europe feature on the home page. Its location appears
@@ -4936,6 +5128,26 @@ function VisibilityAdmin({ photos, locations }: { photos: Photo[]; locations: Ga
           <option value="__none__">The full gallery (no collection)</option>
         </select>
       </label>
+      <div className="admin-sec-head vis-banner-head"><Images size={16} aria-hidden="true" /><h2>Hire page (/work)</h2></div>
+      <p className="admin-sec-hint">
+        Every field here is empty by default and simply doesn&rsquo;t render until you fill it in. A package with
+        no price shows &ldquo;Quote within 24 hours&rdquo; instead of a number.
+      </p>
+      {HIRE_SETTING_FIELDS.map((field) => (
+        <label className="hero2026-target" key={field.key}>
+          <span>{field.label}</span>
+          <input
+            defaultValue={value[field.key] ?? ""}
+            disabled={busy}
+            onBlur={(e) => {
+              const next = e.target.value.trim();
+              if (next === (value[field.key] ?? "")) return;
+              run(() => setSiteSetting(field.key, next || null));
+            }}
+            placeholder={field.placeholder}
+          />
+        </label>
+      ))}
       {curatingHero2026 ? (
         <OrderedPhotoPicker
           title="2026 Europe hero"

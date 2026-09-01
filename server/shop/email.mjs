@@ -130,7 +130,7 @@ export async function sendFulfilmentAlert(subject, detail) {
 }
 
 export async function sendContactEnquiry({ name, email, message, context }) {
-  const to = process.env.SHOP_ALERT_EMAIL ?? "samduckworthphoto@gmail.com";
+  const to = process.env.SHOP_ALERT_EMAIL ?? "hello@samduckworth.com";
   const safeContext = String(context ?? "Website enquiry").slice(0, 160);
   return send({
     to,

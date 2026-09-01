@@ -1,6 +1,7 @@
 import { ArrowUpFromLine, Frame, Globe, Heart, Images, MapPin, X } from "lucide-react";
 import type { CSSProperties } from "react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { money } from "../lib/printCatalogue";
 import { getTransformedPublicUrl, photoBucket } from "../lib/supabase";
 import type { Photo } from "../types";
 import { SmartImage } from "./SmartImage";
@@ -42,6 +43,7 @@ export function PhotoLightbox({
   onViewOnMap,
   onViewGallery,
   onOrderPrint,
+  printFromPrice,
 }: {
   photo: Photo;
   origin?: { x: number; y: number } | null;
@@ -51,6 +53,7 @@ export function PhotoLightbox({
   onViewOnMap?: (photo: Photo) => void;
   onViewGallery?: (photo: Photo) => void;
   onOrderPrint?: (photo: Photo) => void;
+  printFromPrice?: number | null;
 }) {
   const ratio = photo.ratio ?? BUCKET_RATIO[photo.aspect] ?? 1.45;
   const exactRatio = photo.ratio ?? null;
@@ -120,7 +123,17 @@ export function PhotoLightbox({
           <span className="lightbox-location"><MapPin size={13} aria-hidden="true" />{photo.location}</span>
           <h2>{photo.title}</h2>
           {photo.year ? <small>{photo.year}</small> : null}
-          {canFavourite || canViewMap || canViewGallery || canOrderPrint ? (
+          {/* Buying is the one action here that leads somewhere the visitor
+              can't get to on their own, so it sits above the rest, filled, and
+              carries the real starting price. */}
+          {canOrderPrint ? (
+            <button className="map-link-button order-print-button is-primary" onClick={() => onOrderPrint!(photo)} type="button">
+              <Frame size={14} aria-hidden="true" />
+              Order a print
+              {printFromPrice != null ? <span className="order-print-from">from {money(printFromPrice)}</span> : null}
+            </button>
+          ) : null}
+          {canFavourite || canViewMap || canViewGallery ? (
             <div className="lightbox-actions">
               {canFavourite ? (
                 <button
@@ -133,7 +146,6 @@ export function PhotoLightbox({
                   {isFavourite ? "Saved to favourites" : "Add to favourites"}
                 </button>
               ) : null}
-              {canOrderPrint ? <button className="map-link-button order-print-button" onClick={() => onOrderPrint!(photo)} type="button"><Frame size={14} aria-hidden="true" />Order a print</button> : null}
               {canViewGallery ? <button className="map-link-button" onClick={() => onViewGallery!(photo)} type="button"><Images size={14} aria-hidden="true" />View gallery</button> : null}
               {canViewMap ? <button className="map-link-button" onClick={() => onViewOnMap!(photo)} type="button"><Globe size={14} aria-hidden="true" />View on map</button> : null}
             </div>
