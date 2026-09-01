@@ -114,7 +114,7 @@ import { LegalPage, ShopLegalFooter, type LegalPageId } from "./components/Legal
 import { ContactOverlay } from "./components/ContactOverlay";
 import { useCart } from "./lib/cart";
 import { trackPageView, trackProductLinkClicked, trackSelectItem } from "./lib/analytics";
-import { SIZES, cheapestPriceFor, isSizeSellable, money, priceFor } from "./lib/printCatalogue";
+import { FALLBACK_PRICING, SIZES, cheapestPriceFor, cheapestPriceForSize, isSizeSellable, money } from "./lib/printCatalogue";
 import type { SizeId } from "./lib/printCatalogue";
 import { SHOP_FEATURE_ENABLED } from "./lib/features";
 import { savePublicContent, usePublicContent, type PublicContent } from "./lib/publicContent";
@@ -684,7 +684,7 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
         item_category2: photo.location,
         item_list_id: "homepage_print_carousel",
         item_list_name: "Homepage framed prints",
-        price: lowestPrintPrice(photo) ?? priceFor("A5", false),
+        price: lowestPrintPrice(photo) ?? cheapestPriceForSize("A5"),
         currency: "AUD",
         quantity: 1,
       }],
@@ -1620,7 +1620,7 @@ function ShopProduct({ photo, onAdd, productHref, onOpen }: { photo: Photo; onAd
             item_category2: photo.location,
             item_list_id: "shop_showcase",
             item_list_name: "Selected editions",
-            price: cheapestPriceFor("A5"),
+            price: cheapestPriceForSize("A5"),
             currency: "AUD" as const,
             quantity: 1,
           };
@@ -1635,7 +1635,7 @@ function ShopProduct({ photo, onAdd, productHref, onOpen }: { photo: Photo; onAd
         <div className="shop-card-info">
           <div className="sc-ttl">{photo.title}</div>
           <div className="sc-loc">{photo.location}</div>
-          <div className="sc-buy"><span className="sc-price">From {money(cheapestPriceFor("A5"))}</span></div>
+          <div className="sc-buy"><span className="sc-price">From {money(cheapestPriceForSize("A5"))}</span></div>
         </div>
       </a>
     );
@@ -2445,6 +2445,9 @@ function lowestPrintPrice(photo: Photo): number | null {
   const prices: number[] = [];
   for (const size of SIZES) {
     if (isSizeSellable(size.id, false, photo.sellableSizes, photo.maxSellableUnmounted)) {
+      // Unframed "print only" needs the same resolution as an unmounted
+      // framed print and is always the cheapest way to own the image.
+      prices.push(cheapestPriceFor(size.id, false, false));
       prices.push(cheapestPriceFor(size.id, false));
     }
     if (isSizeSellable(size.id, true, photo.sellableSizes, photo.maxSellableMounted)) {
@@ -5802,19 +5805,32 @@ type FrameshopComponentRow = {
   mat_cost_cents: number;
   glass_cost_unmounted_cents: number;
   glass_cost_mounted_cents: number;
+  artist_fee_cents: number;
 };
 type FrameshopMultiplierRow = { id: string; label: string; cost_multiplier: number; frame_code?: string; description?: string };
-type ComponentDraft = { frameUnmounted: string; frameMounted: string; mat: string; glassUnmounted: string; glassMounted: string };
+type FrameshopPaperRow = {
+  id: string;
+  label: string;
+  description?: string;
+  cost_a5_cents: number;
+  cost_a4_cents: number;
+  cost_a3_cents: number;
+  cost_a2_cents: number;
+  cost_a1_cents: number;
+};
+type ComponentDraft = { frameUnmounted: string; frameMounted: string; mat: string; glassUnmounted: string; glassMounted: string; artistFee: string };
 
 function FrameshopPricingAdmin({ session, setMessage }: { session: Session; setMessage: (message: string) => void }) {
   const [components, setComponents] = useState<FrameshopComponentRow[]>([]);
   const [colours, setColours] = useState<FrameshopMultiplierRow[]>([]);
   const [glazing, setGlazing] = useState<FrameshopMultiplierRow[]>([]);
-  const [marginPercent, setMarginPercent] = useState(15);
+  const [paper, setPaper] = useState<FrameshopPaperRow[]>([]);
+  const [marginPercent, setMarginPercent] = useState(FALLBACK_PRICING.marginPercent);
   const [componentDrafts, setComponentDrafts] = useState<Record<string, ComponentDraft>>({});
   const [colourDrafts, setColourDrafts] = useState<Record<string, string>>({});
   const [glazingDrafts, setGlazingDrafts] = useState<Record<string, string>>({});
-  const [marginDraft, setMarginDraft] = useState("15");
+  const [paperDrafts, setPaperDrafts] = useState<Record<string, Record<string, string>>>({});
+  const [marginDraft, setMarginDraft] = useState(String(FALLBACK_PRICING.marginPercent));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -5828,10 +5844,11 @@ function FrameshopPricingAdmin({ session, setMessage }: { session: Session; setM
     return data;
   }, [session.access_token]);
 
-  const applyFrameshop = useCallback((frameshop: { components: FrameshopComponentRow[]; colours: FrameshopMultiplierRow[]; glazing: FrameshopMultiplierRow[]; marginPercent: number }) => {
+  const applyFrameshop = useCallback((frameshop: { components: FrameshopComponentRow[]; colours: FrameshopMultiplierRow[]; glazing: FrameshopMultiplierRow[]; paper?: FrameshopPaperRow[]; marginPercent: number }) => {
     setComponents(frameshop.components);
     setColours(frameshop.colours);
     setGlazing(frameshop.glazing);
+    setPaper(frameshop.paper ?? []);
     setMarginPercent(frameshop.marginPercent);
     const nextComponentDrafts: Record<string, ComponentDraft> = {};
     for (const row of frameshop.components) {
@@ -5841,11 +5858,19 @@ function FrameshopPricingAdmin({ session, setMessage }: { session: Session; setM
         mat: centsToDollarsStr(row.mat_cost_cents),
         glassUnmounted: centsToDollarsStr(row.glass_cost_unmounted_cents),
         glassMounted: centsToDollarsStr(row.glass_cost_mounted_cents),
+        artistFee: centsToDollarsStr(row.artist_fee_cents ?? 0),
       };
     }
     setComponentDrafts(nextComponentDrafts);
     setColourDrafts(Object.fromEntries(frameshop.colours.map((c) => [c.id, String(c.cost_multiplier)])));
     setGlazingDrafts(Object.fromEntries(frameshop.glazing.map((g) => [g.id, String(g.cost_multiplier)])));
+    setPaperDrafts(Object.fromEntries((frameshop.paper ?? []).map((p) => [p.id, {
+      A5: centsToDollarsStr(p.cost_a5_cents),
+      A4: centsToDollarsStr(p.cost_a4_cents),
+      A3: centsToDollarsStr(p.cost_a3_cents),
+      A2: centsToDollarsStr(p.cost_a2_cents),
+      A1: centsToDollarsStr(p.cost_a1_cents),
+    }])));
     setMarginDraft(String(frameshop.marginPercent));
   }, []);
 
@@ -5873,12 +5898,30 @@ function FrameshopPricingAdmin({ session, setMessage }: { session: Session; setM
         matCostCents: dollarsStrToCents(draft.mat),
         glassCostUnmountedCents: dollarsStrToCents(draft.glassUnmounted),
         glassCostMountedCents: dollarsStrToCents(draft.glassMounted),
+        artistFeeCents: dollarsStrToCents(draft.artistFee),
       }));
       const data = await request({ method: "POST", body: JSON.stringify({ action: "save_frameshop_components", components: payload }) });
       applyFrameshop(data);
       setMessage("Frameshop base costs saved — live on the shop now.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Base costs could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function savePaper() {
+    setSaving(true);
+    try {
+      const payload = Object.entries(paperDrafts).map(([id, sizes]) => ({
+        id,
+        costCents: Object.fromEntries(SIZES.map((s) => [s.id, dollarsStrToCents(sizes[s.id] ?? "0")])),
+      }));
+      const data = await request({ method: "POST", body: JSON.stringify({ action: "save_frameshop_paper", paper: payload }) });
+      applyFrameshop(data);
+      setMessage("Paper costs saved — live on the shop now.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Paper costs could not be saved.");
     } finally {
       setSaving(false);
     }
@@ -5926,7 +5969,8 @@ function FrameshopPricingAdmin({ session, setMessage }: { session: Session; setM
           <p className="eyebrow">Pricing — live</p>
           <h2>What customers actually pay.</h2>
           <p>
-            sell = (frame cost × colour multiplier + mat cost if mounted + glass cost × glazing multiplier) × (1 + margin/100).
+            sell = (frame × colour multiplier + mat if mounted + glass × glazing multiplier + paper) × (1 + margin/100) + artist fee,
+            rounded up to the next $5 and then $1 off, so every price is a clean point. Print only drops frame, mat and glazing.
             Shipping is separate — added once per cart at checkout, not per item.
           </p>
         </div>
@@ -5943,7 +5987,7 @@ function FrameshopPricingAdmin({ session, setMessage }: { session: Session; setM
           <span>Glass</span>
         </div>
         {SIZES.map((s) => {
-          const draft = componentDrafts[s.id] ?? { frameUnmounted: "", frameMounted: "", mat: "", glassUnmounted: "", glassMounted: "" };
+          const draft = componentDrafts[s.id] ?? { frameUnmounted: "", frameMounted: "", mat: "", glassUnmounted: "", glassMounted: "", artistFee: "" };
           return (
             <div className="pricing-row" key={`${s.id}-unmounted`}>
               <span className="pricing-size">{s.id}<small>{s.outer[0].toFixed(0)}×{s.outer[1].toFixed(0)}cm</small></span>
@@ -5974,7 +6018,7 @@ function FrameshopPricingAdmin({ session, setMessage }: { session: Session; setM
           <span>Glass</span>
         </div>
         {SIZES.map((s) => {
-          const draft = componentDrafts[s.id] ?? { frameUnmounted: "", frameMounted: "", mat: "", glassUnmounted: "", glassMounted: "" };
+          const draft = componentDrafts[s.id] ?? { frameUnmounted: "", frameMounted: "", mat: "", glassUnmounted: "", glassMounted: "", artistFee: "" };
           return (
             <div className="pricing-row" key={`${s.id}-mounted`}>
               <span className="pricing-size">{s.id}<small>mat {s.mat.toFixed(1)}cm</small></span>
@@ -5995,7 +6039,70 @@ function FrameshopPricingAdmin({ session, setMessage }: { session: Session; setM
           );
         })}
       </div>
+      <p className="pricing-subhead" style={{ fontSize: "0.85em" }}>Artist fee (the value of the photograph, per size)</p>
+      <p className="pc-mount-note">Added after margin, so it isn’t marked up — raise it by $1 and the price goes up by $1. This is the whole of what the work itself earns; everything else on this page is Frameshop’s cost.</p>
+      <div className="pricing-table pricing-table-3col">
+        <div className="pricing-row pricing-head">
+          <span>Size</span>
+          <span>Artist fee</span>
+          <span />
+        </div>
+        {SIZES.map((s) => {
+          const draft = componentDrafts[s.id] ?? { frameUnmounted: "", frameMounted: "", mat: "", glassUnmounted: "", glassMounted: "", artistFee: "" };
+          return (
+            <div className="pricing-row" key={`${s.id}-artist-fee`}>
+              <span className="pricing-size">{s.id}</span>
+              <div className="pricing-cell">
+                <label>
+                  <span>$</span>
+                  <input
+                    inputMode="decimal"
+                    type="text"
+                    value={draft.artistFee}
+                    onChange={(event) => setComponentDrafts((prev) => ({ ...prev, [s.id]: { ...prev[s.id], artistFee: event.target.value } }))}
+                  />
+                </label>
+              </div>
+              <span />
+            </div>
+          );
+        })}
+      </div>
       <button className="solid-button" type="button" onClick={saveComponents} disabled={saving}>{saving ? "Saving…" : "Save base costs"}</button>
+
+      {paper.length ? (
+        <>
+          <h3 className="pricing-subhead">Printing (paper) cost per size</h3>
+          <p className="pc-mount-note">Frameshop prices printing by paper and size, so these are real per-size costs rather than a multiplier. Print only is paper + artist fee, nothing else.</p>
+          <div className="pricing-table pricing-table-3col">
+            <div className="pricing-row pricing-head">
+              <span>Size</span>
+              {paper.map((p) => <span key={p.id}>{p.label}</span>)}
+            </div>
+            {SIZES.map((s) => (
+              <div className="pricing-row" key={`paper-${s.id}`}>
+                <span className="pricing-size">{s.id}</span>
+                {paper.map((p) => (
+                  <div className="pricing-cell" key={`${p.id}-${s.id}`}>
+                    <label>
+                      <span>$</span>
+                      <input
+                        inputMode="decimal"
+                        type="text"
+                        value={paperDrafts[p.id]?.[s.id] ?? ""}
+                        onChange={(event) => setPaperDrafts((prev) => ({ ...prev, [p.id]: { ...prev[p.id], [s.id]: event.target.value } }))}
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+          <button className="solid-button" type="button" onClick={savePaper} disabled={saving}>{saving ? "Saving…" : "Save paper costs"}</button>
+        </>
+      ) : (
+        <p className="pc-mount-note">Paper costs aren’t editable yet — apply supabase/migrations/20260902010000_pricing_repair_and_paper.sql first.</p>
+      )}
 
       <h3 className="pricing-subhead">Colour multipliers (applied to frame cost only)</h3>
       <div className="pricing-multiplier-grid">

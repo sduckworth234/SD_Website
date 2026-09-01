@@ -5,7 +5,7 @@ import { ArrowLeft, Check, LoaderCircle, Lock } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useCart } from "../lib/cart";
 import { trackAddShippingInfo, trackPurchase } from "../lib/analytics";
-import { colourById, glazingById, money } from "../lib/printCatalogue";
+import { money, specLabel } from "../lib/printCatalogue";
 import { usePublicContent } from "../lib/publicContent";
 import { useSeo } from "../lib/seo";
 import { supabase } from "../lib/supabase";
@@ -131,7 +131,7 @@ function PaymentStep({ onBack, onRetry }: { onBack: () => void; onRetry: () => v
         item_name: item.title,
         item_brand: "Sam Duckworth Photography",
         item_category: "Fine-art print",
-        item_variant: `${item.size} · ${colourById(item.colour).label} · ${item.mounted ? "Mounted" : "Unmounted"} · ${glazingById(item.glazing).label}`,
+        item_variant: specLabel(item),
         price: item.price,
         quantity: 1,
       })),
@@ -183,7 +183,7 @@ function OrderSummary({ cart, totals }: { cart: CartState; totals?: CheckoutTota
       </button>
       <div className={`co-summary-content${expanded ? " is-open" : ""}`}>
         <div className="co-summary-items">
-          {cart.items.map((item, index) => <div className="co-summary-item" key={`${item.photoId}-${index}`}><img alt="" src={item.thumb} /><div><b>{item.title}</b><span>{item.size} · {colourById(item.colour).label} · {item.mounted ? "Mounted" : "Unmounted"} · {glazingById(item.glazing).label}</span></div><strong>{money(item.price)}</strong></div>)}
+          {cart.items.map((item, index) => <div className="co-summary-item" key={`${item.photoId}-${index}`}><img alt="" src={item.thumb} /><div><b>{item.title}</b><span>{specLabel(item)}</span></div><strong>{money(item.price)}</strong></div>)}
         </div>
         <div className="co-summary-lines">
           <p><span>Subtotal</span><span>{money(totals?.subtotal ?? cart.subtotal)}</span></p>
@@ -250,7 +250,13 @@ export function CheckoutPage({ onNavigate }: { onNavigate: (path: string) => voi
           ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify({
-          cart: cart.items.map(({ photoId, size, mounted, colour, glazing }) => ({ photoId, size, mounted, colour, glazing })),
+          // expectedPriceCents is the price this browser actually displayed.
+          // The server reprices from scratch and refuses the session if the
+          // two disagree, rather than silently charging a different amount.
+          cart: cart.items.map(({ photoId, size, mounted, colour, glazing, paper, framed, price }) => ({
+            photoId, size, mounted, colour, glazing, paper, framed,
+            expectedPriceCents: Math.round(price * 100),
+          })),
           customer,
           promotionCode: promotionCode.trim() || undefined,
         }),

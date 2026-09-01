@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:pricing": "node scripts/pricing-parity.mjs"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "6.8.1",
