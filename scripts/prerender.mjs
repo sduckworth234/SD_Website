@@ -528,6 +528,17 @@ async function main() {
     });
   }
 
+  routes.push({
+    path: "/shop/gift-voucher",
+    title: `Gift vouchers — ${SITE_NAME}`,
+    description: "A gift voucher for a fine-art photography print by Sam Duckworth — the recipient chooses the photograph, size and frame.",
+    structuredData: breadcrumbs([
+      { name: "Home", path: "/" },
+      { name: "Framed Editions", path: "/shop" },
+      { name: "Gift vouchers", path: "/shop/gift-voucher" },
+    ]),
+  });
+
   for (const route of routes) await writePage(shellBefore, shellAfter, route);
 
   // The sitemap is generated here too, from the same rows — one query pass, no
@@ -562,6 +573,7 @@ async function writeSitemap({ locations, publicPhotos, shopPhotos }) {
   add("/work", null, "0.8", "monthly");
   add("/map", newest(publicPhotos), "0.7", "monthly");
   add("/shop", newest(shopPhotos), "0.9", "weekly");
+  add("/shop/gift-voucher", null, "0.5", "monthly");
 
   for (const location of locations) {
     const inLocation = publicPhotos.filter((p) => p.location_id === location.id);
