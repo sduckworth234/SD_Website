@@ -454,7 +454,7 @@ async function main() {
   // The Product price is the genuinely cheapest way to own an A5 — the same
   // "From $X" the gallery tiles and configurator show (cheapestPriceForSize in
   // src/lib/printCatalogue.ts: min of print-only, unmounted and mounted, natural
-  // frame, clear glazing, archival matte). Computed from the same pricing
+  // frame, clear glazing, semi-gloss luster). Computed from the same pricing
   // tables checkout charges from (server/shop/catalogue.mjs); fetchPricing
   // falls back wholesale, margin included, exactly like the browser now does.
   const livePricing = await fetchPricing(rest);
@@ -484,7 +484,7 @@ async function main() {
           image,
           url: `${SITE_URL}/shop/${photo.slug}`,
           category: "Fine-art photography print",
-          material: "Archival fine-art paper with professional frame",
+          material: "Fine-art photo paper with professional frame",
           brand: { "@type": "Brand", name: SITE_NAME },
           offers: {
             "@type": "Offer",

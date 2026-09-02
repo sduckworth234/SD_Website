@@ -29,7 +29,7 @@ const STORAGE_KEY = "sd_print_cart_v1";
  * fields — fill them with what they implicitly were rather than dropping the
  * cart. Price is recomputed on every render anyway (see CartProvider). */
 function normaliseStored(item: CartItem): CartItem {
-  return { ...item, paper: item.paper ?? "archival_matte", framed: item.framed ?? true };
+  return { ...item, paper: item.paper ?? "semi_gloss", framed: item.framed ?? true };
 }
 
 function readStored(): CartItem[] {
@@ -104,7 +104,7 @@ export function makeCartItem(
   mounted: boolean,
   colour: ColourId,
   glazing: GlazingId,
-  paper: PaperId = "archival_matte",
+  paper: PaperId = "semi_gloss",
   framed = true,
 ): CartItem {
   return {

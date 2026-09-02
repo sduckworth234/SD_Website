@@ -22,7 +22,7 @@ function safeUrl(value) {
 // Frameshop job — including whether it's the unframed "print only" product
 // and which paper stock.
 function itemFinish(item) {
-  const paper = escapeHtml(String(item.paper ?? "archival_matte").replace(/_/g, " "));
+  const paper = escapeHtml(String(item.paper ?? "semi_gloss").replace(/_/g, " "));
   if (item.framed === false) return `print only, unframed and rolled, ${paper} paper`;
   const glazing = escapeHtml(String(item.glazing ?? "clear").replace(/_/g, " "));
   return `${item.mounted ? "mounted" : "unmounted"}, ${escapeHtml(item.colour)}, ${glazing} glass, ${paper} paper`;

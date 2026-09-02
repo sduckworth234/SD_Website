@@ -65,7 +65,7 @@ export function PrintConfigurator({
   const [framed, setFramed] = useState(true);
   const [colour, setColour] = useState<ColourId>("natural");
   const [glazing, setGlazing] = useState<GlazingId>("clear");
-  const [paper, setPaper] = useState<PaperId>("archival_matte");
+  const [paper, setPaper] = useState<PaperId>("semi_gloss");
   const [cartOpen, setCartOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
@@ -230,7 +230,7 @@ export function PrintConfigurator({
     price: cheapestPriceForSize("A5"),
     available: true,
     category: "Fine-art photography print",
-    material: "Archival fine-art paper with professional frame",
+    material: "Fine-art photo paper with professional frame",
   }), [photo, seoDescription]);
 
   useSeo(`${photo.title} print — Sam Duckworth Photography`, {
@@ -618,7 +618,7 @@ export function PrintConfigurator({
 
       <section className="pc-trust">
         <div><b>Printed to order</b><span>Made in Australia when you order — nothing sits in a warehouse.</span></div>
-        <div><b>Archival fine-art paper</b><span>Gallery-quality giclée print, made to last on your wall.</span></div>
+        <div><b>Fine-art photo paper</b><span>Gallery-quality giclée print, made to last on your wall.</span></div>
         <div><b>Typically dispatched in 2–3 business days</b><span>Tracked delivery from an Australian print lab.</span></div>
       </section>
 

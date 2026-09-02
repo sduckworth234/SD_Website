@@ -56,6 +56,16 @@
 -- estimateShippingCents(), which total once per cart with real multi-item
 -- consolidation (and now a cheaper rolled-tube tier for print-only orders)
 -- rather than once per item.
+--
+-- RUN IT AS ONE TRANSACTION. Every statement below is transactional DDL (no
+-- CREATE INDEX CONCURRENTLY, no ALTER TYPE ... ADD VALUE), so the explicit
+-- begin/commit is safe and turns a partial failure into a clean rollback
+-- rather than a half-migrated database. The Supabase SQL editor already runs a
+-- multi-statement script inside an implicit transaction block; an explicit
+-- BEGIN inside one simply promotes it to an explicit block, so this is correct
+-- both there and via psql.
+
+begin;
 
 -- ---------------------------------------------------------------------------
 -- 1. print_pricing_components — converge on the 20260821 shape, + artist fee
@@ -81,6 +91,24 @@ alter table public.print_pricing_components
   -- not marked up), so raising it raises the price dollar for dollar.
   -- Seeded with sensible defaults — Sam edits these in Admin -> Shop.
   add column if not exists artist_fee_cents           integer;
+
+-- The pre-20260821 columns go NOW, before the seed insert below.
+--
+-- They must: on the old production shape they are NOT NULL with no default,
+-- and the seed insert names only the new columns. Postgres checks NOT NULL
+-- while forming the candidate tuple — BEFORE ON CONFLICT can discard it — so
+-- leaving them in place fails the whole migration with
+-- "null value in column frame_cost_cents violates not-null constraint",
+-- even though every row already exists and would have conflicted away.
+--
+-- Dropping first loses nothing: the backfill below never reads these columns,
+-- it writes canonical Frameshop 103RO values. The old numbers were 224-series
+-- costs for a moulding that was abandoned (too thin for A2/A1), so they are
+-- deliberately discarded either way. No-op on a database already in the
+-- 20260821 shape, or on a freshly created table.
+alter table public.print_pricing_components
+  drop column if exists frame_cost_cents,
+  drop column if exists glass_cost_cents;
 
 -- Canonical, live-verified Frameshop 103RO numbers (checked 2026-08-21, frame
 -- + mat; glass re-checked unmounted 2026-09-02 and unchanged). Inserted for
@@ -113,12 +141,6 @@ from (values
   ('A1', 14530, 16600, 4.8::numeric, 4360, 3470, 5150, 18000)
 ) as v(size, frame_unmounted, frame_mounted, mat_width, mat_cost, glass_unmounted, glass_mounted, artist_fee)
 where c.size = v.size;
-
--- The pre-20260821 columns. Dropped only now that everything above them is
--- populated, so a partially-applied run can be re-run safely.
-alter table public.print_pricing_components
-  drop column if exists frame_cost_cents,
-  drop column if exists glass_cost_cents;
 
 alter table public.print_pricing_components
   alter column frame_cost_unmounted_cents set not null,
@@ -195,9 +217,39 @@ create table if not exists public.print_pricing_glazing (
   updated_at      timestamptz not null default now()
 );
 
-alter table public.print_pricing_glazing
-  drop constraint if exists print_pricing_glazing_id_check,
-  drop constraint if exists print_pricing_glazing_cost_multiplier_check;
+-- Drop the OLD restrictive checks by discovery rather than by name.
+--
+-- Dropping them by name is the one silent-failure risk in this migration: the
+-- live constraints were auto-named by Postgres from whichever CREATE TABLE
+-- actually ran in production, and "drop constraint if exists <wrong name>" is a
+-- successful no-op. The restrictive id check would then survive and the 'none'
+-- insert below would fail (or, if the name did match something else, the
+-- add-constraint would fail as a duplicate). Either way the migration dies.
+--
+-- So: drop EVERY check constraint on the table, whatever it is called, then
+-- add back the two this file defines. The table has no check constraints other
+-- than these two in any shape it has ever had. contype = 'c' is deliberate —
+-- the primary key is 'p' and (on PG 17+, where NOT NULL is also recorded in
+-- pg_constraint) NOT NULL is 'n', so neither is touched.
+do $$
+declare
+  con record;
+begin
+  for con in
+    select c.conname
+    from pg_constraint c
+    join pg_class rel on rel.oid = c.conrelid
+    join pg_namespace nsp on nsp.oid = rel.relnamespace
+    where nsp.nspname = 'public'
+      and rel.relname = 'print_pricing_glazing'
+      and c.contype = 'c'
+  loop
+    execute format(
+      'alter table public.print_pricing_glazing drop constraint %I', con.conname
+    );
+  end loop;
+end
+$$;
 
 alter table public.print_pricing_glazing
   add constraint print_pricing_glazing_id_check
@@ -220,20 +272,17 @@ on conflict (id) do nothing;
 --    multiplier. Read live from frameshop.com.au's "Printing" tab on
 --    2026-09-02.
 --
---    Semi-Gloss (Luster) and Matte Smooth (Archival) are the same price;
---    High Gloss (Metallic) is 1.3x and Cotton Rag (Smooth) is 1.8x. Only the
---    two that fit the brand are seeded and offered: Matte Smooth (Archival)
---    as the default — it is what the site's "archival matte" copy already
---    promises — with Cotton Rag as the premium upgrade. The gloss papers are
---    deliberately not sold.
---
---    A5 Cotton Rag ($18.36) is derived at exactly 1.8x the archival price;
---    the live reading for that one cell was stale. Every other cell is a
---    direct reading.
+--    Semi-Gloss (Luster) is the default and Matte Smooth (Archival) is priced
+--    identically to it; High Gloss (Metallic) is 1.3x and Cotton Rag (Smooth)
+--    is 1.8x. Only two are seeded and offered, deliberately, to keep the
+--    configurator simple rather than presenting five near-identical finishes:
+--    Semi-Gloss (Luster) as the house standard, with High Gloss (Metallic) as
+--    the premium upgrade for higher contrast under gallery lighting. Every
+--    figure below is a direct live reading, none derived.
 -- ---------------------------------------------------------------------------
 
 create table if not exists public.print_pricing_paper (
-  id            text primary key check (id in ('archival_matte', 'cotton_rag')),
+  id            text primary key check (id in ('semi_gloss', 'high_gloss')),
   label         text not null,
   description   text not null,
   cost_a5_cents integer not null check (cost_a5_cents >= 0),
@@ -249,12 +298,12 @@ comment on table public.print_pricing_paper is
   'Per-size printing (paper) cost, read live from frameshop.com.au''s Printing tab on 2026-09-02. Explicit cents per size rather than a multiplier because Frameshop prices printing by paper and size independently. Applies to framed prints AND to the unframed "print only" (rolled) product, which is paper + artist fee only.';
 
 insert into public.print_pricing_paper (id, label, description, cost_a5_cents, cost_a4_cents, cost_a3_cents, cost_a2_cents, cost_a1_cents, sort_order) values
-  ('archival_matte', 'Archival matte',
-   'Matte smooth archival paper — deep blacks, no glare, the house standard.',
+  ('semi_gloss', 'Semi-gloss luster',
+   'A soft sheen with rich colour and low glare — the house standard.',
    1020, 1560, 2730, 4480, 7680, 0),
-  ('cotton_rag',     'Cotton rag',
-   '100% cotton rag, smooth textured surface — the softest, most tactile finish.',
-   1836, 2808, 4914, 8064, 13824, 1)
+  ('high_gloss', 'High-gloss metallic',
+   'A metallic sheen with high contrast and depth — best under gallery lighting.',
+   1326, 2028, 3549, 5824, 9984, 1)
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
@@ -308,22 +357,48 @@ on conflict (key) do nothing;
 -- ---------------------------------------------------------------------------
 
 alter table public.order_items
-  add column if not exists paper text not null default 'archival_matte',
+  add column if not exists paper text not null default 'semi_gloss',
   -- false = the new unframed "print only" product: a rolled print in a tube,
   -- no frame, no mat, no glazing.
   add column if not exists framed boolean not null default true;
 
-alter table public.order_items drop constraint if exists order_items_paper_check;
-alter table public.order_items
-  add constraint order_items_paper_check check (paper in ('archival_matte', 'cotton_rag'));
+-- Same discovery-based drop as print_pricing_glazing above, and for the same
+-- reason: order_items.glazing was added in production by an inline column
+-- CHECK whose name Postgres generated, and the live restrictive list has no
+-- 'none'. Matched on the constraint DEFINITION so only the glazing and paper
+-- checks are touched — order_items' other checks (size, colour, quantity, …)
+-- are left exactly as they are.
+do $$
+declare
+  con record;
+begin
+  for con in
+    select c.conname
+    from pg_constraint c
+    join pg_class rel on rel.oid = c.conrelid
+    join pg_namespace nsp on nsp.oid = rel.relnamespace
+    where nsp.nspname = 'public'
+      and rel.relname = 'order_items'
+      and c.contype = 'c'
+      and (pg_get_constraintdef(c.oid) like '%glazing%'
+        or pg_get_constraintdef(c.oid) like '%paper%')
+  loop
+    execute format(
+      'alter table public.order_items drop constraint %I', con.conname
+    );
+  end loop;
+end
+$$;
 
-alter table public.order_items drop constraint if exists order_items_glazing_check;
+alter table public.order_items
+  add constraint order_items_paper_check check (paper in ('semi_gloss', 'high_gloss'));
+
 alter table public.order_items
   add constraint order_items_glazing_check
     check (glazing in ('clear', 'non_reflective', 'perspex', 'uv_clear', 'uv_non_reflective', 'none'));
 
 comment on column public.order_items.paper is
-  'Paper stock chosen for this print — see print_pricing_paper. Defaults to archival_matte for orders placed before paper was selectable.';
+  'Paper stock chosen for this print — see print_pricing_paper. Defaults to semi_gloss for orders placed before paper was selectable.';
 comment on column public.order_items.framed is
   'False for the unframed "print only" product (rolled in a tube). Defaults true so pre-existing orders read correctly.';
 
@@ -382,7 +457,7 @@ begin
     (item->>'mounted')::boolean,
     item->>'colour',
     coalesce(item->>'glazing', 'clear'),
-    coalesce(item->>'paper', 'archival_matte'),
+    coalesce(item->>'paper', 'semi_gloss'),
     coalesce((item->>'framed')::boolean, true),
     item->>'sku',
     (item->>'unit_price_cents')::integer,
@@ -401,3 +476,5 @@ $$;
 
 revoke all on function public.create_paid_order(jsonb, jsonb) from public, anon, authenticated;
 grant execute on function public.create_paid_order(jsonb, jsonb) to service_role;
+
+commit;

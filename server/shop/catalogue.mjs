@@ -49,8 +49,8 @@ export const FALLBACK_PRICING = Object.freeze({
   colours: Object.freeze({ natural: 1.0, black: 1.0, white: 1.0 }),
   glazing: Object.freeze({ clear: 1.0, non_reflective: 2.0, perspex: 2.0, uv_clear: 2.83, uv_non_reflective: 5.63, none: 0 }),
   paper: Object.freeze({
-    archival_matte: { A5: 1020, A4: 1560, A3: 2730, A2: 4480, A1: 7680 },
-    cotton_rag: { A5: 1836, A4: 2808, A3: 4914, A2: 8064, A1: 13824 },
+    semi_gloss: { A5: 1020, A4: 1560, A3: 2730, A2: 4480, A1: 7680 },
+    high_gloss: { A5: 1326, A4: 2028, A3: 3549, A2: 5824, A1: 9984 },
   }),
   marginPercent: 40,
 });
@@ -87,7 +87,7 @@ export function priceCentsFor(spec, pricing = FALLBACK_PRICING) {
   if (colourMult == null) throw new Error(`Unsupported frame colour: ${spec.colour}`);
   const glazingMult = pricing.glazing[spec.glazing ?? "clear"];
   if (glazingMult == null) throw new Error(`Unsupported glazing: ${spec.glazing}`);
-  const paperRow = pricing.paper[spec.paper ?? "archival_matte"];
+  const paperRow = pricing.paper[spec.paper ?? "semi_gloss"];
   if (!paperRow) throw new Error(`Unsupported paper: ${spec.paper}`);
   const paperCents = paperRow[spec.size];
   if (paperCents == null) throw new Error(`No paper cost for ${spec.paper} at ${spec.size}`);
@@ -108,7 +108,7 @@ export function productCostCentsFor(spec, pricing = FALLBACK_PRICING) {
   const frameCents = framed ? Math.round((mounted ? row.frameCentsMounted : row.frameCentsUnmounted) * pricing.colours[spec.colour ?? "natural"]) : 0;
   const matCents = mounted ? row.matCents : 0;
   const glassCents = framed ? Math.round((mounted ? row.glassCentsMounted : row.glassCentsUnmounted) * pricing.glazing[spec.glazing ?? "clear"]) : 0;
-  return frameCents + matCents + glassCents + pricing.paper[spec.paper ?? "archival_matte"][spec.size];
+  return frameCents + matCents + glassCents + pricing.paper[spec.paper ?? "semi_gloss"][spec.size];
 }
 
 function framedShipCentsFor(size) {
@@ -168,7 +168,7 @@ export function normaliseCart(input, pricing = FALLBACK_PRICING) {
     const mounted = framed && raw?.mounted === true;
     const colour = typeof raw?.colour === "string" ? raw.colour.toLowerCase() : "";
     const glazing = typeof raw?.glazing === "string" ? raw.glazing.toLowerCase() : "clear";
-    const paper = typeof raw?.paper === "string" ? raw.paper.toLowerCase() : "archival_matte";
+    const paper = typeof raw?.paper === "string" ? raw.paper.toLowerCase() : "semi_gloss";
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(photoId)) {
       throw new Error("Cart contains an invalid photo id.");
     }

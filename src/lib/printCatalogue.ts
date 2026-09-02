@@ -75,14 +75,15 @@ export type SizeComponents = {
 
 /** Paper stock. Frameshop prices printing by paper AND size (Epson P20070),
  * so this is explicit per-size cents rather than a multiplier. Only two of
- * their five stocks are sold: the gloss/metallic options don't fit the work. */
-export type PaperId = "archival_matte" | "cotton_rag";
+ * their five stocks are sold, kept deliberately simple: a photo finish and a
+ * fine-art finish, not five variants to choose between. */
+export type PaperId = "semi_gloss" | "high_gloss";
 
 export type PrintPaper = { id: PaperId; label: string; description: string };
 
 export const PAPERS: PrintPaper[] = [
-  { id: "archival_matte", label: "Archival matte", description: "Matte smooth archival paper — deep blacks, no glare, the house standard." },
-  { id: "cotton_rag", label: "Cotton rag", description: "100% cotton rag, smooth textured surface — the softest, most tactile finish." },
+  { id: "semi_gloss", label: "Semi-gloss luster", description: "A soft sheen with rich colour and low glare — the house standard." },
+  { id: "high_gloss", label: "High-gloss metallic", description: "A metallic sheen with high contrast and depth — best under gallery lighting." },
 ];
 
 export type Pricing = {
@@ -124,8 +125,8 @@ export const FALLBACK_PRICING: Pricing = {
   colours: { natural: 1.0, black: 1.0, white: 1.0 },
   glazing: { clear: 1.0, non_reflective: 2.0, perspex: 2.0, uv_clear: 2.83, uv_non_reflective: 5.63, none: 0 },
   paper: {
-    archival_matte: { A5: 1020, A4: 1560, A3: 2730, A2: 4480, A1: 7680 },
-    cotton_rag: { A5: 1836, A4: 2808, A3: 4914, A2: 8064, A1: 13824 },
+    semi_gloss: { A5: 1020, A4: 1560, A3: 2730, A2: 4480, A1: 7680 },
+    high_gloss: { A5: 1326, A4: 2028, A3: 3549, A2: 5824, A1: 9984 },
   },
   marginPercent: 40,
 };
@@ -294,7 +295,7 @@ export function priceCentsFor(spec: PriceSpec, pricing: Pricing = ACTIVE_PRICING
   if (colourMult == null) throw new Error(`Unsupported frame colour: ${spec.colour}`);
   const glazingMult = pricing.glazing[spec.glazing ?? "clear"];
   if (glazingMult == null) throw new Error(`Unsupported glazing: ${spec.glazing}`);
-  const paperRow = pricing.paper[spec.paper ?? "archival_matte"];
+  const paperRow = pricing.paper[spec.paper ?? "semi_gloss"];
   if (!paperRow) throw new Error(`Unsupported paper: ${spec.paper}`);
   const paperCents = paperRow[spec.size];
   if (paperCents == null) throw new Error(`No paper cost for ${spec.paper} at ${spec.size}`);
@@ -315,13 +316,13 @@ export function productCostCentsFor(spec: PriceSpec, pricing: Pricing = ACTIVE_P
   const frameCents = framed ? Math.round((mounted ? row.frameCentsMounted : row.frameCentsUnmounted) * pricing.colours[spec.colour ?? "natural"]) : 0;
   const matCents = mounted ? row.matCents : 0;
   const glassCents = framed ? Math.round((mounted ? row.glassCentsMounted : row.glassCentsUnmounted) * pricing.glazing[spec.glazing ?? "clear"]) : 0;
-  return frameCents + matCents + glassCents + pricing.paper[spec.paper ?? "archival_matte"][spec.size];
+  return frameCents + matCents + glassCents + pricing.paper[spec.paper ?? "semi_gloss"][spec.size];
 }
 
 /** One-line human description of a configuration, shared by the cart drawer
  * and the checkout summary so they never drift apart. */
 export function specLabel(spec: PriceSpec): string {
-  const paper = paperById(spec.paper ?? "archival_matte").label;
+  const paper = paperById(spec.paper ?? "semi_gloss").label;
   if (spec.framed === false) return `${spec.size} · Print only, rolled · ${paper}`;
   const colour = colourById(spec.colour ?? "natural").label;
   const glazing = glazingById(spec.glazing ?? "clear").label;
@@ -336,7 +337,7 @@ export function priceFor(
   mounted: boolean,
   colour: ColourId = "natural",
   glazing: GlazingId = "clear",
-  paper: PaperId = "archival_matte",
+  paper: PaperId = "semi_gloss",
   framed = true,
 ): number {
   return priceCentsFor({ size, mounted, colour, glazing, paper, framed }) / 100;
@@ -345,7 +346,7 @@ export function priceFor(
 /** Cheapest framed price for a size/mount combo (any colour, Clear Glass,
  * house paper). Signature unchanged for existing "From $X" callers. */
 export function cheapestPriceFor(size: SizeId, mounted = false, framed = true): number {
-  if (!framed) return priceFor(size, false, "natural", "clear", "archival_matte", false);
+  if (!framed) return priceFor(size, false, "natural", "clear", "semi_gloss", false);
   return Math.min(...COLOURS.map((c) => priceFor(size, mounted, c.id, "clear")));
 }
 

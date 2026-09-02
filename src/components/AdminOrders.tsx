@@ -245,7 +245,7 @@ export function AdminOrders({ session }: { session: Session }) {
                 {order.order_items.map((item) => (
                   <div key={item.id}>
                     {item.thumb_url ? <img alt="" src={item.thumb_url} /> : null}
-                    <span><b>{item.title}</b><small>{item.size} · {item.framed === false ? "print only, rolled" : `${item.colour} · ${item.mounted ? "mounted" : "unmounted"} · ${String(item.glazing ?? "clear").replace(/_/g, " ")} glass`} · {String(item.paper ?? "archival_matte").replace(/_/g, " ")} paper</small></span>
+                    <span><b>{item.title}</b><small>{item.size} · {item.framed === false ? "print only, rolled" : `${item.colour} · ${item.mounted ? "mounted" : "unmounted"} · ${String(item.glazing ?? "clear").replace(/_/g, " ")} glass`} · {String(item.paper ?? "semi_gloss").replace(/_/g, " ")} paper</small></span>
                     {item.print_master_path ? <em>JPEG ready</em> : (
                       <label className="master-upload"><Upload size={13} /> {working === `${item.id}-upload` ? "Uploading…" : "Add print master"}<input accept="image/jpeg,.jpg,.jpeg" disabled={Boolean(working)} onChange={(event) => event.target.files?.[0] && uploadMaster(item, event.target.files[0])} type="file" /></label>
                     )}

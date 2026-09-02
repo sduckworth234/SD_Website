@@ -21,7 +21,7 @@ import * as server from "../server/shop/catalogue.mjs";
 const SIZES = ["A5", "A4", "A3", "A2", "A1"];
 const COLOURS = ["natural", "black", "white"];
 const GLAZING = ["clear", "non_reflective", "perspex", "uv_clear", "uv_non_reflective", "none"];
-const PAPERS = ["archival_matte", "cotton_rag"];
+const PAPERS = ["semi_gloss", "high_gloss"];
 
 const failures = [];
 const check = (label, a, b) => { if (a !== b) failures.push(`${label}: client ${a} vs server ${b}`); };
@@ -102,7 +102,7 @@ if (process.argv.includes("--table")) {
   for (const size of SIZES) {
     for (const mounted of [false, true]) {
       for (const colour of COLOURS) {
-        const spec = { size, mounted, colour, glazing: "clear", paper: "archival_matte", framed: true };
+        const spec = { size, mounted, colour, glazing: "clear", paper: "semi_gloss", framed: true };
         rows.push({
           config: `${size} ${mounted ? "mounted" : "unmounted"} ${colour} clear`,
           cost: d(client.productCostCentsFor(spec)),
