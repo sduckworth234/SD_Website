@@ -2461,13 +2461,12 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
               hand people to the gallery, where every sellable photograph now
               carries its own print link. */}
           <div className="shop-gallery-cta">
-            <p>Looking for a particular place or photograph?</p>
             <a
               className="solid-button"
               href="/galleries"
               onClick={(event) => { event.preventDefault(); goGalleries(); }}
             >
-              {shopPhotos.length ? `Browse all ${shopPhotos.length} photographs available as prints` : "Browse the full galleries"}
+              {shopPhotos.length ? <>Browse all {shopPhotos.length} photographs available as prints <span aria-hidden="true">→</span></> : "Browse the full galleries"}
             </a>
           </div>
           <p className="shop-local-line">

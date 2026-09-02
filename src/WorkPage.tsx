@@ -207,7 +207,7 @@ export default function WorkPage({ onNavigate }: { onNavigate: (route: string) =
                 <ul className="work-package-scope">
                   {pack.scope.map((line) => <li key={line}>{line}</li>)}
                 </ul>
-                <p className="work-package-price">{from ? <>From <strong>{from}</strong></> : "Quote within 24 hours"}</p>
+                {from ? <p className="work-package-price">From <strong>{from}</strong></p> : null}
                 <button
                   className="ghost-button"
                   type="button"
