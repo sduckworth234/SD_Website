@@ -103,12 +103,12 @@ import type { ExtractedPhotoMeta } from "./lib/ingest";
 import { reverseGeocode } from "./lib/geocode";
 import type { Placement } from "./lib/geocode";
 import { useSeo } from "./lib/seo";
+import { readBootData } from "./lib/boot";
 import { Header, ThemeToggle, useAutoHideOnScroll } from "./components/Header";
 import { MobileBottomNav } from "./components/MobileBottomNav";
 import { OakFrame } from "./components/OakFrame";
 import { SmartImage } from "./components/SmartImage";
 import { SDLoader } from "./components/SDLoader";
-import { PrintConfigurator } from "./components/PrintConfigurator";
 import { CartDrawer } from "./components/CartDrawer";
 import { LegalPage, ShopLegalFooter, type LegalPageId } from "./components/LegalPages";
 import { ContactOverlay } from "./components/ContactOverlay";
@@ -128,6 +128,10 @@ const PortfolioPage = lazy(() => import("./PortfolioPage"));
 const CheckoutPage = lazy(() => import("./components/CheckoutPage").then((module) => ({ default: module.CheckoutPage })));
 const CheckoutSuccessPage = lazy(() => import("./components/CheckoutPage").then((module) => ({ default: module.CheckoutSuccessPage })));
 const AdminOrders = lazy(() => import("./components/AdminOrders").then((module) => ({ default: module.AdminOrders })));
+// The product configurator (frame/mat/glazing preview) only ever renders on
+// /shop/<slug>. Keeping it out of the main chunk means a visitor who lands on
+// the gallery never downloads it.
+const PrintConfigurator = lazy(() => import("./components/PrintConfigurator").then((module) => ({ default: module.PrintConfigurator })));
 
 const allLocations = "All work";
 type ActiveLocation = LocationBucket | typeof allLocations;
@@ -152,6 +156,18 @@ function pickLandingLocation(names: string[]): string {
 // category. Falls back to the random landing when absent or invalid.
 function readLocationParam(): string | null {
   try { return new URLSearchParams(window.location.search).get("location"); } catch { return null; }
+}
+
+// /galleries/<location-slug> — the canonical, prerendered per-place URL. The
+// slug can only be resolved to a place name once the locations load, so
+// GalleriesPage holds the URL-sync effect until then.
+function readLocationSlugPath(): string | null {
+  try {
+    const match = window.location.pathname.match(/^\/galleries\/([^/]+)\/?$/);
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
 }
 
 // /galleries?collection=europe-2024 — how the 2026 hero and any shared link
@@ -414,7 +430,9 @@ function App() {
       : <ShopUnavailable onNavigate={navigate} />;
   }
 
-  if (matches("/galleries")) {
+  // /galleries and /galleries/<location-slug> are the same page; the slug is
+  // resolved to a place inside it once the locations load.
+  if (matches("/galleries") || path.startsWith("/galleries/")) {
     return <GalleriesPage key={route} onNavigate={navigate} />;
   }
 
@@ -482,6 +500,25 @@ function deriveRecentWork(all: Photo[], limit: number): Photo[] {
   return slots.filter(Boolean) as Photo[];
 }
 
+// The prerendered landing hero, as a stand-in Photo. Only ever used while the
+// real gallery data is still in flight, and only on the home page — the image
+// it points at is already preloaded by the prerendered <head>, so the stage is
+// filled on the first frame. See src/lib/boot.ts.
+function bootHeroPhoto(): Photo | undefined {
+  const hero = readBootData()?.hero;
+  if (!hero) return undefined;
+  return {
+    id: hero.id,
+    title: hero.title,
+    slug: "",
+    location: hero.location,
+    kind: "Drone",
+    year: "",
+    aspect: hero.aspect,
+    imageUrl: hero.imageUrl,
+  };
+}
+
 // Shared data (photos, locations, recent), admin detection, scroll state and the
 // derived public/location lists — used by both the Home page and Galleries page.
 function useSiteData() {
@@ -497,23 +534,27 @@ function useSiteData() {
   const [isLoading, setIsLoading] = useState(true);
 
   const loadGallery = useCallback(async () => {
-    const [data, recent, siteSettings, igPosts] = await Promise.all([
-      getGalleryData(),
-      getRecentPhotos(9),
-      getSiteSettings(),
-      getInstagramPosts(),
-    ]);
+    // Only the photos + settings gate the first paint — settings because the
+    // hero photo is chosen there. Recent Work and the Instagram strip used to
+    // sit in the same Promise.all, so the slowest of FOUR requests decided
+    // when the hero appeared; they now land on their own, after paint.
+    const recentRequest = getRecentPhotos(9);
+    const instagramRequest = getInstagramPosts();
+    const [data, siteSettings] = await Promise.all([getGalleryData(), getSiteSettings()]);
     setPhotos(data.photos);
-    // Recent Work is its own request, and it used to return [] on ANY failure —
-    // no retry, no fallback — so a single flaky call on mobile data made the
-    // section vanish while the rest of the page loaded fine. Everything it
-    // needs is already in the gallery payload, so fall back to deriving it
-    // rather than showing nothing.
-    setRecentPhotos(recent.length >= 5 ? recent : deriveRecentWork(data.photos, 9));
     setLocations(data.locations);
     setCollections(data.collections ?? []);
     setSettings(siteSettings);
-    setInstagramPosts(igPosts);
+    // Recent Work is its own request, and it used to return [] on ANY failure —
+    // no retry, no fallback — so a single flaky call on mobile data made the
+    // section vanish while the rest of the page loaded fine. Everything it
+    // needs is already in the gallery payload, so derive it immediately and
+    // let the real answer replace it when (if) it arrives.
+    setRecentPhotos(deriveRecentWork(data.photos, 9));
+    void recentRequest
+      .then((recent) => { if (recent.length >= 5) setRecentPhotos(recent); })
+      .catch(() => { /* the derived selection above already stands in */ });
+    void instagramRequest.then(setInstagramPosts).catch(() => setInstagramPosts([]));
   }, []);
 
   useEffect(() => {
@@ -585,7 +626,10 @@ function useSiteData() {
     const extra = [...present].filter(
       (name) => name && name !== "Unsorted" && !locations.some((l) => l.name === name),
     );
-    return [...ordered, ...extra];
+    const names = [...ordered, ...extra];
+    // Before any photo has loaded, fall back to the place list baked into the
+    // prerendered page so the hero's ticker isn't blank on first paint.
+    return names.length ? names : readBootData()?.locations ?? [];
   }, [publicPhotos, locations]);
 
   // Visibility flags (key→enabled) and small key/value settings (key→value),
@@ -716,7 +760,14 @@ function Home({ onNavigate }: { onNavigate: (route: string) => void }) {
 
   // The cinematic landing photo: an admin-chosen one (site_settings) wins, else
   // fall back to a featured wide/landscape so the hero is always filled.
+  //
+  // Before any of that resolves, the prerendered boot payload stands in — the
+  // build already picked the hero the same way and preloaded its image, so the
+  // stage is filled on the first frame instead of after the gallery query. The
+  // moment real photos arrive they win outright: the admin can change the hero
+  // without a redeploy, so the baked-in pick can be stale.
   const heroPhoto = useMemo(() => {
+    if (!publicPhotos.length) return bootHeroPhoto();
     const chosen = settingValue.hero_photo
       ? publicPhotos.find((p) => p.id === settingValue.hero_photo)
       : undefined;
@@ -1051,6 +1102,20 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
     if (match) setActiveCollectionId(match.id);
   }, [visibleCollections]);
 
+  // Resolve /galleries/<location-slug> once the locations have loaded. Until
+  // it resolves the URL-sync effect below stays quiet, otherwise it would
+  // rewrite the deep link back to a bare /galleries before the place is known.
+  const pendingLocationSlug = useRef(readLocationSlugPath());
+  useEffect(() => {
+    if (!pendingLocationSlug.current) return;
+    // Wait for real locations, but give up once loading is finished (the
+    // bundled fallback data has no slugs) rather than blocking the URL sync.
+    if (isLoading && !locations.length) return;
+    const match = locations.find((l) => l.slug === pendingLocationSlug.current);
+    pendingLocationSlug.current = null;
+    if (match) setActiveLocation(match.name);
+  }, [locations, isLoading]);
+
   // Photos inside the active collection — the pool everything else derives from.
   const scopedPhotos = useMemo(() => {
     if (isFavourites) return favouritePhotos;
@@ -1134,18 +1199,30 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
     setVisibleCount(pageSize);
   }, [activeCollectionId, activeLocation, pageSize, view]);
 
-  // Keep the URL shareable: ?collection=slug&location=Name, both optional.
+  // Keep the URL shareable. A place on its own gets the clean, prerendered
+  // /galleries/<slug> form — which is also how the legacy
+  // /galleries?location=Name links (and the map's pins) upgrade themselves.
+  // A collection scope still needs the query form, since that combination has
+  // no static page of its own.
   useEffect(() => {
-    if (isLoading) return;
-    const params = new URLSearchParams();
-    if (activeCollection) params.set("collection", activeCollection.slug);
-    if (activeLocation !== allLocations) params.set("location", activeLocation);
-    const query = params.toString();
-    const next = `/galleries${query ? `?${query}` : ""}`;
+    if (isLoading || pendingLocationSlug.current) return;
+    const locationSlug = activeLocation === allLocations
+      ? null
+      : locations.find((l) => l.name === activeLocation)?.slug ?? null;
+    let next: string;
+    if (!activeCollection && locationSlug) {
+      next = `/galleries/${locationSlug}`;
+    } else {
+      const params = new URLSearchParams();
+      if (activeCollection) params.set("collection", activeCollection.slug);
+      if (activeLocation !== allLocations) params.set("location", activeLocation);
+      const query = params.toString();
+      next = `/galleries${query ? `?${query}` : ""}`;
+    }
     if (window.location.pathname + window.location.search !== next) {
       window.history.replaceState({}, "", next);
     }
-  }, [activeCollection, activeLocation, isLoading]);
+  }, [activeCollection, activeLocation, isLoading, locations]);
 
   function changeCollection(id: string) {
     setActiveCollectionId(id);
@@ -1235,17 +1312,33 @@ function GalleriesPage({ onNavigate }: { onNavigate: (route: string) => void }) 
   // "Italy · 2024 Europe" beats a bare "Italy" now that Italy spans three trips.
   const pageHeading = isFavourites ? "Favourites" : seoLoc ?? collectionLabel ?? "All work";
   const seoTitle = [seoLoc, collectionLabel].filter(Boolean).join(" · ");
+  // Canonical must agree with the prerendered file: a bare place is
+  // /galleries/<slug> (scripts/prerender.mjs writes one per visible location),
+  // anything scoped by collection keeps the query form.
+  const seoLocSlug = seoLoc ? locations.find((l) => l.name === seoLoc)?.slug ?? null : null;
+  const seoPath = !activeCollection && seoLocSlug
+    ? `/galleries/${seoLocSlug}`
+    : seoTitle
+      ? `/galleries?${new URLSearchParams({
+          ...(activeCollection ? { collection: activeCollection.slug } : {}),
+          ...(seoLoc ? { location: seoLoc } : {}),
+        }).toString()}`
+      : "/galleries";
+  // A bare place reuses the prerendered page's exact title, so the crawled and
+  // the rendered versions of /galleries/<slug> never disagree.
+  const seoPageTitle = !activeCollection && seoLoc
+    ? `${seoLoc} — Aerial & Landscape Photography | Sam Duckworth`
+    : seoTitle
+      ? `${seoTitle} — Sam Duckworth Photography`
+      : "Gallery — Sam Duckworth Photography";
   useSeo(
-    seoTitle ? `${seoTitle} — Sam Duckworth Photography` : "Gallery — Sam Duckworth Photography",
+    seoPageTitle,
     seoTitle
       ? {
           description: `Aerial and landscape photography${seoLoc ? ` from ${seoLoc}` : ""}${collectionLabel ? ` — ${collectionLabel}` : ""}, by Sam Duckworth.`,
-          path: `/galleries?${new URLSearchParams({
-            ...(activeCollection ? { collection: activeCollection.slug } : {}),
-            ...(seoLoc ? { location: seoLoc } : {}),
-          }).toString()}`,
+          path: seoPath,
         }
-      : { path: "/galleries" },
+      : { path: seoPath },
   );
 
   useScrollReveal([isLoading, imagesReady, activeLocation, visiblePhotos.length, view]);
@@ -2308,7 +2401,11 @@ function ShopProductRoute({ adminAccess = false, slug, onNavigate }: { adminAcce
 
   if (isLoading) return <main className="shop-feature-off"><SDLoader label="Preparing your print" /></main>;
   if (!photo || shouldRedirect) return null;
-  return <PrintConfigurator photo={photo} otherShopPhotos={shopPhotos} onNavigate={onNavigate} />;
+  return (
+    <Suspense fallback={<main className="shop-feature-off"><SDLoader label="Preparing your print" /></main>}>
+      <PrintConfigurator photo={photo} otherShopPhotos={shopPhotos} onNavigate={onNavigate} />
+    </Suspense>
+  );
 }
 
 function InstagramRail() {

@@ -156,6 +156,23 @@ Conventions the gallery relies on:
 ## Deploy / domain
 
 - Push to `main` → Vercel builds + deploys.
+- **`npm run build` = `tsc -b && vite build && node scripts/prerender.mjs`.**
+  The prerender reads published Supabase rows (publishable key, from the env or
+  `.env.local`) and writes a real HTML file per public route into `dist/` —
+  `/`, `/galleries`, `/galleries/<location-slug>`, `/shop`, `/shop/<slug>`,
+  `/work`, `/map`, the policy pages — each with its own title/description/
+  canonical/OG/JSON-LD, plus `dist/sitemap.xml`. It also inlines the resolved
+  landing hero as `<link rel=preload>` + a `#sd-boot` JSON block (read by
+  `src/lib/boot.ts`) so the hero paints on the first frame. **No env = it warns
+  and skips; the build still succeeds.** Everything between the
+  `<!-- SEO:START -->` / `<!-- SEO:END -->` markers in `index.html` is what it
+  replaces — keep those markers.
+- **Routing order on Vercel is filesystem → rewrites**, which is what makes the
+  above work: prerendered files win, and only unmatched paths reach the
+  catch-all `/api/spa`, which returns the SPA shell with **HTTP 404** for
+  unknown URLs and 200 for the app-only/data-driven routes it knows about
+  (`/admin`, `/checkout`, `/cart`, `/shop/<slug>`, `/galleries/<slug>`).
+  `/api/sitemap` survives only as the fallback for a prerender-less build.
 - **The shop is live in Production** (launched 2026-08-17 — see
   `Shop Setup/Shop Launch QA Refactor — 2026-08-17.md`). `VITE_SHOP_ENABLED`
   and `SHOP_CHECKOUT_ENABLED` default false in a fresh environment and exist

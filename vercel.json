@@ -10,7 +10,7 @@
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/portfolio", "destination": "/portfolio.html" },
     { "source": "/portfolio/", "destination": "/portfolio.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/api/spa" }
   ],
   "headers": [
     {

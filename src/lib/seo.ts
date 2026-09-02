@@ -130,6 +130,23 @@ export function useSeo(title: string, opts: SeoOptions = {}) {
 
     document.getElementById(STRUCTURED_DATA_ID)?.remove();
     if (structuredData) {
+      // The prerendered head (scripts/prerender.mjs) already carries this
+      // route's schema for non-JS crawlers. Drop any prerendered block of a
+      // type we're about to render ourselves — otherwise a product page ships
+      // two Product graphs — but leave the rest (LocalBusiness, breadcrumbs)
+      // in place.
+      const types = new Set(
+        (Array.isArray(structuredData) ? structuredData : [structuredData]).map((entry) =>
+          JSON.stringify(entry["@type"]),
+        ),
+      );
+      for (const node of document.querySelectorAll('script[type="application/ld+json"][data-sd-prerendered]')) {
+        try {
+          if (types.has(JSON.stringify(JSON.parse(node.textContent ?? "{}")["@type"]))) node.remove();
+        } catch {
+          // Unparseable block — leave it alone rather than guessing.
+        }
+      }
       const script = document.createElement("script");
       script.id = STRUCTURED_DATA_ID;
       script.type = "application/ld+json";

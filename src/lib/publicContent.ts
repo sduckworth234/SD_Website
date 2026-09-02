@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { readBootData } from "./boot";
 import { supabase } from "./supabase";
 
 export type PublicContent = {
@@ -151,8 +152,22 @@ export async function savePublicContent(content: PublicContent) {
   return saved;
 }
 
+// The prerendered home page carries the live contact/handle values, so the
+// first paint shows them rather than the hardcoded defaults. Everything not in
+// the boot payload (the long About/Contact copy) still comes from the defaults
+// until the real fetch lands.
+function seedContent(): PublicContent {
+  const boot = readBootData();
+  if (!boot) return DEFAULT_PUBLIC_CONTENT;
+  const seeded = { ...DEFAULT_PUBLIC_CONTENT };
+  for (const [key, value] of Object.entries(boot.content)) {
+    if (typeof value === "string" && value) (seeded as Record<string, string>)[key] = value;
+  }
+  return seeded;
+}
+
 export function usePublicContent() {
-  const [content, setContent] = useState(DEFAULT_PUBLIC_CONTENT);
+  const [content, setContent] = useState(seedContent);
 
   useEffect(() => {
     let active = true;
