@@ -68,6 +68,13 @@
       type="font/woff2"
       crossorigin
     />
+    <!-- Everything between SEO:START and SEO:END is REGENERATED PER ROUTE at
+         build time by scripts/prerender.mjs, which writes a static HTML file
+         for /, /galleries, /galleries/<place>, /shop, /shop/<slug>, /work,
+         /map and the policy pages. Edit the defaults here freely — they are
+         what ships if the prerender is skipped (no Supabase env) — but keep
+         the two marker comments intact or the prerender bails out. -->
+    <!-- SEO:START -->
     <title>Sam Duckworth Photography — Aerial &amp; Landscape, Northern Beaches</title>
     <meta
       name="description"
@@ -96,7 +103,11 @@
     />
     <meta name="twitter:image" content="https://www.samduckworth.com/api/og-image" />
 
-    <!-- Structured data: who + what, for search + local SEO -->
+    <!-- Structured data: who + what, for search + local SEO. LocalBusiness (not
+         just ProfessionalService) with a locality, phone and email is what
+         earns a local pack / knowledge panel for "drone photographer northern
+         beaches". The prerender regenerates this per route and pulls the phone
+         and email from site_content, so these values are the fallback. -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -108,21 +119,32 @@
             "jobTitle": "Photographer & Videographer",
             "url": "https://www.samduckworth.com/",
             "image": "https://www.samduckworth.com/og-image.png",
-            "sameAs": ["https://instagram.com/sam.duckworth"]
+            "sameAs": ["https://www.instagram.com/sam.duckworth/"]
           },
           {
-            "@type": "ProfessionalService",
+            "@type": ["LocalBusiness", "ProfessionalService"],
             "@id": "https://www.samduckworth.com/#business",
             "name": "Sam Duckworth Photography",
             "image": "https://www.samduckworth.com/og-image.png",
             "url": "https://www.samduckworth.com/",
             "founder": { "@id": "https://www.samduckworth.com/#sam" },
+            "email": "samduckworthphoto@gmail.com",
+            "telephone": "0423 638 403",
+            "priceRange": "$$",
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": "Northern Beaches, Sydney",
+              "addressRegion": "NSW",
+              "addressCountry": "AU"
+            },
             "areaServed": ["Northern Beaches", "Sydney", "New South Wales", "Australia"],
-            "knowsAbout": ["Aerial photography", "Drone photography", "Landscape photography", "Travel photography"]
+            "knowsAbout": ["Aerial photography", "Drone photography", "Landscape photography", "Travel photography"],
+            "sameAs": ["https://www.instagram.com/sam.duckworth/"]
           }
         ]
       }
     </script>
+    <!-- SEO:END -->
   </head>
   <body>
     <div id="root"></div>

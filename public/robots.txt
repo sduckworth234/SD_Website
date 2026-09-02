@@ -1,5 +1,11 @@
 User-agent: *
 Allow: /
+
+# Private / transactional surfaces — nothing here belongs in an index, and
+# crawling them only wastes crawl budget on pages that redirect or 401.
 Disallow: /admin
+Disallow: /checkout
+Disallow: /cart
+Disallow: /api/
 
 Sitemap: https://www.samduckworth.com/sitemap.xml

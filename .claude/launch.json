@@ -4,16 +4,39 @@
     {
       "name": "vite-dev",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "--port", "5175", "--strictPort"],
+      "runtimeArgs": [
+        "vite",
+        "--port",
+        "5175",
+        "--strictPort"
+      ],
       "port": 5175,
       "url": "http://localhost:5175"
     },
     {
       "name": "mockups",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "mockups", "--port", "5199", "--strictPort"],
+      "runtimeArgs": [
+        "vite",
+        "mockups",
+        "--port",
+        "5199",
+        "--strictPort"
+      ],
       "port": 5199,
       "url": "http://localhost:5199"
+    },
+    {
+      "name": "vite-audit",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "--port",
+        "5197",
+        "--strictPort"
+      ],
+      "port": 5197,
+      "url": "http://localhost:5197"
     }
   ]
 }
