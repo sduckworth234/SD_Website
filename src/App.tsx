@@ -2466,7 +2466,7 @@ function ShopPage({ adminAccess = false, onNavigate }: { adminAccess?: boolean; 
               href="/galleries"
               onClick={(event) => { event.preventDefault(); goGalleries(); }}
             >
-              {shopPhotos.length ? <>Browse all {shopPhotos.length} photographs available as prints <span aria-hidden="true">→</span></> : "Browse the full galleries"}
+              {shopPhotos.length ? <>Browse all as prints <span aria-hidden="true">→</span></> : "Browse the full galleries"}
             </a>
           </div>
           <p className="shop-local-line">
@@ -2827,7 +2827,7 @@ function HomePrintPromo({
               href="/galleries"
               onClick={(event) => { event.preventDefault(); onOpenGalleries(); }}
             >
-              Browse all {availableCount} photographs available as prints <span aria-hidden="true">→</span>
+              Browse all as prints <span aria-hidden="true">→</span>
             </a>
           ) : null}
         </div>
