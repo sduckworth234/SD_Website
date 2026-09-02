@@ -41,7 +41,8 @@ begin
     stripe_checkout_session_id, stripe_payment_intent_id, status,
     customer_email, customer_name, shipping_address, currency,
     subtotal_cents, shipping_cents, discount_cents, discount_code, total_cents,
-    delivery_method
+    fulfilment_provider, stripe_receipt_url, stripe_invoice_id,
+    stripe_invoice_url, stripe_invoice_pdf, delivery_method
   ) values (
     p_order->>'stripe_checkout_session_id',
     nullif(p_order->>'stripe_payment_intent_id', ''),
@@ -55,12 +56,17 @@ begin
     coalesce((p_order->>'discount_cents')::integer, 0),
     nullif(p_order->>'discount_code', ''),
     (p_order->>'total_cents')::integer,
+    coalesce(nullif(p_order->>'fulfilment_provider', ''), 'manual'),
+    nullif(p_order->>'stripe_receipt_url', ''),
+    nullif(p_order->>'stripe_invoice_id', ''),
+    nullif(p_order->>'stripe_invoice_url', ''),
+    nullif(p_order->>'stripe_invoice_pdf', ''),
     coalesce(nullif(p_order->>'delivery_method', ''), 'delivery')
   ) returning id into new_order_id;
 
   insert into public.order_items (
     order_id, photo_id, title, location, thumb_url, size, mounted,
-    colour, sku, unit_price_cents, print_master_path,
+    colour, glazing, sku, unit_price_cents, print_master_path,
     print_master_width, print_master_height
   )
   select
@@ -72,6 +78,7 @@ begin
     item->>'size',
     (item->>'mounted')::boolean,
     item->>'colour',
+    coalesce(item->>'glazing', 'clear'),
     item->>'sku',
     (item->>'unit_price_cents')::integer,
     nullif(item->>'print_master_path', ''),

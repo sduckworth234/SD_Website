@@ -11,9 +11,13 @@
 // Frameshop relationship is set up, but is no longer what customers are
 // actually charged.
 //
-// Pricing is a FORMULA, not a lookup table — see priceFor() below and
-// supabase/migrations/20260821030000_frameshop_print_pricing.sql for the
-// exact math and where each number came from. `outer`/`mat` below are kept
+// Pricing is a FORMULA, not a lookup table — see priceCentsFor() below and
+// supabase/migrations/20260902010000_pricing_repair_and_paper.sql for the
+// exact math and where each number came from. Since 2026-09-02 the formula
+// also carries the printing (paper) cost and a per-size artist fee, offers an
+// unframed "print only" product, and rounds every result to a clean price
+// point. It is mirrored, in integer cents, in server/shop/catalogue.mjs;
+// scripts/pricing-parity.mjs asserts the two never drift. `outer`/`mat` below are kept
 // from the Prodigi-era measurements (unchanged) — they only drive the room
 // preview and DPI gating, not price.
 //
@@ -49,75 +53,117 @@ export const SIZES: PrintSize[] = [
 ];
 
 export type SizeComponents = {
-  /** 103RO (wood), in dollars — the colour multiplier applies to this alone.
-   * Different for mounted vs unmounted: the outer frame grows to cover the
-   * mat border once mounted, so it costs more, not the same frame "plus a
-   * mat" — these are two real, independently-priced Frameshop quotes. */
-  frameCostUnmounted: number;
-  frameCostMounted: number;
+  /** 103RO (wood) frame, in CENTS — the colour multiplier applies to this
+   * alone. Different for mounted vs unmounted: the outer frame grows to
+   * cover the mat border once mounted, so it costs more, not the same frame
+   * "plus a mat" — two real, independently-priced Frameshop quotes. */
+  frameCentsUnmounted: number;
+  frameCentsMounted: number;
   /** Single mat at this size's `mat` width, neutral-white core — added only
    * when mounted. Mat colour doesn't change price, verified live. */
-  matCost: number;
+  matCents: number;
   /** Clear Glass baseline — the glazing multiplier applies to this. Also
    * genuinely different mounted vs unmounted (bigger glazing covers the mat
    * too) — see the file header for why this distinction matters. */
-  glassCostUnmounted: number;
-  glassCostMounted: number;
+  glassCentsUnmounted: number;
+  glassCentsMounted: number;
+  /** The value of the photograph itself, on top of Frameshop's cost. Added
+   * AFTER margin — margin covers the fulfilment cost, the artist fee isn't
+   * marked up — so raising it raises the price dollar for dollar. */
+  artistFeeCents: number;
 };
 
-// Fallback only — shown before the live fetch from public.print_pricing_*
-// resolves, or if it fails. applyLiveFrameshopPricing() patches this object
-// in place once fetched (see fetchPricingSettings() in src/lib/supabase.ts).
-// Checkout never trusts this — server/shop/catalogue.mjs reads the same
-// tables independently for the amount actually charged.
+/** Paper stock. Frameshop prices printing by paper AND size (Epson P20070),
+ * so this is explicit per-size cents rather than a multiplier. Only two of
+ * their five stocks are sold: the gloss/metallic options don't fit the work. */
+export type PaperId = "archival_matte" | "cotton_rag";
+
+export type PrintPaper = { id: PaperId; label: string; description: string };
+
+export const PAPERS: PrintPaper[] = [
+  { id: "archival_matte", label: "Archival matte", description: "Matte smooth archival paper — deep blacks, no glare, the house standard." },
+  { id: "cotton_rag", label: "Cotton rag", description: "100% cotton rag, smooth textured surface — the softest, most tactile finish." },
+];
+
+export type Pricing = {
+  components: Record<SizeId, SizeComponents>;
+  /** Frame colour cost multipliers, applied to frame cost only. */
+  colours: Record<ColourId, number>;
+  /** Glazing cost multipliers, applied to glass cost only. */
+  glazing: Record<GlazingId, number>;
+  /** Printing cost in cents, per paper per size. */
+  paper: Record<PaperId, Record<SizeId, number>>;
+  marginPercent: number;
+};
+
+// THE fallback. Must stay byte-identical to server/shop/catalogue.mjs's
+// FALLBACK_PRICING — scripts/pricing-parity.mjs asserts that for every
+// size × mount × colour × glazing × paper × framed combination, and is the
+// thing that makes it safe for this file and the checkout server to disagree
+// about whether the live tables are reachable.
+//
+// Applied ALL-OR-NOTHING: fetchPricingSettings() in src/lib/supabase.ts
+// either installs a complete live Pricing object or leaves this one whole.
+// Mixing the two is what produced the 2026-09-02 incident, where the browser
+// showed a price built from fallback components + live multipliers + a live
+// 40% margin while checkout charged one built entirely from the 15%-margin
+// fallback.
 //
 // Deliberately excludes shipping — that stays estimateShipping()'s job
-// further down this file (unchanged, still Prodigi-derived AU courier
-// quotes). Folding a shipping estimate into every item's unit price here
-// too would double-charge shipping on any multi-item order, since
-// estimateShipping() already gives real multi-item consolidation (+$5 for
-// most extra prints rather than a full shipping charge each).
-export const PRICE_COMPONENTS: Record<SizeId, SizeComponents> = {
-  A5: { frameCostUnmounted: 32.80, frameCostMounted: 43.70, matCost: 6.80, glassCostUnmounted: 5.00, glassCostMounted: 6.00 },
-  A4: { frameCostUnmounted: 50.20, frameCostMounted: 68.80, matCost: 12.00, glassCostUnmounted: 7.00, glassCostMounted: 8.00 },
-  A3: { frameCostUnmounted: 72.10, frameCostMounted: 85.20, matCost: 17.40, glassCostUnmounted: 9.00, glassCostMounted: 14.00 },
-  A2: { frameCostUnmounted: 100.50, frameCostMounted: 120.10, matCost: 24.20, glassCostUnmounted: 19.00, glassCostMounted: 25.20 },
-  A1: { frameCostUnmounted: 145.30, frameCostMounted: 166.00, matCost: 43.60, glassCostUnmounted: 34.70, glassCostMounted: 51.50 },
+// further down this file. Folding a shipping estimate into every item's unit
+// price would double-charge shipping on any multi-item order, since
+// estimateShipping() already gives real multi-item consolidation.
+export const FALLBACK_PRICING: Pricing = {
+  components: {
+    A5: { frameCentsUnmounted: 3280, frameCentsMounted: 4370, matCents: 680, glassCentsUnmounted: 500, glassCentsMounted: 600, artistFeeCents: 2000 },
+    A4: { frameCentsUnmounted: 5020, frameCentsMounted: 6880, matCents: 1200, glassCentsUnmounted: 700, glassCentsMounted: 800, artistFeeCents: 3500 },
+    A3: { frameCentsUnmounted: 7210, frameCentsMounted: 8520, matCents: 1740, glassCentsUnmounted: 900, glassCentsMounted: 1400, artistFeeCents: 6000 },
+    A2: { frameCentsUnmounted: 10050, frameCentsMounted: 12010, matCents: 2420, glassCentsUnmounted: 1900, glassCentsMounted: 2520, artistFeeCents: 11000 },
+    A1: { frameCentsUnmounted: 14530, frameCentsMounted: 16600, matCents: 4360, glassCentsUnmounted: 3470, glassCentsMounted: 5150, artistFeeCents: 18000 },
+  },
+  colours: { natural: 1.0, black: 1.0, white: 1.0 },
+  glazing: { clear: 1.0, non_reflective: 2.0, perspex: 2.0, uv_clear: 2.83, uv_non_reflective: 5.63, none: 0 },
+  paper: {
+    archival_matte: { A5: 1020, A4: 1560, A3: 2730, A2: 4480, A1: 7680 },
+    cotton_rag: { A5: 1836, A4: 2808, A3: 4914, A2: 8064, A1: 13824 },
+  },
+  marginPercent: 40,
 };
 
-/** Percentage margin applied to (frame + mat + glass) cost. Mutable
- * fallback, patched live from site_settings.print_margin_percent. */
-export let MARGIN_PERCENT = 15;
+let ACTIVE_PRICING: Pricing = FALLBACK_PRICING;
+let pricingVersion = 0;
+const pricingListeners = new Set<() => void>();
 
-/** Patches PRICE_COMPONENTS/COLOURS/GLAZING/MARGIN_PERCENT in place from
- * live-fetched pricing data — mutates existing objects so every caller sees
- * the update without its own re-fetch plumbing. Missing/partial data for a
- * size/colour/glazing id leaves that entry's fallback value untouched. */
-export function applyLiveFrameshopPricing(data: {
-  components?: Partial<Record<SizeId, Partial<SizeComponents>>>;
-  colours?: Partial<Record<ColourId, { costMultiplier?: number }>>;
-  glazing?: Partial<Record<GlazingId, { costMultiplier?: number }>>;
-  marginPercent?: number;
-}): void {
-  for (const size of SIZES) {
-    const patch = data.components?.[size.id];
-    if (!patch) continue;
-    const target = PRICE_COMPONENTS[size.id];
-    if (patch.frameCostUnmounted != null) target.frameCostUnmounted = patch.frameCostUnmounted;
-    if (patch.frameCostMounted != null) target.frameCostMounted = patch.frameCostMounted;
-    if (patch.matCost != null) target.matCost = patch.matCost;
-    if (patch.glassCostUnmounted != null) target.glassCostUnmounted = patch.glassCostUnmounted;
-    if (patch.glassCostMounted != null) target.glassCostMounted = patch.glassCostMounted;
-  }
-  for (const c of COLOURS) {
-    const mult = data.colours?.[c.id]?.costMultiplier;
-    if (mult != null) c.costMultiplier = mult;
-  }
-  for (const g of GLAZING) {
-    const mult = data.glazing?.[g.id]?.costMultiplier;
-    if (mult != null) g.costMultiplier = mult;
-  }
-  if (data.marginPercent != null) MARGIN_PERCENT = data.marginPercent;
+/** Installs live pricing, or restores the complete fallback when passed null.
+ * There is no partial path on purpose — see FALLBACK_PRICING's comment. */
+export function applyLivePricing(pricing: Pricing | null): void {
+  ACTIVE_PRICING = pricing ?? FALLBACK_PRICING;
+  pricingVersion += 1;
+  for (const listener of pricingListeners) listener();
+}
+
+export function activePricing(): Pricing {
+  return ACTIVE_PRICING;
+}
+
+/** True while prices come from the hardcoded fallback rather than the live
+ * tables — surfaced in the admin pricing panel so a silent fallback is
+ * visible rather than invisible. */
+export function pricingIsFallback(): boolean {
+  return ACTIVE_PRICING === FALLBACK_PRICING;
+}
+
+// Live pricing lands asynchronously, after the first render. These let React
+// re-render when it does (useSyncExternalStore in src/lib/usePricing.ts) —
+// deliberately framework-free here so this module stays importable from a
+// plain Node script for the parity test.
+export function subscribePricing(listener: () => void): () => void {
+  pricingListeners.add(listener);
+  return () => pricingListeners.delete(listener);
+}
+
+export function pricingSnapshot(): number {
+  return pricingVersion;
 }
 
 /** Visible timber width carved out of the mounted border (portion of the mat
@@ -137,12 +183,6 @@ export type FrameColour = {
   /** Real Frameshop moulding code — kept for reference when ordering, never
    * shown to customers (frame/glazing UI uses the plain label only). */
   frameCode: string;
-  /** Multiplies SizeComponents.frameCostMounted/frameCostUnmounted. 103F and
-   * 103RO priced identically at A2 (both $100.50 unmounted) — they share the
-   * same Frameshop "Price Rate", unlike the original 224-series pick where
-   * colours were priced differently. 103H is assumed to match 103F (same
-   * Price Rate) — not independently verified. */
-  costMultiplier: number;
 };
 
 // Colour-matched against real Frameshop 103-series photos, rendered with a
@@ -154,10 +194,9 @@ export const COLOURS: FrameColour[] = [
     css: "linear-gradient(135deg,#d3b78c,#c2a175 45%,#a9865f)",
     grain: "repeating-linear-gradient(100deg, rgba(70,48,24,.05) 0px, rgba(70,48,24,.05) 1px, transparent 2px, transparent 6px, rgba(255,244,222,.07) 7px, transparent 9px)",
     frameCode: "103RO",
-    costMultiplier: 1.0,
   },
-  { id: "black", label: "Black", css: "linear-gradient(135deg,#2c2c2c,#141414)", frameCode: "103F", costMultiplier: 1.0 },
-  { id: "white", label: "White", css: "linear-gradient(135deg,#f4f0e6,#dcd6c8)", frameCode: "103H", costMultiplier: 1.0 },
+  { id: "black", label: "Black", css: "linear-gradient(135deg,#2c2c2c,#141414)", frameCode: "103F" },
+  { id: "white", label: "White", css: "linear-gradient(135deg,#f4f0e6,#dcd6c8)", frameCode: "103H" },
 ];
 
 export type GlazingId = "clear" | "non_reflective" | "perspex" | "uv_clear" | "uv_non_reflective" | "none";
@@ -166,25 +205,18 @@ export type FrameGlazing = {
   id: GlazingId;
   label: string;
   description: string;
-  /** Multiplies SizeComponents.glassCost. Sampled once at A2 mounted
-   * (Clear Glass $25.20 baseline): Non-Reflective $50.40 (2.00x), Clear
-   * Perspex $50.60 (2.01x, rounded to 2.00), UV Clear $71.40 (2.83x),
-   * UV Non-Reflective $141.80 (5.63x). "No Glass" is 0 — verified live: an
-   * empty 103RO A2 frame drops the glass line entirely, leaving just frame
-   * (+ mat if mounted) cost. */
-  costMultiplier: number;
 };
 
 // Distinct from the site's existing "Canvas & glass" enquiry-only finishes
 // (a different product — frameless glass prints) — this is the glazing that
 // sits in front of any framed print.
 export const GLAZING: FrameGlazing[] = [
-  { id: "clear", label: "Clear Glass", description: "Standard 2mm clear framing glass — the most cost-effective option.", costMultiplier: 1.0 },
-  { id: "non_reflective", label: "Non-Reflective Glass", description: "2mm matte-coated glass that reduces glare — good for bright rooms.", costMultiplier: 2.0 },
-  { id: "perspex", label: "Clear Perspex (Acrylic)", description: "Lightweight, shatter-resistant 2–3mm acrylic with 94% UV resistance.", costMultiplier: 2.0 },
-  { id: "uv_clear", label: "UV Clear Glass", description: "2.5mm premium glass, 99% UV protection, same clear look as standard glass.", costMultiplier: 2.83 },
-  { id: "uv_non_reflective", label: "UV Non-Reflective Glass", description: "2.5mm glass combining anti-glare and 99% UV protection.", costMultiplier: 5.63 },
-  { id: "none", label: "No Glass", description: "An empty frame with no glazing — for canvas or already-protected artwork.", costMultiplier: 0 },
+  { id: "clear", label: "Clear Glass", description: "Standard 2mm clear framing glass — the most cost-effective option." },
+  { id: "non_reflective", label: "Non-Reflective Glass", description: "2mm matte-coated glass that reduces glare — good for bright rooms." },
+  { id: "perspex", label: "Clear Perspex (Acrylic)", description: "Lightweight, shatter-resistant 2–3mm acrylic with 94% UV resistance." },
+  { id: "uv_clear", label: "UV Clear Glass", description: "2.5mm premium glass, 99% UV protection, same clear look as standard glass." },
+  { id: "uv_non_reflective", label: "UV Non-Reflective Glass", description: "2.5mm glass combining anti-glare and 99% UV protection." },
+  { id: "none", label: "No Glass", description: "An empty frame with no glazing — for canvas or already-protected artwork." },
 ];
 
 export function sizeById(id: SizeId): PrintSize {
@@ -205,33 +237,126 @@ export function glazingById(id: GlazingId): FrameGlazing {
   return g;
 }
 
-export function skuFor(size: SizeId, mounted: boolean): string {
+export function paperById(id: PaperId): PrintPaper {
+  const p = PAPERS.find((x) => x.id === id);
+  if (!p) throw new Error(`Unknown paper ${id}`);
+  return p;
+}
+
+/** `framed: false` is the unframed "print only" product — a rolled print in
+ * a tube, no frame, no mat, no glazing. */
+export function skuFor(size: SizeId, mounted: boolean, framed = true): string {
+  if (!framed) return `GLOBAL-PRINT-${size}`;
   return `GLOBAL-${mounted ? "CFPM" : "CFP"}-${size}`;
 }
 
-/** sell_price = (frameCost*colourMult + (mounted?matCost:0) + glassCost*glazingMult)
- *             * (1 + MARGIN_PERCENT/100)
- * Rounded to the nearest cent. Shipping is NOT included — see
- * estimateShipping() below, added once per cart rather than once per item.
- * Defaults (natural/clear) match the configurator's initial selection, so
- * existing "from $X"-style callers that don't pass colour/glazing keep
- * working unchanged. */
-export function priceFor(size: SizeId, mounted: boolean, colour: ColourId = "natural", glazing: GlazingId = "clear"): number {
-  const c = PRICE_COMPONENTS[size];
-  const colourDef = colourById(colour);
-  const glazingDef = glazingById(glazing);
-  const frameCost = mounted ? c.frameCostMounted : c.frameCostUnmounted;
-  const glassCost = mounted ? c.glassCostMounted : c.glassCostUnmounted;
-  const productCost = frameCost * colourDef.costMultiplier + (mounted ? c.matCost : 0) + glassCost * glazingDef.costMultiplier;
-  const sell = productCost * (1 + MARGIN_PERCENT / 100);
-  return Math.round(sell * 100) / 100;
+/** Round UP to the next whole $5, then take $1 off, so every customer-facing
+ * figure is a clean price point: $176.17 -> $179, $48.33 -> $49. The single
+ * place rounding happens in this runtime; server/shop/catalogue.mjs has the
+ * identical function. */
+export function roundToPricePoint(cents: number): number {
+  if (cents <= 0) return 0;
+  return Math.ceil(cents / 500) * 500 - 100;
 }
 
-/** The true cheapest price for a size/mount combo (any colour/glazing), for
- * "From $X" badges — always black/white frame (lower cost_multiplier than
- * wood) with Clear Glass (lowest glazing multiplier). */
-export function cheapestPriceFor(size: SizeId, mounted = false): number {
+export type PriceSpec = {
+  size: SizeId;
+  mounted: boolean;
+  colour?: ColourId;
+  glazing?: GlazingId;
+  paper?: PaperId;
+  /** false = print only (unframed, rolled). */
+  framed?: boolean;
+};
+
+/**
+ * THE formula. Mirrored exactly in server/shop/catalogue.mjs and documented
+ * in supabase/migrations/20260902010000_pricing_repair_and_paper.sql — all
+ * three must stay in sync, and all three work in integer cents so the price
+ * the browser shows and the price checkout charges agree to the cent.
+ *
+ *   product_cost = frame(size, mounted) x colour_mult
+ *                + (mounted ? mat : 0)
+ *                + glass(size, mounted) x glazing_mult
+ *                + paper(size)
+ *   sell         = round_to_price_point(product_cost x (1 + margin%) + artist_fee)
+ *
+ * Print only (framed: false) zeroes frame, mat and glass, leaving paper +
+ * artist fee. Shipping is NOT included — see estimateShipping() below, added
+ * once per cart rather than once per item.
+ */
+export function priceCentsFor(spec: PriceSpec, pricing: Pricing = ACTIVE_PRICING): number {
+  const framed = spec.framed !== false;
+  const mounted = framed && spec.mounted === true;
+  const row = pricing.components[spec.size];
+  if (!row) throw new Error(`Unsupported print size: ${spec.size}`);
+  const colourMult = pricing.colours[spec.colour ?? "natural"];
+  if (colourMult == null) throw new Error(`Unsupported frame colour: ${spec.colour}`);
+  const glazingMult = pricing.glazing[spec.glazing ?? "clear"];
+  if (glazingMult == null) throw new Error(`Unsupported glazing: ${spec.glazing}`);
+  const paperRow = pricing.paper[spec.paper ?? "archival_matte"];
+  if (!paperRow) throw new Error(`Unsupported paper: ${spec.paper}`);
+  const paperCents = paperRow[spec.size];
+  if (paperCents == null) throw new Error(`No paper cost for ${spec.paper} at ${spec.size}`);
+
+  const frameCents = framed ? Math.round((mounted ? row.frameCentsMounted : row.frameCentsUnmounted) * colourMult) : 0;
+  const matCents = mounted ? row.matCents : 0;
+  const glassCents = framed ? Math.round((mounted ? row.glassCentsMounted : row.glassCentsUnmounted) * glazingMult) : 0;
+  const productCostCents = frameCents + matCents + glassCents + paperCents;
+  return roundToPricePoint(Math.round(productCostCents * (1 + pricing.marginPercent / 100)) + row.artistFeeCents);
+}
+
+/** Frameshop's own cost for this configuration, before margin and artist fee
+ * — for the admin margin view and the pricing report, never shown publicly. */
+export function productCostCentsFor(spec: PriceSpec, pricing: Pricing = ACTIVE_PRICING): number {
+  const framed = spec.framed !== false;
+  const mounted = framed && spec.mounted === true;
+  const row = pricing.components[spec.size];
+  const frameCents = framed ? Math.round((mounted ? row.frameCentsMounted : row.frameCentsUnmounted) * pricing.colours[spec.colour ?? "natural"]) : 0;
+  const matCents = mounted ? row.matCents : 0;
+  const glassCents = framed ? Math.round((mounted ? row.glassCentsMounted : row.glassCentsUnmounted) * pricing.glazing[spec.glazing ?? "clear"]) : 0;
+  return frameCents + matCents + glassCents + pricing.paper[spec.paper ?? "archival_matte"][spec.size];
+}
+
+/** One-line human description of a configuration, shared by the cart drawer
+ * and the checkout summary so they never drift apart. */
+export function specLabel(spec: PriceSpec): string {
+  const paper = paperById(spec.paper ?? "archival_matte").label;
+  if (spec.framed === false) return `${spec.size} · Print only, rolled · ${paper}`;
+  const colour = colourById(spec.colour ?? "natural").label;
+  const glazing = glazingById(spec.glazing ?? "clear").label;
+  return `${spec.size} · ${colour} · ${spec.mounted ? "Mounted" : "Unmounted"} · ${glazing} · ${paper}`;
+}
+
+/** Dollars, for display. Always a whole number given the rounding rule above.
+ * Defaults match the configurator's initial selection, so existing callers
+ * that only pass size/mount keep working unchanged. */
+export function priceFor(
+  size: SizeId,
+  mounted: boolean,
+  colour: ColourId = "natural",
+  glazing: GlazingId = "clear",
+  paper: PaperId = "archival_matte",
+  framed = true,
+): number {
+  return priceCentsFor({ size, mounted, colour, glazing, paper, framed }) / 100;
+}
+
+/** Cheapest framed price for a size/mount combo (any colour, Clear Glass,
+ * house paper). Signature unchanged for existing "From $X" callers. */
+export function cheapestPriceFor(size: SizeId, mounted = false, framed = true): number {
+  if (!framed) return priceFor(size, false, "natural", "clear", "archival_matte", false);
   return Math.min(...COLOURS.map((c) => priceFor(size, mounted, c.id, "clear")));
+}
+
+/** The genuinely cheapest way to own this size — which is now the unframed
+ * rolled print — for "From $X" badges. */
+export function cheapestPriceForSize(size: SizeId): number {
+  return Math.min(
+    cheapestPriceFor(size, false, false),
+    cheapestPriceFor(size, false),
+    cheapestPriceFor(size, true),
+  );
 }
 
 // Room photo calibration: shot square-on (camera perpendicular to the wall,
@@ -250,37 +375,71 @@ export const ROOM = {
   src: "/shop/room-corner.jpg",
 };
 
-/** Single-item AU Standard shipping (AUD) — $15.10 for A5–A2, $21.55 for A1. */
-function baseShipFor(size: SizeId): number {
-  return size === "A1" ? 21.55 : 15.10;
+/** Single framed item, AU Standard, in cents. The live quotes below were
+ * $15.10 / $21.55; both are rounded UP to a whole dollar so nothing
+ * customer-facing ever shows cents (see money()). */
+function framedShipCentsFor(size: SizeId): number {
+  return size === "A1" ? 2200 : 1600;
 }
 
+export type ShippingItem = { size: SizeId; framed?: boolean };
+
 /**
- * AU Standard shipping for a whole order, verified against 7 live quotes on
- * api.sandbox.prodigi.com (2026-08-14):
- *   1×A3=$15.10 · 2×A3=$20.10 · A3+A5=$20.10 · 3×A3=$25.10 (linear, +$5 each)
- *   1×A1=$21.55 · A1+A3=$26.55 · A2+A1=$26.55 (+$5, order doesn't matter)
- *   2×A1=$31.55 (+$10, not +$5 — two large parcels can't share a box)
- * Rule: every extra A5–A2 print costs exactly $5.00. An extra A1 costs $5.00
- * unless another A1 is already in the order, in which case it's $10.00.
+ * AU Standard shipping for a whole order, in cents. Mirrored exactly in
+ * server/shop/catalogue.mjs's estimateShippingCents().
+ *
+ * FRAMED prints, verified against 7 live quotes on api.sandbox.prodigi.com
+ * (2026-08-14): 1×A3=$15.10 · 2×A3=$20.10 · A3+A5=$20.10 · 3×A3=$25.10
+ * (linear, +$5 each) · 1×A1=$21.55 · A1+A3=$26.55 · A2+A1=$26.55 ·
+ * 2×A1=$31.55 (+$10, not +$5 — two large parcels can't share a box). Rule:
+ * every extra A5–A2 print costs $5, an extra A1 costs $5 unless another A1 is
+ * already in the order, in which case $10. Bases rounded up to $16 / $22.
+ *
+ * PRINT ONLY ships rolled in a tube — much cheaper, and several rolled prints
+ * go in one tube. A deliberately conservative tier: $12 base ($14 if any A1,
+ * which needs a longer tube) plus $3 per extra rolled print. If the order
+ * also contains a framed piece the framed rules govern and each rolled print
+ * adds a flat $5, since it can't be assumed to travel inside the frame box.
  */
-export function estimateShipping(sizes: SizeId[]): number {
-  if (!sizes.length) return 0;
-  const sorted = [...sizes].sort((a, b) => baseShipFor(b) - baseShipFor(a));
-  let total = baseShipFor(sorted[0]);
-  let a1Count = sorted[0] === "A1" ? 1 : 0;
-  for (const size of sorted.slice(1)) {
-    if (size === "A1") {
-      total += a1Count >= 1 ? 10 : 5;
-      a1Count += 1;
-    } else {
-      total += 5;
+export function estimateShippingCents(items: ShippingItem[]): number {
+  if (!items.length) return 0;
+  const framed = items.filter((it) => it.framed !== false);
+  const rolled = items.filter((it) => it.framed === false);
+  let total = 0;
+  if (framed.length) {
+    const sorted = [...framed].sort((a, b) => framedShipCentsFor(b.size) - framedShipCentsFor(a.size));
+    total += framedShipCentsFor(sorted[0].size);
+    let a1Count = sorted[0].size === "A1" ? 1 : 0;
+    for (const item of sorted.slice(1)) {
+      if (item.size === "A1") {
+        total += a1Count >= 1 ? 1000 : 500;
+        a1Count += 1;
+      } else {
+        total += 500;
+      }
     }
+    total += rolled.length * 500;
+  } else {
+    total += rolled.some((it) => it.size === "A1") ? 1400 : 1200;
+    total += (rolled.length - 1) * 300;
   }
   return total;
 }
 
-export const money = (n: number) => `$${n.toFixed(2)}`;
+/** Dollars, for display. Accepts bare sizes for older callers. */
+export function estimateShipping(items: (ShippingItem | SizeId)[]): number {
+  return estimateShippingCents(items.map((it) => (typeof it === "string" ? { size: it } : it))) / 100;
+}
+
+/** Whole dollars wherever the amount is whole — which, given the price-point
+ * rounding and the whole-dollar shipping tiers, is everywhere customer-facing.
+ * Falls back to cents only for an amount that genuinely has them (a live
+ * Prodigi shipping quote, a promotional discount). Admin screens format cents
+ * themselves and don't go through here. */
+export const money = (n: number) => {
+  const cents = Math.round(n * 100);
+  return cents % 100 === 0 ? `$${cents / 100}` : `$${(cents / 100).toFixed(2)}`;
+};
 
 // Print-size gating — mirrored in server/shop/printSizing.mjs (server-only
 // module system, can't share this file directly). Keep both in sync.

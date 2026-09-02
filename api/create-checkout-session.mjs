@@ -122,7 +122,9 @@ export default async function handler(req, res) {
           unit_amount: item.unitPriceCents,
           product_data: {
             name: photo.title,
-            description: `${item.size} · ${item.colour} frame · ${item.mounted ? "mounted" : "unmounted"} · ${item.glazing.replace(/_/g, " ")} glass`,
+            description: item.framed
+              ? `${item.size} · ${item.colour} frame · ${item.mounted ? "mounted" : "unmounted"} · ${item.glazing.replace(/_/g, " ")} glass · ${item.paper.replace(/_/g, " ")}`
+              : `${item.size} · print only, unframed and rolled · ${item.paper.replace(/_/g, " ")}`,
             images: photo.thumbUrl?.startsWith("https://") ? [photo.thumbUrl] : undefined,
           },
         },
@@ -187,7 +189,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     const message = safeError(error);
-    const status = /not valid|first order only|Enter |Cart |no longer available|unsupported|between 1|isn't available as a/i.test(message) ? 400 : 500;
+    const status = /not valid|first order only|Enter |Cart |no longer available|unsupported|between 1|isn't available as a|Prices have been updated/i.test(message) ? 400 : 500;
     if (status === 500) console.error("create checkout session:", message);
     json(res, status, { error: status === 500 ? "Checkout could not be started. Please try again." : message });
   }

@@ -13,17 +13,21 @@ import {
   COLOURS,
   GLAZING,
   MOULDING_CM,
+  PAPERS,
   ROOM,
   SIZES,
   UNMOUNTED_BAND_CM,
   colourById,
   glazingById,
   isSizeSellable,
+  cheapestPriceForSize,
   money,
+  paperById,
   priceFor,
   sizeById,
 } from "../lib/printCatalogue";
-import type { ColourId, GlazingId, SizeId } from "../lib/printCatalogue";
+import type { ColourId, GlazingId, PaperId, SizeId } from "../lib/printCatalogue";
+import { usePricingVersion } from "../lib/usePricing";
 import { makeCartItem, useCart } from "../lib/cart";
 import { CartDrawer } from "./CartDrawer";
 import { ShopLegalFooter } from "./LegalPages";
@@ -57,8 +61,11 @@ export function PrintConfigurator({
   const cart = useCart();
   const [size, setSize] = useState<SizeId>("A3");
   const [mounted, setMounted] = useState(true);
+  // false = "Print only": unframed, rolled in a tube. No frame, mat or glazing.
+  const [framed, setFramed] = useState(true);
   const [colour, setColour] = useState<ColourId>("natural");
   const [glazing, setGlazing] = useState<GlazingId>("clear");
+  const [paper, setPaper] = useState<PaperId>("archival_matte");
   const [cartOpen, setCartOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
@@ -161,8 +168,8 @@ export function PrintConfigurator({
       const pxPerCm = Math.min(naturalPxPerCm, availableW / outerW, availableH / outerH);
       const width = outerW * pxPerCm;
       const height = outerH * pxPerCm;
-      const nextBandCm = mounted ? MOULDING_CM : UNMOUNTED_BAND_CM;
-      const nextMatCm = mounted ? Math.max(0, sizeById(size).mat - MOULDING_CM) : 0;
+      const nextBandCm = framed ? (mounted ? MOULDING_CM : UNMOUNTED_BAND_CM) : 0;
+      const nextMatCm = framed && mounted ? Math.max(0, sizeById(size).mat - MOULDING_CM) : 0;
       const wantedLeft = el.clientWidth * ROOM.centerX;
       const wantedTop = el.clientHeight * ROOM.centerY;
       const left = Math.min(
@@ -190,19 +197,23 @@ export function PrintConfigurator({
     const ro = new ResizeObserver(recompute);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [size, mounted, photo, previewMode]);
+  }, [size, mounted, framed, photo, previewMode]);
 
   const sizeDef = sizeById(size);
   const colourDef = colourById(colour);
   const glazingDef = glazingById(glazing);
-  const price = priceFor(size, mounted, colour, glazing);
+  const paperDef = paperById(paper);
+  // Re-render when live pricing arrives after first paint, so the shown price
+  // is never the fallback while checkout prices from the live tables.
+  usePricingVersion();
+  const price = priceFor(size, mounted, colour, glazing, paper, framed);
   const maxForMount = mounted ? photo.maxSellableMounted : photo.maxSellableUnmounted;
   // Only worth a note when it's an actual limitation — A1 (the top size) or
   // unknown/no restriction don't need a message at all.
   const maxIdeal = maxForMount && maxForMount !== "A1" && SIZES.some((s) => s.id === maxForMount) ? maxForMount : null;
 
-  const bandCm = mounted ? MOULDING_CM : UNMOUNTED_BAND_CM;
-  const matCm = mounted ? Math.max(0, sizeDef.mat - MOULDING_CM) : 0;
+  const bandCm = framed ? (mounted ? MOULDING_CM : UNMOUNTED_BAND_CM) : 0;
+  const matCm = framed && mounted ? Math.max(0, sizeDef.mat - MOULDING_CM) : 0;
   const orientation = orientOf(photo);
   const [shortEdge, longEdge] = sizeDef.outer;
   const detailOuterW = orientation === "landscape" ? longEdge : shortEdge;
@@ -216,7 +227,7 @@ export function PrintConfigurator({
     description: seoDescription,
     path: `/shop/${photo.slug}`,
     image: thumb(photo, 1600),
-    price: priceFor("A5", false),
+    price: cheapestPriceForSize("A5"),
     available: true,
     category: "Fine-art photography print",
     material: "Archival fine-art paper with professional frame",
@@ -233,14 +244,14 @@ export function PrintConfigurator({
   useEffect(() => {
     trackViewItem({
       currency: "AUD",
-      value: priceFor("A5", false),
+      value: cheapestPriceForSize("A5"),
       items: [{
         item_id: photo.id,
         item_name: photo.title,
         item_brand: "Sam Duckworth Photography",
         item_category: "Fine-art print",
         item_category2: photo.location,
-        price: priceFor("A5", false),
+        price: cheapestPriceForSize("A5"),
         quantity: 1,
       }],
     });
@@ -302,7 +313,7 @@ export function PrintConfigurator({
       return;
     }
     setAddError(null);
-    cart.add(makeCartItem(photo, thumb(photo, 200), size, mounted, colour, glazing));
+    cart.add(makeCartItem(photo, thumb(photo, 200), size, mounted, colour, glazing, paper, framed));
     trackAddToCart({
       currency: "AUD",
       value: price,
@@ -312,7 +323,9 @@ export function PrintConfigurator({
         item_brand: "Sam Duckworth Photography",
         item_category: "Fine-art print",
         item_category2: photo.location,
-        item_variant: `${size} · ${colourDef.label} · ${mounted ? "Mounted" : "Unmounted"} · ${glazingDef.label}`,
+        item_variant: framed
+          ? `${size} · ${colourDef.label} · ${mounted ? "Mounted" : "Unmounted"} · ${glazingDef.label} · ${paperDef.label}`
+          : `${size} · Print only · ${paperDef.label}`,
         price,
         quantity: 1,
       }],
@@ -466,7 +479,9 @@ export function PrintConfigurator({
               <div className="pc-detail-spec" aria-live="polite">
                 <b>{size} · {detailOuterW.toFixed(1)} × {detailOuterH.toFixed(1)} cm</b>
                 <span>
-                  {mounted ? `${matCm.toFixed(1)} cm mat · ${MOULDING_CM.toFixed(1)} cm frame` : "Full-bleed presentation"}
+                  {!framed
+                    ? "Unframed, rolled"
+                    : mounted ? `${matCm.toFixed(1)} cm mat · ${MOULDING_CM.toFixed(1)} cm frame` : "Full-bleed presentation"}
                   {` · ${orientation}`}
                 </span>
               </div>
@@ -520,41 +535,60 @@ export function PrintConfigurator({
           </div>
 
           <div className="pc-group">
-            <div className="pc-group-head"><label>Frame colour</label><span className="pc-val">{colourDef.label}</span></div>
-            <div className="pc-swatches">
-              {COLOURS.map((c) => (
-                <button key={c.id} className={`pc-swatch-btn${c.id === colour ? " on" : ""}`} type="button" onClick={() => setColour(c.id)} title={c.label}>
-                  <span className="pc-swatch-chip" style={{ background: c.css }} />
-                  <span>{c.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="pc-group">
-            <div className="pc-group-head"><label>Mount</label></div>
+            <div className="pc-group-head"><label>Frame</label></div>
             <div className="pc-mount-toggle">
-              <button type="button" className={mounted ? "on" : ""} onClick={() => setMounted(true)}>Mounted</button>
-              <button type="button" className={!mounted ? "on" : ""} onClick={() => setMounted(false)}>Unmounted</button>
+              <button type="button" className={framed && mounted ? "on" : ""} onClick={() => { setFramed(true); setMounted(true); }}>Mounted</button>
+              <button type="button" className={framed && !mounted ? "on" : ""} onClick={() => { setFramed(true); setMounted(false); }}>Unmounted</button>
+              <button type="button" className={!framed ? "on" : ""} onClick={() => { setFramed(false); setMounted(false); }}>Print only</button>
             </div>
             <p className="pc-mount-note">
-              {mounted
-                ? "Snow-white mat, fixed width per size — the frame's outer size doesn't change, mount or not."
-                : "Print runs to the frame's edge. Same outer size as mounted, just no mat."}
+              {!framed
+                ? "The print alone, unframed and rolled in a tube — frame it yourself, and it ships for less."
+                : mounted
+                  ? "Snow-white mat, fixed width per size — the frame's outer size doesn't change, mount or not."
+                  : "Print runs to the frame's edge. Same outer size as mounted, just no mat."}
             </p>
           </div>
 
+          {framed ? (
+            <div className="pc-group">
+              <div className="pc-group-head"><label>Frame colour</label><span className="pc-val">{colourDef.label}</span></div>
+              <div className="pc-swatches">
+                {COLOURS.map((c) => (
+                  <button key={c.id} className={`pc-swatch-btn${c.id === colour ? " on" : ""}`} type="button" onClick={() => setColour(c.id)} title={c.label}>
+                    <span className="pc-swatch-chip" style={{ background: c.css }} />
+                    <span>{c.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="pc-group">
-            <div className="pc-group-head"><label>Glazing</label><span className="pc-val">{glazingDef.label}</span></div>
+            <div className="pc-group-head"><label>Paper</label><span className="pc-val">{paperDef.label}</span></div>
             <div className="pc-glazing-options">
-              {GLAZING.map((g) => (
-                <button key={g.id} className={`pc-glazing-btn${g.id === glazing ? " on" : ""}`} type="button" onClick={() => setGlazing(g.id)} title={g.description}>
-                  {g.label}
+              {PAPERS.map((p) => (
+                <button key={p.id} className={`pc-glazing-btn${p.id === paper ? " on" : ""}`} type="button" onClick={() => setPaper(p.id)} title={p.description}>
+                  {p.label}
                 </button>
               ))}
             </div>
-            <p className="pc-mount-note">{glazingDef.description}</p>
+            <p className="pc-mount-note">{paperDef.description}</p>
           </div>
+
+          {framed ? (
+            <div className="pc-group">
+              <div className="pc-group-head"><label>Glazing</label><span className="pc-val">{glazingDef.label}</span></div>
+              <div className="pc-glazing-options">
+                {GLAZING.map((g) => (
+                  <button key={g.id} className={`pc-glazing-btn${g.id === glazing ? " on" : ""}`} type="button" onClick={() => setGlazing(g.id)} title={g.description}>
+                    {g.label}
+                  </button>
+                ))}
+              </div>
+              <p className="pc-mount-note">{glazingDef.description}</p>
+            </div>
+          ) : null}
 
           <aside className="pc-alt-finishes" aria-label="Canvas and glass finishes">
             <div>

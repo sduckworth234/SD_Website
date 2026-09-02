@@ -6,8 +6,10 @@
 import { json, methodAllowed, readJson, safeError } from "../server/shop/http.mjs";
 import { quoteSkuCostCents, prodigiConfigured } from "../server/shop/prodigi.mjs";
 import { requireAdmin, supabaseRest } from "../server/shop/supabase.mjs";
+import { DEFAULT_MARGIN_PERCENT } from "../server/shop/catalogue.mjs";
 
 const SIZES = ["A5", "A4", "A3", "A2", "A1"];
+const PAPER_IDS = ["archival_matte", "cotton_rag"];
 
 function skuFor(size, mounted) {
   return `GLOBAL-${mounted ? "CFPM" : "CFP"}-${size}`;
@@ -19,17 +21,21 @@ async function fetchAllRows() {
 }
 
 async function fetchFrameshopPricing() {
-  const [components, colours, glazing, marginRows] = await Promise.all([
+  const [components, colours, glazing, paper, marginRows] = await Promise.all([
     supabaseRest("print_pricing_components?select=*&order=size.asc"),
     supabaseRest("print_pricing_colours?select=*&order=id.asc"),
     supabaseRest("print_pricing_glazing?select=*&order=id.asc"),
+    // Ships ahead of 20260902010000_pricing_repair_and_paper.sql: the panel
+    // renders without a paper editor rather than failing to load at all.
+    supabaseRest("print_pricing_paper?select=*&order=sort_order.asc").catch(() => []),
     supabaseRest("site_settings?select=value&key=eq.print_margin_percent"),
   ]);
   return {
     components: components ?? [],
     colours: colours ?? [],
     glazing: glazing ?? [],
-    marginPercent: marginRows?.[0]?.value != null ? Number(marginRows[0].value) : 15,
+    paper: paper ?? [],
+    marginPercent: marginRows?.[0]?.value != null ? Number(marginRows[0].value) : DEFAULT_MARGIN_PERCENT,
   };
 }
 
@@ -43,8 +49,9 @@ async function saveFrameshopComponents(body) {
     const matCents = Number(row?.matCostCents);
     const glassUnmountedCents = Number(row?.glassCostUnmountedCents);
     const glassMountedCents = Number(row?.glassCostMountedCents);
+    const artistFeeCents = Number(row?.artistFeeCents);
     if (!SIZES.includes(size)) throw new Error("Invalid size.");
-    const values = [frameUnmountedCents, frameMountedCents, matCents, glassUnmountedCents, glassMountedCents];
+    const values = [frameUnmountedCents, frameMountedCents, matCents, glassUnmountedCents, glassMountedCents, artistFeeCents];
     if (!values.every((n) => Number.isInteger(n) && n >= 0 && n <= 10_000_00)) {
       throw new Error(`Invalid component cost for ${size}.`);
     }
@@ -56,8 +63,31 @@ async function saveFrameshopComponents(body) {
         mat_cost_cents: matCents,
         glass_cost_unmounted_cents: glassUnmountedCents,
         glass_cost_mounted_cents: glassMountedCents,
+        artist_fee_cents: artistFeeCents,
         updated_at: new Date().toISOString(),
       }),
+    });
+  }
+  return { saved: updates.length, ...(await fetchFrameshopPricing()) };
+}
+
+// Printing (paper) cost per size, per stock — Frameshop prices printing by
+// paper AND size, so these are explicit cents, not a multiplier.
+async function saveFrameshopPaper(body) {
+  const updates = Array.isArray(body.paper) ? body.paper : [];
+  if (!updates.length) throw new Error("No paper costs to save.");
+  for (const row of updates) {
+    const id = typeof row?.id === "string" ? row.id : "";
+    if (!PAPER_IDS.includes(id)) throw new Error(`Invalid paper ${id || "(unknown)"}.`);
+    const patch = { updated_at: new Date().toISOString() };
+    for (const size of SIZES) {
+      const cents = Number(row?.costCents?.[size]);
+      if (!Number.isInteger(cents) || cents < 0 || cents > 10_000_00) throw new Error(`Invalid ${id} cost for ${size}.`);
+      patch[`cost_${size.toLowerCase()}_cents`] = cents;
+    }
+    await supabaseRest(`print_pricing_paper?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(patch),
     });
   }
   return { saved: updates.length, ...(await fetchFrameshopPricing()) };
@@ -159,6 +189,7 @@ export default async function handler(req, res) {
     if (body.action === "save_frameshop_components") return json(res, 200, await saveFrameshopComponents(body));
     if (body.action === "save_frameshop_multipliers") return json(res, 200, await saveFrameshopMultipliers(body));
     if (body.action === "save_frameshop_margin") return json(res, 200, await saveFrameshopMargin(body));
+    if (body.action === "save_frameshop_paper") return json(res, 200, await saveFrameshopPaper(body));
     json(res, 400, { error: "Unknown pricing action." });
   } catch (error) {
     const message = safeError(error);

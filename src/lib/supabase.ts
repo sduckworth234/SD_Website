@@ -1,8 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { fallbackLocations, photos as fallbackPhotos } from "../data/photos";
 import type { Collection, GalleryLocation, InstagramPost, Photo, RealPrintPhoto, SiteSetting } from "../types";
-import { applyLiveFrameshopPricing, computeSellableSizes, maxSellableFromSizes } from "./printCatalogue";
-import type { SellableSizes, SizeId, SizeOverrides } from "./printCatalogue";
+import { COLOURS, GLAZING, PAPERS, SIZES, applyLivePricing, computeSellableSizes, maxSellableFromSizes } from "./printCatalogue";
+import type { ColourId, GlazingId, PaperId, Pricing, SellableSizes, SizeId, SizeOverrides } from "./printCatalogue";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabasePublishableKey =
@@ -219,58 +219,83 @@ async function fetchCollections(): Promise<typeof NO_COLLECTIONS> {
   }
 }
 
-// Live Frameshop-based pricing components from public.print_pricing_components/
-// _colours/_glazing and site_settings.print_margin_percent — see
-// supabase/migrations/20260821030000_frameshop_print_pricing.sql,
-// admin-editable from the Pricing tab. Patches src/lib/printCatalogue.ts's
-// PRICE_COMPONENTS/COLOURS/GLAZING/MARGIN_PERCENT in place on success; any
-// failure (table not migrated yet, network blip) just leaves the fallback
-// values untouched — same "ships ahead" posture as collections above, never
-// blocks or breaks the gallery fetch.
+// Live pricing from public.print_pricing_components/_colours/_glazing/_paper
+// and site_settings.print_margin_percent — see supabase/migrations/
+// 20260902010000_pricing_repair_and_paper.sql, admin-editable from the Shop
+// pricing panel.
+//
+// ALL-OR-NOTHING, deliberately. The 2026-09-02 incident happened because this
+// function used to patch whatever it managed to read on top of the hardcoded
+// fallback: the components select 400'd against an unmigrated table while the
+// colour multipliers and the 40% margin came back fine, so the browser priced
+// from fallback components x live multipliers x live margin — a combination
+// that existed nowhere else, least of all on the checkout server. Now any
+// missing or unreadable piece restores the complete fallback, margin included,
+// which is byte-identical to the server's. Never blocks the gallery fetch.
 async function fetchPricingSettings(): Promise<void> {
   if (!supabase) return;
   try {
-    const [componentsRes, coloursRes, glazingRes, marginRes] = await Promise.all([
-      supabase.from("print_pricing_components").select("size, frame_cost_unmounted_cents, frame_cost_mounted_cents, mat_cost_cents, glass_cost_unmounted_cents, glass_cost_mounted_cents"),
+    const [componentsRes, coloursRes, glazingRes, paperRes, marginRes] = await Promise.all([
+      supabase.from("print_pricing_components").select("size, frame_cost_unmounted_cents, frame_cost_mounted_cents, mat_cost_cents, glass_cost_unmounted_cents, glass_cost_mounted_cents, artist_fee_cents"),
       supabase.from("print_pricing_colours").select("id, cost_multiplier"),
       supabase.from("print_pricing_glazing").select("id, cost_multiplier"),
+      supabase.from("print_pricing_paper").select("id, cost_a5_cents, cost_a4_cents, cost_a3_cents, cost_a2_cents, cost_a1_cents"),
       supabase.from("site_settings").select("value").eq("key", "print_margin_percent").maybeSingle(),
     ]);
-    type ComponentPatch = { frameCostUnmounted?: number; frameCostMounted?: number; matCost?: number; glassCostUnmounted?: number; glassCostMounted?: number };
-    const components: Record<string, ComponentPatch> = {};
-    for (const row of (componentsRes.data ?? []) as {
-      size: string;
-      frame_cost_unmounted_cents: number;
-      frame_cost_mounted_cents: number;
-      mat_cost_cents: number;
-      glass_cost_unmounted_cents: number;
-      glass_cost_mounted_cents: number;
-    }[]) {
-      components[row.size] = {
-        frameCostUnmounted: row.frame_cost_unmounted_cents / 100,
-        frameCostMounted: row.frame_cost_mounted_cents / 100,
-        matCost: row.mat_cost_cents / 100,
-        glassCostUnmounted: row.glass_cost_unmounted_cents / 100,
-        glassCostMounted: row.glass_cost_mounted_cents / 100,
+    if (componentsRes.error || coloursRes.error || glazingRes.error || paperRes.error) {
+      throw new Error("A print pricing table could not be read.");
+    }
+
+    const num = (value: unknown): number => {
+      const n = Number(value);
+      if (!Number.isFinite(n)) throw new Error("Pricing value is not a number.");
+      return n;
+    };
+
+    const components = {} as Pricing["components"];
+    for (const row of (componentsRes.data ?? []) as Record<string, unknown>[]) {
+      components[row.size as SizeId] = {
+        frameCentsUnmounted: num(row.frame_cost_unmounted_cents),
+        frameCentsMounted: num(row.frame_cost_mounted_cents),
+        matCents: num(row.mat_cost_cents),
+        glassCentsUnmounted: num(row.glass_cost_unmounted_cents),
+        glassCentsMounted: num(row.glass_cost_mounted_cents),
+        artistFeeCents: num(row.artist_fee_cents),
       };
     }
-    const colours: Record<string, { costMultiplier?: number }> = {};
-    for (const row of (coloursRes.data ?? []) as { id: string; cost_multiplier: number }[]) {
-      colours[row.id] = { costMultiplier: Number(row.cost_multiplier) };
+    const colours = {} as Pricing["colours"];
+    for (const row of (coloursRes.data ?? []) as { id: ColourId; cost_multiplier: number }[]) {
+      colours[row.id] = num(row.cost_multiplier);
     }
-    const glazing: Record<string, { costMultiplier?: number }> = {};
-    for (const row of (glazingRes.data ?? []) as { id: string; cost_multiplier: number }[]) {
-      glazing[row.id] = { costMultiplier: Number(row.cost_multiplier) };
+    const glazing = {} as Pricing["glazing"];
+    for (const row of (glazingRes.data ?? []) as { id: GlazingId; cost_multiplier: number }[]) {
+      glazing[row.id] = num(row.cost_multiplier);
     }
-    const marginValue = (marginRes.data as { value?: string } | null)?.value;
-    applyLiveFrameshopPricing({
-      components: components as Partial<Record<SizeId, ComponentPatch>>,
-      colours,
-      glazing,
-      marginPercent: marginValue != null ? Number(marginValue) : undefined,
-    });
-  } catch {
-    // fallback pricing stands.
+    const paper = {} as Pricing["paper"];
+    for (const row of (paperRes.data ?? []) as Record<string, unknown>[]) {
+      paper[row.id as PaperId] = {
+        A5: num(row.cost_a5_cents), A4: num(row.cost_a4_cents), A3: num(row.cost_a3_cents),
+        A2: num(row.cost_a2_cents), A1: num(row.cost_a1_cents),
+      };
+    }
+
+    // Every id the app can offer must be present, or the whole thing is
+    // rejected — a partially-populated table is exactly the failure mode this
+    // function exists to avoid.
+    for (const size of SIZES) if (!components[size.id]) throw new Error(`No pricing components for ${size.id}.`);
+    for (const c of COLOURS) if (colours[c.id] == null) throw new Error(`No colour multiplier for ${c.id}.`);
+    for (const g of GLAZING) if (glazing[g.id] == null) throw new Error(`No glazing multiplier for ${g.id}.`);
+    for (const p of PAPERS) {
+      if (!paper[p.id]) throw new Error(`No paper costs for ${p.id}.`);
+      for (const size of SIZES) if (paper[p.id][size.id] == null) throw new Error(`No ${p.id} cost at ${size.id}.`);
+    }
+    const marginPercent = num((marginRes.data as { value?: string } | null)?.value);
+
+    applyLivePricing({ components, colours, glazing, paper, marginPercent });
+  } catch (error) {
+    // Restore the COMPLETE fallback rather than leaving a half-applied state.
+    applyLivePricing(null);
+    console.warn("Live print pricing unavailable — using the bundled fallback prices.", error);
   }
 }
 

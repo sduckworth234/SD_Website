@@ -18,6 +18,16 @@ function safeUrl(value) {
   }
 }
 
+// What was actually ordered, in the words Sam needs when placing the
+// Frameshop job — including whether it's the unframed "print only" product
+// and which paper stock.
+function itemFinish(item) {
+  const paper = escapeHtml(String(item.paper ?? "archival_matte").replace(/_/g, " "));
+  if (item.framed === false) return `print only, unframed and rolled, ${paper} paper`;
+  const glazing = escapeHtml(String(item.glazing ?? "clear").replace(/_/g, " "));
+  return `${item.mounted ? "mounted" : "unmounted"}, ${escapeHtml(item.colour)}, ${glazing} glass, ${paper} paper`;
+}
+
 function money(cents) {
   return new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(Number(cents ?? 0) / 100);
 }
@@ -36,7 +46,7 @@ async function send(message) {
 }
 
 export async function sendOrderConfirmation(order, items) {
-  const rows = items.map((item) => `<li style="margin:8px 0">${escapeHtml(item.title)} — ${escapeHtml(item.size)}, ${item.mounted ? "mounted" : "unmounted"}, ${escapeHtml(item.colour)}, ${escapeHtml(String(item.glazing ?? "clear").replace(/_/g, " "))} glass</li>`).join("");
+  const rows = items.map((item) => `<li style="margin:8px 0">${escapeHtml(item.title)} — ${escapeHtml(item.size)}, ${itemFinish(item)}</li>`).join("");
   const pickup = order.delivery_method === "pickup";
   // The pickup address is never published on the site; it is shared here, once
   // the print exists and there is a person to share it with.
@@ -67,7 +77,7 @@ export async function sendNewOrderAlert(order, items) {
     return { skipped: true };
   }
   const address = order.shipping_address ?? {};
-  const rows = items.map((item) => `<li style="margin:8px 0">${escapeHtml(item.title)} — ${escapeHtml(item.size)}, ${item.mounted ? "mounted" : "unmounted"}, ${escapeHtml(item.colour)}, ${escapeHtml(String(item.glazing ?? "clear").replace(/_/g, " "))} glass</li>`).join("");
+  const rows = items.map((item) => `<li style="margin:8px 0">${escapeHtml(item.title)} — ${escapeHtml(item.size)}, ${itemFinish(item)}</li>`).join("");
   const adminUrl = safeUrl(`${SITE_URL}/admin`);
   const addressLines = [address.line1, address.line2, `${address.suburb ?? ""} ${address.state ?? ""} ${address.postcode ?? ""}`.trim()].filter(Boolean).map(escapeHtml).join("<br>");
   const reference = order.id.slice(0, 8).toUpperCase();
