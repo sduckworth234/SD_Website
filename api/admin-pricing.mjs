@@ -9,7 +9,7 @@ import { requireAdmin, supabaseRest } from "../server/shop/supabase.mjs";
 import { DEFAULT_MARGIN_PERCENT } from "../server/shop/catalogue.mjs";
 
 const SIZES = ["A5", "A4", "A3", "A2", "A1"];
-const PAPER_IDS = ["archival_matte", "cotton_rag"];
+const PAPER_IDS = ["semi_gloss", "high_gloss"];
 
 function skuFor(size, mounted) {
   return `GLOBAL-${mounted ? "CFPM" : "CFP"}-${size}`;

@@ -58,7 +58,7 @@ async function fulfilSession(sessionId) {
       mounted: item.mounted,
       colour: item.colour,
       glazing: item.glazing ?? "clear",
-      paper: item.paper ?? "archival_matte",
+      paper: item.paper ?? "semi_gloss",
       framed: item.framed !== false,
       sku: item.sku,
       unit_price_cents: item.unitPriceCents,

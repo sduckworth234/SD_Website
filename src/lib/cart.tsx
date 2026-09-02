@@ -5,7 +5,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { ColourId, GlazingId, PaperId, SizeId } from "./printCatalogue";
-import { estimateShipping, priceCentsFor } from "./printCatalogue";
+import { COLOURS, GLAZING, PAPERS, SIZES, estimateShipping, priceCentsFor } from "./printCatalogue";
 import { usePricingVersion } from "./usePricing";
 
 export type CartItem = {
@@ -25,11 +25,30 @@ export type CartItem = {
 
 const STORAGE_KEY = "sd_print_cart_v1";
 
+const VALID_SIZES = new Set(SIZES.map((s) => s.id));
+const VALID_COLOURS = new Set(COLOURS.map((c) => c.id));
+const VALID_GLAZING = new Set(GLAZING.map((g) => g.id));
+const VALID_PAPERS = new Set(PAPERS.map((p) => p.id));
+
 /** Items stored before paper and "print only" existed are missing those
  * fields — fill them with what they implicitly were rather than dropping the
- * cart. Price is recomputed on every render anyway (see CartProvider). */
+ * cart. Also guards against a value that ISN'T missing but no longer exists —
+ * a size/colour/glazing/paper id retired in an admin change or a site update
+ * (the paper stock was renamed once already: an old cart holding "archival_matte"
+ * survived the rename in localStorage and crashed on the very next hydration,
+ * since priceCentsFor has no such id to price). Any stored value outside the
+ * CURRENT valid set is coerced to the default rather than trusted, so a future
+ * rename of any of these can't repeat that crash. Price is recomputed on every
+ * render anyway (see CartProvider). */
 function normaliseStored(item: CartItem): CartItem {
-  return { ...item, paper: item.paper ?? "semi_gloss", framed: item.framed ?? true };
+  return {
+    ...item,
+    size: VALID_SIZES.has(item.size) ? item.size : "A3",
+    colour: VALID_COLOURS.has(item.colour) ? item.colour : "natural",
+    glazing: VALID_GLAZING.has(item.glazing) ? item.glazing : "clear",
+    paper: VALID_PAPERS.has(item.paper) ? item.paper : "semi_gloss",
+    framed: item.framed ?? true,
+  };
 }
 
 function readStored(): CartItem[] {
@@ -70,10 +89,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [stored]);
 
   const value = useMemo<CartContextValue>(() => {
-    const items = stored.map((it) => ({
-      ...it,
-      price: priceCentsFor({ size: it.size, mounted: it.mounted, colour: it.colour, glazing: it.glazing, paper: it.paper, framed: it.framed }) / 100,
-    }));
+    // Belt and braces alongside normaliseStored: even a validated item can in
+    // principle fail to price (a component genuinely missing from a pricing
+    // table read). One bad item must never crash the whole cart — drop it
+    // from the priced total rather than throwing, and log it so it's not a
+    // silent zero either.
+    const items = stored.flatMap((it) => {
+      try {
+        return [{
+          ...it,
+          price: priceCentsFor({ size: it.size, mounted: it.mounted, colour: it.colour, glazing: it.glazing, paper: it.paper, framed: it.framed }) / 100,
+        }];
+      } catch (error) {
+        console.error("cart: dropping an item that failed to price", it, error);
+        return [];
+      }
+    });
     const subtotal = items.reduce((sum, it) => sum + it.price, 0);
     const shipping = estimateShipping(items.map((it) => ({ size: it.size, framed: it.framed })));
     return {
