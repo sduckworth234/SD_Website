@@ -172,7 +172,9 @@ Conventions the gallery relies on:
   catch-all `/api/spa`, which returns the SPA shell with **HTTP 404** for
   unknown URLs and 200 for the app-only/data-driven routes it knows about
   (`/admin`, `/checkout`, `/cart`, `/shop/<slug>`, `/galleries/<slug>`).
-  `/api/sitemap` survives only as the fallback for a prerender-less build.
+  There is no `/api/sitemap` function; `scripts/prerender.mjs` writes
+  `dist/sitemap.xml` directly, and its catch path writes a core-routes
+  fallback sitemap if prerendering itself fails.
 - **The shop is live in Production** (launched 2026-08-17 — see
   `Shop Setup/Shop Launch QA Refactor — 2026-08-17.md`). `VITE_SHOP_ENABLED`
   and `SHOP_CHECKOUT_ENABLED` default false in a fresh environment and exist
