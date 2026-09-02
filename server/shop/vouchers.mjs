@@ -18,6 +18,68 @@ import { supabaseRest } from "./supabase.mjs";
 export const VOUCHER_AMOUNTS_CENTS = [10000, 20000, 40000];
 export const VOUCHER_KIND = "gift_voucher";
 
+function cleanField(value, max) {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
+/** Builds the gift-voucher Checkout Session.
+ *
+ * Deliberately a plain HOSTED session rather than the embedded Payment Element
+ * the print checkout uses: there is nothing to configure, no shipping to quote
+ * and no order to build, so the buyer is better served by Stripe's own page
+ * than by a second bespoke payment form.
+ *
+ * It lives here, and is dispatched from api/create-checkout-session.mjs on the
+ * `kind` field, rather than in an endpoint of its own — Vercel's Hobby plan
+ * allows 12 serverless functions and every route file spends one.
+ */
+export async function createVoucherSession(stripe, body, origin) {
+  const amountCents = Number(body.amountCents);
+  if (!VOUCHER_AMOUNTS_CENTS.includes(amountCents)) throw new Error("Choose one of the listed voucher amounts.");
+  const buyerEmail = cleanField(body.buyerEmail, 254).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerEmail)) throw new Error("Enter a valid email address.");
+  const buyerName = cleanField(body.buyerName, 120);
+  const recipientName = cleanField(body.recipientName, 120);
+  if (!recipientName) throw new Error("Enter the name of the person receiving the voucher.");
+  const message = cleanField(body.message, 400);
+
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    customer_email: buyerEmail,
+    line_items: [{
+      quantity: 1,
+      price_data: {
+        currency: "aud",
+        unit_amount: amountCents,
+        product_data: {
+          name: "Gift voucher",
+          description: "Credit towards any framed photographic print. Emailed as a single-use code.",
+        },
+      },
+    }],
+    // The webhook branches on this tag. Without it a voucher session would
+    // fall into the print-order path and fail on missing cart metadata.
+    metadata: {
+      kind: VOUCHER_KIND,
+      voucher_amount_cents: String(amountCents),
+      buyer_name: buyerName,
+      recipient_name: recipientName,
+      voucher_message: message,
+    },
+    payment_intent_data: {
+      receipt_email: buyerEmail,
+      metadata: { shop: "gift-voucher" },
+    },
+    success_url: `${origin}/shop/gift-voucher?purchase=success`,
+    cancel_url: `${origin}/shop/gift-voucher`,
+    expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
+  }, {
+    idempotencyKey: `voucher-${crypto.randomUUID()}`,
+  });
+
+  return { url: session.url, sessionId: session.id };
+}
+
 export function isVoucherSession(session) {
   return session?.metadata?.kind === VOUCHER_KIND;
 }

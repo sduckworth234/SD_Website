@@ -6,7 +6,6 @@
     { "path": "/api/instagram-sync", "schedule": "0 6 * * *" }
   ],
   "rewrites": [
-    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/portfolio", "destination": "/portfolio.html" },
     { "source": "/portfolio/", "destination": "/portfolio.html" },

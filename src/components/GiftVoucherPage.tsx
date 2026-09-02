@@ -38,13 +38,13 @@ export function GiftVoucherPage({ onNavigate }: { onNavigate: (route: string) =>
     setError("");
     try {
       const accessToken = supabase ? (await supabase.auth.getSession()).data.session?.access_token : null;
-      const response = await fetch("/api/create-voucher-session", {
+      const response = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: {
           "content-type": "application/json",
           ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
         },
-        body: JSON.stringify({ amountCents, recipientName, buyerName, buyerEmail, message }),
+        body: JSON.stringify({ kind: "gift_voucher", amountCents, recipientName, buyerName, buyerEmail, message }),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) throw new Error(data?.error || "The voucher could not be started.");

@@ -599,8 +599,28 @@ async function writeSitemap({ locations, publicPhotos, shopPhotos }) {
   );
 }
 
-main().catch((error) => {
+main().catch(async (error) => {
   // A prerender failure must never take the deploy down: the SPA still works,
   // it just ships the generic head until the next successful build.
   console.warn(`[prerender] skipped — ${error.message}`);
+  // There is no /api/sitemap function any more, so a skipped prerender would
+  // otherwise leave /sitemap.xml missing entirely. Write the core routes at
+  // least — they need no data from Supabase.
+  try {
+    const core = ["/", "/galleries", "/shop", "/work", "/map"];
+    await writeFile(
+      join(DIST, "sitemap.xml"),
+      [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        ...core.map((path) => `  <url><loc>${SITE_URL}${path === "/" ? "/" : path}</loc></url>`),
+        "</urlset>",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    console.warn("[prerender] wrote a core-routes sitemap.xml as a fallback");
+  } catch (fallbackError) {
+    console.warn(`[prerender] could not write a fallback sitemap — ${fallbackError.message}`);
+  }
 });

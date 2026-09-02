@@ -6,6 +6,7 @@ import { json, methodAllowed, publicOrigin, readJson, safeError } from "../serve
 import { sizeIsSellable } from "../server/shop/printSizing.mjs";
 import { quoteShippingCents } from "../server/shop/prodigi.mjs";
 import { fetchShopPhotos, requireAdmin, shopRuntimeConfig, supabaseRest } from "../server/shop/supabase.mjs";
+import { VOUCHER_KIND, createVoucherSession } from "../server/shop/vouchers.mjs";
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 const rateBuckets = new Map();
@@ -75,6 +76,12 @@ export default async function handler(req, res) {
     if (rateLimited(req)) return json(res, 429, { error: "Too many checkout attempts. Please wait a minute and try again." });
     if (!stripe) return json(res, 503, { error: "Stripe test mode is not configured yet." });
     const body = await readJson(req);
+    // Gift vouchers share this endpoint (see createVoucherSession): a voucher
+    // has no cart, no shipping and no order, so it branches out before any of
+    // the print-order work below.
+    if (body?.kind === VOUCHER_KIND) {
+      return json(res, 200, await createVoucherSession(stripe, body, publicOrigin(req)));
+    }
     const pricing = await fetchPricing(supabaseRest);
     const cart = normaliseCart(body.cart, pricing);
     const customer = customerFrom(body);
@@ -189,7 +196,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     const message = safeError(error);
-    const status = /not valid|first order only|Enter |Cart |no longer available|unsupported|between 1|isn't available as a|Prices have been updated/i.test(message) ? 400 : 500;
+    const status = /not valid|first order only|Enter |Choose one|Cart |no longer available|unsupported|between 1|isn't available as a|Prices have been updated/i.test(message) ? 400 : 500;
     if (status === 500) console.error("create checkout session:", message);
     json(res, status, { error: status === 500 ? "Checkout could not be started. Please try again." : message });
   }
